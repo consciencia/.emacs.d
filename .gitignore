@@ -3,4 +3,12 @@ projectile-bookmarks.eld
 projectile.cache
 ido.last
 auto-save-list/
+emacs-src/
+games/
+bookmarks
+ede-projects.el
+test.c
+test.js
 *~
+url
+semanticdb
