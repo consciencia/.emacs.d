@@ -6,6 +6,8 @@
 (package-initialize)
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/"))
+(add-to-list 'package-archives
+             '("marmalade" . "http://marmalade-repo.org/packages/"))
 
 (defun custom/install-package-when-needed (package)
   (unless (package-installed-p package)
@@ -14,6 +16,7 @@
             (package-install package))))
 
 (defun custom/setup-packages ()
+  (load "spacemacs-theme__.el")
   (load "ace-jump-mode__.el")
   (load "ace-window__.el")
   (load "autopair__.el")

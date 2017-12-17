@@ -47,12 +47,12 @@
 ;; get project root from projectile will be handy when managing
 ;; TAGS indexes and things like that
 
-;; 1) find how to bind C-j in scratch buffer
-;; 2) fix rebinding of C-j to C-RET for IDO accroding to answer in forum
-;; 3) find out why arrow in dired not works in terminal mode
-;; 4) find out more info about C horrible coloring
+;; 1) install better isearch with normal regexes
+;; 2) install some visual find-and-replace
+;; 3) find out how to integrate EDE with projectile (projectile-project-root will be handy)
+;;    must add functionality for add project to generate EDE config there
+;; x) ggtags fuzzy handling of candidates show ...
 ;; 5) Install support for multiple cursors
 ;; 6) set up magit
-;; 7) set up full C/C++ dev environment
-;; 8) Do same for JS
-;; 9) And for python
+;; 8) setup JS
+;; 9) setup python

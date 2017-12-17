@@ -152,6 +152,7 @@
   (define-key ggtags-mode-map (kbd "M-,") 'pop-tag-mark)
   (add-hook 'c-mode-hook
             (lambda ()
+              ;; (local-set-key (kbd "<tab>") 'custom/c-indent-or-complete)
               ;; (local-set-key (kbd "???") 'ggtags-kill-file-buffers) 
               ;; (local-set-key (kbd "???") 'ggtags-create-tags) 
               ;; (local-set-key (kbd "???") 'ggtags-update-tags)
@@ -168,6 +169,7 @@
   ;; C++ BINDS
   (add-hook 'c++-mode-hook
             (lambda ()
+              ;; (local-set-key (kbd "<tab>") 'custom/c-indent-or-complete)
               ;; (local-set-key (kbd "???") 'ggtags-kill-file-buffers) 
               ;; (local-set-key (kbd "???") 'ggtags-create-tags) 
               ;; (local-set-key (kbd "???") 'ggtags-update-tags)
@@ -219,3 +221,10 @@
   (add-to-ordered-list 'emulation-mode-map-alists
                        `((cua-mode . ,custom-ido-map))
                        0))
+
+;; COMPANY BINDS
+;; bug somewhere, not loaded even if it should be loaded in this stage of init ...
+;; solved by explicit require
+(require 'company)
+(define-key company-active-map (kbd "<tab>") 'company-search-candidates)
+

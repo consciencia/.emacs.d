@@ -186,3 +186,12 @@
                         (string= (car imenu--rescan-item) name))
               (add-to-list 'symbol-names name)
               (add-to-list 'name-and-pos (cons name position))))))))
+
+(defun custom/c-indent-or-complete ()
+  (interactive)
+  (let ((old-point (point))
+        (old-tick (buffer-chars-modified-tick)))
+    (call-interactively 'c-indent-line-or-region)
+    (if (and (eq old-point (point))
+             (eq old-tick (buffer-chars-modified-tick)))
+        (call-interactively 'company-search-candidates))))
