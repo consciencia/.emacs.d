@@ -1,5 +1,5 @@
-;; set up ELISP load paths, extern subtree s used for inclusion of
-;; private config tree (for example, some sensitive work related infos)
+(package-initialize)
+
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 (let ((default-directory  "~/.emacs.d/lisp/"))
   (normal-top-level-add-subdirs-to-load-path))
@@ -27,9 +27,12 @@
 
 (load custom-file)
 
-;; install GNU Global (add one for ubuntu, redhat and arch)
-;; fedora: sudo dnf install global
-;; in ext-apps is windows binary of global
+(setq backup-directory-alist
+      `(("." . "~/.emacs.d/file-backups")))
+(setq delete-old-versions nil
+      kept-new-versions 10
+      kept-old-versions 10
+      version-control t)
 
 ;; These two are used for emacs state save before runs
 ;; not works correctly with neotree and minimap
@@ -42,17 +45,12 @@
 ;; (desktop-save "~/.emacs.d/")
 ;; (desktop-read)
 
-;;;;;;;;;
-;; projectile-project-root
-;; get project root from projectile will be handy when managing
-;; TAGS indexes and things like that
+;; semantic maybe can load all DBs via semanticdb-current-database-list when
+;; project roots are known (from projectile)
+;; not sure, actual dir parsing is working same way, so maybe this is not needed
 
-;; 1) install better isearch with normal regexes
-;; 2) install some visual find-and-replace
-;; 3) find out how to integrate EDE with projectile (projectile-project-root will be handy)
-;;    must add functionality for add project to generate EDE config there
-;; x) ggtags fuzzy handling of candidates show ...
-;; 5) Install support for multiple cursors
-;; 6) set up magit
-;; 8) setup JS
-;; 9) setup python
+;; 6) set up magit (HANDLE DIF IN EMACS)
+;; 9) setup python mode
+;; 8) setup JS/HTML/CSS mode
+;; install flycheck
+

@@ -46,4 +46,9 @@
    gdb-show-main t)
 
   (setq split-height-threshold 40)
-  (setq split-width-threshold 80))
+  (setq split-width-threshold 80)
+
+  (blink-cursor-mode 0)
+  (setq visible-cursor nil)
+
+  (global-visual-line-mode t))

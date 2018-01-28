@@ -1,3 +1,20 @@
+(defun custom/keyboard-escape-quit ()
+  "Modifies EMACs keyboard-escape-quit but withut window removal."
+  (interactive)
+  (cond ((eq last-command 'mode-exited) nil)
+	((region-active-p)
+	 (deactivate-mark))
+	((> (minibuffer-depth) 0)
+	 (abort-recursive-edit))
+	(current-prefix-arg
+	 nil)
+	((> (recursion-depth) 0)
+	 (exit-recursive-edit))
+	(buffer-quit-function
+	 (funcall buffer-quit-function))
+	((string-match "^ \\*" (buffer-name (current-buffer)))
+	 (bury-buffer))))
+
 (defun custom/universal-quit ()
   (interactive)
   (let* ((this-window (selected-window))
@@ -140,58 +157,97 @@
   (local-set-key (kbd "C-<up>") 'paredit-backward-up))
 
 (defun ido-goto-symbol (&optional symbol-list)
-      "Refresh imenu and jump to a place in the buffer using Ido."
-      (interactive)
-      (unless (featurep 'imenu)
-        (require 'imenu nil t))
-      (cond
-       ((not symbol-list)
-        (let ((ido-mode ido-mode)
-              (ido-enable-flex-matching
-               (if (boundp 'ido-enable-flex-matching)
-                   ido-enable-flex-matching t))
-              name-and-pos symbol-names position)
-          (unless ido-mode
-            (ido-mode 1)
-            (setq ido-enable-flex-matching t))
-          (while (progn
-                   (imenu--cleanup)
-                   (setq imenu--index-alist nil)
-                   (ido-goto-symbol (imenu--make-index-alist))
-                   (setq selected-symbol
-                         (ido-completing-read "Symbol? " symbol-names))
-                   (string= (car imenu--rescan-item) selected-symbol)))
-          (unless (and (boundp 'mark-active) mark-active)
-            (push-mark nil t nil))
-          (setq position (cdr (assoc selected-symbol name-and-pos)))
-          (cond
-           ((overlayp position)
-            (goto-char (overlay-start position)))
-           (t
-            (goto-char position)))))
-       ((listp symbol-list)
-        (dolist (symbol symbol-list)
-          (let (name position)
-            (cond
-             ((and (listp symbol) (imenu--subalist-p symbol))
-              (ido-goto-symbol symbol))
-             ((listp symbol)
-              (setq name (car symbol))
-              (setq position (cdr symbol)))
-             ((stringp symbol)
-              (setq name symbol)
-              (setq position
-                    (get-text-property 1 'org-imenu-marker symbol))))
-            (unless (or (null position) (null name)
-                        (string= (car imenu--rescan-item) name))
-              (add-to-list 'symbol-names name)
-              (add-to-list 'name-and-pos (cons name position))))))))
-
-(defun custom/c-indent-or-complete ()
+  "Refresh imenu and jump to a place in the buffer using Ido."
   (interactive)
-  (let ((old-point (point))
-        (old-tick (buffer-chars-modified-tick)))
-    (call-interactively 'c-indent-line-or-region)
-    (if (and (eq old-point (point))
-             (eq old-tick (buffer-chars-modified-tick)))
-        (call-interactively 'company-search-candidates))))
+  (unless (featurep 'imenu)
+    (require 'imenu nil t))
+  (cond
+   ((not symbol-list)
+    (let ((ido-mode ido-mode)
+          (ido-enable-flex-matching
+           (if (boundp 'ido-enable-flex-matching)
+               ido-enable-flex-matching t))
+          name-and-pos symbol-names position)
+      (unless ido-mode
+        (ido-mode 1)
+        (setq ido-enable-flex-matching t))
+      (while (progn
+               (imenu--cleanup)
+               (setq imenu--index-alist nil)
+               (ido-goto-symbol (imenu--make-index-alist))
+               (setq selected-symbol
+                     (ido-completing-read "Symbol? " symbol-names))
+               (string= (car imenu--rescan-item) selected-symbol)))
+      (unless (and (boundp 'mark-active) mark-active)
+        (push-mark nil t nil))
+      (setq position (cdr (assoc selected-symbol name-and-pos)))
+      (cond
+       ((overlayp position)
+        (goto-char (overlay-start position))
+        (recenter))
+       (t
+        (goto-char position)
+        (recenter)))))
+   ((listp symbol-list)
+    (dolist (symbol symbol-list)
+      (let (name position)
+        (cond
+         ((and (listp symbol) (imenu--subalist-p symbol))
+          (ido-goto-symbol symbol))
+         ((listp symbol)
+          (setq name (car symbol))
+          (setq position (cdr symbol)))
+         ((stringp symbol)
+          (setq name symbol)
+          (setq position
+                (get-text-property 1 'org-imenu-marker symbol))))
+        (unless (or (null position) (null name)
+                    (string= (car imenu--rescan-item) name))
+          (add-to-list 'symbol-names name)
+          (add-to-list 'name-and-pos (cons name position))))))))
+
+(defun custom/get-simple-input (question opts)
+  (interactive)
+  (ido-completing-read question opts))
+
+(defun custom/parse-from-file (path)
+  (read (f-read-text path 'utf-8)))
+
+(defun custom/serialize-to-file (obj path)
+  (f-write-text (prin1-to-string obj) 'utf-8 path))
+
+(defun custom/map/create ()
+  (make-hash-table :test 'equal))
+
+(defun custom/map/get (key map)
+  (gethash key map))
+
+(defun custom/map/set (key val map)
+  (puthash key val map))
+
+(defun custom/map/len (map)
+  (hash-table-count map))
+
+(defun custom/map/clear (map)
+  (clrhash map))
+
+(defun custom/map/to-list (map)
+  (let ((acc nil))
+    (maphash (lambda (k v)
+               (setq acc (cons (cons k v) acc)))
+             map)
+    acc))
+
+(defun custom/mode ()
+  major-mode)
+
+;; rework to potentialy something else
+;; at least, its a good template for overloaded tab key
+;; (defun custom/c-indent-or-complete ()
+;;   (interactive)
+;;   (let ((old-point (point))
+;;         (old-tick (buffer-chars-modified-tick)))
+;;     (call-interactively 'c-indent-line-or-region)
+;;     (if (and (eq old-point (point))
+;;              (eq old-tick (buffer-chars-modified-tick)))
+;;         (call-interactively 'company-search-candidates))))
