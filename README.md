@@ -1,0 +1,2 @@
+# .emacs.d
+EMACS config
