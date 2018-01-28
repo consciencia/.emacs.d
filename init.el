@@ -34,6 +34,15 @@
       kept-old-versions 10
       version-control t)
 
+;; SETUP cygwin when running on windows
+(if (eq system-type 'windows-nt)
+    (progn
+      (load "cygwin-mount.el")
+      (require 'cygwin-mount)
+      (cygwin-mount-activate)
+      (load "setup-cygwin.el")
+      (require 'setup-cygwin)))
+
 ;; These two are used for emacs state save before runs
 ;; not works correctly with neotree and minimap
 ;; some additional hacks must be done, maybe restarting minimap
@@ -49,7 +58,6 @@
 ;; project roots are known (from projectile)
 ;; not sure, actual dir parsing is working same way, so maybe this is not needed
 
-;; 6) set up magit (HANDLE DIF IN EMACS)
 ;; 9) setup python mode
 ;; 8) setup JS/HTML/CSS mode
 ;; install flycheck
