@@ -54,10 +54,6 @@
 ;; (desktop-save "~/.emacs.d/")
 ;; (desktop-read)
 
-;; semantic maybe can load all DBs via semanticdb-current-database-list when
-;; project roots are known (from projectile)
-;; not sure, actual dir parsing is working same way, so maybe this is not needed
-
 ;; 9) setup python mode
 ;; 8) setup JS/HTML/CSS mode
 ;; install flycheck

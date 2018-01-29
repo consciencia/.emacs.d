@@ -82,5 +82,10 @@ save the pointer marker if tag is found"
 ;; (setq-default semantic-symref-tool "global")
 ;; list of function which are able to retrieve project root
 ;; semanticdb-project-root-functions
-
+;;
+;; maybe it can be used for fetch of project symbol DB instead of
+;; calling custom/semantic-index-this-projectile-project and hoping
+;; it will load most of the symbols from caches
+;;;;;;;;;;;;;;;;;
+;; semanticdb-current-database-list
 
