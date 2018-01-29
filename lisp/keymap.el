@@ -142,7 +142,7 @@
   
   ;; BUFFER LOCAL SEARCHING BINDS
   (define-key search-key-map (kbd "C-r") 'vr/query-replace)
-  (define-key search-key-map (kbd "C-f") 'vr/isearch-forward)
+  (define-key search-key-map (kbd "C-f") 'isearch-forward)
   (define-key search-key-map (kbd "C-s") 'isearch-forward-symbol-at-point)
   (define-key search-key-map (kbd "C-o") 'occur)
   (define-key search-key-map (kbd "C-g") 'grep)

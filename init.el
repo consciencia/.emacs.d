@@ -16,7 +16,7 @@
 
 (load "utils.el")
 
-(load "package-init.el")
+(load "package-loader.el")
 (custom/setup-packages)
 
 (load "ui.el")

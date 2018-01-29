@@ -3,12 +3,15 @@
   (add-to-list 'default-frame-alist '(fullscreen . maximized))
   (menu-bar-mode -1)
   (tool-bar-mode -1)
-  ;; (load-theme 'wheatgrass)
+  (load-theme 'spacemacs-dark)
+
   (setq ring-bell-function 'ignore)
   (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
   (setq mouse-wheel-progressive-speed nil)
   (setq mouse-wheel-follow-mouse 't)
+
   (setq scroll-step 2)
+
   (global-linum-mode 1)
   (show-paren-mode 1)
   (setq show-paren-delay 0)
@@ -19,7 +22,8 @@
   (setq-default tab-stop-list (number-sequence 4 120 4))
   (defvaralias 'c-basic-offset 'tab-width)
   (defvaralias 'cperl-indent-level 'tab-width)
-  (setq inhibit-startup-screen t)
+
+  ;; (setq inhibit-startup-screen t)
   (setq inhibit-default-init t)
   (setq-default frame-title-format "%b (%f)")
   (setq whitespace-line-column 80)
