@@ -17,6 +17,7 @@
 
 (defun custom/setup-packages ()
   (load "f__.el")
+  (load "grizzl__.el")
   (load "visual-regex__.el")
   (load "spacemacs-theme__.el")
   (load "smart-mode-line__.el")

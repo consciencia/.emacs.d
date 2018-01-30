@@ -3,7 +3,7 @@
   (add-to-list 'default-frame-alist '(fullscreen . maximized))
   (menu-bar-mode -1)
   (tool-bar-mode -1)
-  (load-theme 'spacemacs-dark)
+  (load-theme 'spacemacs-dark t)
 
   (setq ring-bell-function 'ignore)
   (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
@@ -23,7 +23,7 @@
   (defvaralias 'c-basic-offset 'tab-width)
   (defvaralias 'cperl-indent-level 'tab-width)
 
-  ;; (setq inhibit-startup-screen t)
+  (setq inhibit-startup-screen t)
   (setq inhibit-default-init t)
   (setq-default frame-title-format "%b (%f)")
   (setq whitespace-line-column 80)
@@ -31,13 +31,15 @@
   (add-hook 'prog-mode-hook 'whitespace-mode)
   (set-face-attribute 'default nil :height 100)
   (setq scroll-conservatively 101)
-  
-  (add-hook 'minibuffer-setup-hook
-            (lambda ()
-              (setq gc-cons-threshold most-positive-fixnum)))
-  (add-hook 'minibuffer-exit-hook
-            (lambda ()
-              (setq gc-cons-threshold 800000)))
+
+  ;; Creates havoc when fuzzysearching big collections...
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; (add-hook 'minibuffer-setup-hook
+  ;;           (lambda ()
+  ;;             (setq gc-cons-threshold most-positive-fixnum)))
+  ;; (add-hook 'minibuffer-exit-hook
+  ;;           (lambda ()
+  ;;             (setq gc-cons-threshold 800000)))
 
   (setq tab-always-indent 'complete)
   (add-to-list 'completion-styles 'initials t)
