@@ -1,3 +1,5 @@
+(require 'whitespace)
+
 (defun custom/setup-ui ()
   (which-function-mode t)
   (add-to-list 'default-frame-alist '(fullscreen . maximized))
@@ -28,18 +30,16 @@
   (setq-default frame-title-format "%b (%f)")
   (setq whitespace-line-column 80)
   (setq whitespace-style '(face lines-tail))
+  (global-whitespace-mode t)
+
+  (add-hook 'buffer-list-update-hook
+            (lambda ()
+              (if (not (active-minibuffer-window))
+                  (custom/truncate-lines))))
+  
   (add-hook 'prog-mode-hook 'whitespace-mode)
   (set-face-attribute 'default nil :height 100)
   (setq scroll-conservatively 101)
-
-  ;; Creates havoc when fuzzysearching big collections...
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; (add-hook 'minibuffer-setup-hook
-  ;;           (lambda ()
-  ;;             (setq gc-cons-threshold most-positive-fixnum)))
-  ;; (add-hook 'minibuffer-exit-hook
-  ;;           (lambda ()
-  ;;             (setq gc-cons-threshold 800000)))
 
   (setq tab-always-indent 'complete)
   (add-to-list 'completion-styles 'initials t)

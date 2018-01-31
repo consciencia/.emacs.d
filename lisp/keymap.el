@@ -61,6 +61,15 @@
   (define-key global-map
     (kbd "<escape> <escape> <escape>")
     'custom/keyboard-escape-quit)
+  (define-key minibuffer-local-completion-map
+    (kbd "<tab>")
+    (lambda ()
+      (interactive)
+      (call-interactively 'minibuffer-complete)
+      (call-interactively 'switch-to-completions)))
+  (define-key completion-list-mode-map
+    (kbd "C-f")
+    'isearch-forward)
   
   ;; WINDOWS AND FRAMES MANIPULATION BINDS
   (define-key general-key-map (kbd "C-s C-h") 'split-window-horizontally)
@@ -143,6 +152,10 @@
   (define-key projectile-key-map (kbd "C-f C-f") 'projectile-grep)
   (define-key projectile-key-map (kbd "C-f C-r") 'projectile-replace)
   (define-key projectile-key-map (kbd "C-f C-o") 'projectile-multi-occur)
+  (define-key projectile-key-map (kbd "C-v C-s") 'magit-status)
+  (define-key projectile-key-map (kbd "C-v C-l") 'magit-log-popup)
+  (define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-and-checkout)
+  (define-key projectile-key-map (kbd "C-v C-d") 'magit-diff-popup)
   
   ;; BUFFER LOCAL SEARCHING BINDS
   (define-key search-key-map (kbd "C-r") 'vr/query-replace)

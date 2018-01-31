@@ -24,6 +24,5 @@
                 (progn
                   (custom/old-create-imenu-list new-f))
               (progn
-                (custom/new-create-imenu-list new-f)))))
-
+                (custom/old-create-imenu-list new-f)))))
 

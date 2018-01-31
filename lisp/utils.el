@@ -241,6 +241,23 @@
 (defun custom/mode ()
   major-mode)
 
+(defun custom/switch-to-minibuffer-window ()
+    "switch to minibuffer window (if active)"
+    (interactive)
+    (when (active-minibuffer-window)
+      (select-window (active-minibuffer-window))))
+
+(defun custom/truncate-lines (&optional arg)
+  (interactive "P")
+  (setq truncate-lines t)
+  (force-mode-line-update)
+  (unless truncate-lines
+    (let ((buffer (current-buffer)))
+      (walk-windows (lambda (window)
+                      (if (eq buffer (window-buffer window))
+                          (set-window-hscroll window 0)))
+                    nil t))))
+
 ;; rework to potentialy something else
 ;; at least, its a good template for overloaded tab key
 ;; (defun custom/c-indent-or-complete ()
