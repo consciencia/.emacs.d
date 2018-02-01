@@ -66,7 +66,8 @@
     (lambda ()
       (interactive)
       (call-interactively 'minibuffer-complete)
-      (call-interactively 'switch-to-completions)))
+      (call-interactively 'switch-to-completions)
+      (call-interactively 'isearch-forward)))
   (define-key completion-list-mode-map
     (kbd "C-f")
     'isearch-forward)
@@ -254,24 +255,26 @@
         (if (equal custom/c-navigation-method-used "global")
             (call-interactively 'pop-tag-mark)
           (error "Unknown navigation method %s" custom/c-navigation-method-used)))))
-  (define-key ggtags-mode-map (kbd "<M-kp-multiply>") 'semantic-ia-show-doc)   
-
-  ;; semantic-analyze-proto-impl-toggle
-  ;; -> Toggle between the implementation, and a prototype of tag under point 
+  (define-key ggtags-mode-map (kbd "<M-kp-multiply>")
+    (lambda ()
+      (interactive)
+      (call-interactively 'semantic-ia-show-doc)
+      (switch-to-buffer-other-window "*TAG DOCUMENTATION*")))
+  (define-key ggtags-mode-map
+    (kbd "<M-kp-divide>")
+    'semantic-analyze-proto-impl-toggle)
   
   ;; C BINDS
   (add-hook 'c-mode-hook
             (lambda ()
-
+              ;; TODO
               ))
-  (add-hook 'c-mode-hook 'semantic-mode)
   
   ;; C++ BINDS
   (add-hook 'c++-mode-hook
             (lambda ()
-
+              ;; TODO
               ))
-  (add-hook 'c++-mode-hook 'semantic-mode)
   
   ;; HEXL BINDS
   (add-hook 'hexl-mode-hook

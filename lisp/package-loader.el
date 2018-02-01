@@ -6,8 +6,6 @@
 (package-initialize)
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/"))
-(add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
 
 (defun custom/install-package-when-needed (package)
   (unless (package-installed-p package)

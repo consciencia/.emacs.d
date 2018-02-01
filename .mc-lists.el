@@ -3,7 +3,9 @@
 
 (setq mc/cmds-to-run-for-all
       '(
+        autopair-insert-opening
         beginning-of-visual-line
+        cua--prefix-override-handler
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit

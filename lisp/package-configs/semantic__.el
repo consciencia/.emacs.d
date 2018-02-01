@@ -4,9 +4,13 @@
 (require 'cedet-global)
 (require 'stickyfunc-enhance)
 
-(global-semanticdb-minor-mode 1)
-(global-semantic-idle-scheduler-mode 1)
-(global-semantic-mru-bookmark-mode 1)
+(global-semantic-idle-scheduler-mode t)
+(global-semanticdb-minor-mode t)
+(global-semantic-mru-bookmark-mode t)
+(global-semantic-stickyfunc-mode t)
+(global-semantic-highlight-edits-mode t)
+(global-semantic-show-unmatched-syntax-mode t)
+(global-semantic-show-parser-state-mode t)
 
 (setq semanticdb-project-roots projectile-known-projects)
 
@@ -18,6 +22,18 @@
  (progn
    (message "FAILED TO CONNECT SEMANTIC TO GLOBAL")))
 
+(with-eval-after-load 'semantic
+  (add-to-list 'semantic-inhibit-functions
+               (lambda ()
+                 (if (or (equal major-mode 'c-mode)
+                         (equal major-mode 'c++-mode))
+                     nil
+                   t))))
+
+(semantic-mode 1)
+
+
+
 (defvar semantic-tags-location-ring (make-ring 200))
 (defun custom/semantic-goto-definition (point)
   "Goto definition using semantic-ia-fast-jump   
@@ -26,7 +42,8 @@ save the pointer marker if tag is found"
   (condition-case err
       (progn                            
         (ring-insert semantic-tags-location-ring (point-marker))  
-        (semantic-ia-fast-jump point))
+        (semantic-ia-fast-jump point)
+        (recenter))
     (error
      ;;if not found remove the tag saved in the ring  
      (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
@@ -43,7 +60,8 @@ save the pointer marker if tag is found"
       (if (not buff)                                               
           (message "Buffer has been deleted")                    
         (switch-to-buffer buff)                                    
-        (goto-char pos))                                           
+        (goto-char pos)
+        (recenter))                                           
       (set-marker marker nil nil))))
 
 (defun custom/semantic-index-dir-recur (root)
@@ -89,3 +107,13 @@ save the pointer marker if tag is found"
 ;;;;;;;;;;;;;;;;;
 ;; semanticdb-current-database-list
 
+;; can inject preprocessor values
+;; (semantic-c-add-preprocessor-symbol "__KERNEL__" "")
+
+;; WARNING after emacs update (together with CEDET)
+;; you must delete whole semnatic cache becuase it is in invalid
+;; format (better said, incompatible with new version) and semantic
+;; simply silently fails instead of detecting incompatibility
+;;
+;; TODO write mail to ericludlam@gmail.com about this
+;; critical feature request ...
