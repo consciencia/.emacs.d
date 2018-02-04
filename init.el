@@ -3,9 +3,6 @@
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 (let ((default-directory  "~/.emacs.d/lisp/"))
   (normal-top-level-add-subdirs-to-load-path))
-(if (file-directory-p "~/.emacs.d/extern/")
-  (let ((default-directory  "~/.emacs.d/extern/"))
-    (normal-top-level-add-subdirs-to-load-path)))
 ;; set up EMACS custom settings file (used by UI settings manager)
 (setq custom-file "~/.emacs.d/emacs-custom.el")
 ;; set up EMACS C code tracking
@@ -18,6 +15,8 @@
 
 (load "package-loader.el")
 (custom/setup-packages)
+
+(load "db.el")
 
 (load "ui.el")
 (custom/setup-ui)

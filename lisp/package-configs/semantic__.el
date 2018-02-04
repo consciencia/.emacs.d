@@ -1,6 +1,7 @@
 (custom/install-package-when-needed 'stickyfunc-enhance)
 (require 'cc-mode)
 (require 'semantic)
+(require 'ede)
 (require 'cedet-global)
 (require 'stickyfunc-enhance)
 
@@ -11,8 +12,6 @@
 (global-semantic-highlight-edits-mode t)
 (global-semantic-show-unmatched-syntax-mode t)
 (global-semantic-show-parser-state-mode t)
-
-(setq semanticdb-project-roots projectile-known-projects)
 
 (setq cedet-global-command "global")
 (if (cedet-gnu-global-version-check t)
@@ -31,8 +30,34 @@
                    t))))
 
 (semantic-mode 1)
+(global-ede-mode 1)
 
 
+
+(defun custom/ede/generate-generic-loader (proj-root)
+  (let ((root-file (concat (file-name-as-directory proj-root)
+                           "PROJLOADER.el"))
+        (gtags-file (concat (file-name-as-directory proj-root)
+                            "GTAGS")))
+    `(progn
+       (ede-cpp-root-project ,(read-string "Project name: ")
+                             :file ,root-file
+                             :include-path '("/include"
+                                             "../include")
+                             ;; abs path to foreign headers
+                             :system-include-path '()
+                             ;; ("MACRO" . "VAL")
+                             :spp-table '()
+                             ;; full path to header files with defs
+                             :spp-files '())
+       (custom/semantic-index-specific ,proj-root)
+       (if (not (eq system-type 'windows-nt)) 
+           (progn
+             (if (not (file-exists-p ,gtags-file))
+                 (ggtags-create-tags ,proj-root))
+             (semantic-symref-detect-symref-tool)
+             ;; semantic-symref-tool should be "global" now
+             )))))
 
 (defvar semantic-tags-location-ring (make-ring 200))
 (defun custom/semantic-goto-definition (point)
@@ -61,6 +86,7 @@ save the pointer marker if tag is found"
           (message "Buffer has been deleted")                    
         (switch-to-buffer buff)                                    
         (goto-char pos)
+        (pulse-momentary-highlight-one-line pos)
         (recenter))                                           
       (set-marker marker nil nil))))
 
@@ -75,7 +101,7 @@ save the pointer marker if tag is found"
       (setq file (pop files))
       (if (not (file-accessible-directory-p file))
           (progn
-            (when (string-match-p ".*\\.\\(c\\|cpp\\|h\\|hpp\\)$"
+            (when (string-match-p ".*\\.\\(c\\|cpp\\)$"
                                   file)
               (ignore-errors
                 (semanticdb-file-table-object file))))
@@ -83,6 +109,11 @@ save the pointer marker if tag is found"
         (progn
           (semanticdb-save-all-db)
           (custom/semantic-index-dir-recur file))))))
+
+(defun custom/semantic-index-specific (root)
+  (interactive)
+  (custom/semantic-index-dir-recur root)
+  (semanticdb-save-all-db))
 
 (defun custom/semantic-index-this-dir ()
   (interactive)
@@ -94,13 +125,6 @@ save the pointer marker if tag is found"
   (custom/semantic-index-dir-recur (projectile-project-root))
   (semanticdb-save-all-db))
 
-;; returns symref tool
-;; (semantic-symref-detect-symref-tool)
-;; force CEDET to use GLOBAL for symref
-;; (setq-default semantic-symref-tool "global")
-;; list of function which are able to retrieve project root
-;; semanticdb-project-root-functions
-;;
 ;; maybe it can be used for fetch of project symbol DB instead of
 ;; calling custom/semantic-index-this-projectile-project and hoping
 ;; it will load most of the symbols from caches

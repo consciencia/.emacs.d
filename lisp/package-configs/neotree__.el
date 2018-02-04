@@ -6,7 +6,8 @@
 
 (setq projectile-switch-project-action
       (lambda (&rest args)
-        (let* ((projectile-completion-system #'completing-read-default))
+        (custom/project/load-loader (projectile-project-root))
+        (let* ((projectile-completion-system #'custom/default-completing-read))
           (apply 'projectile-find-file args))
         (apply 'neotree-projectile-action args)
         (call-interactively 'windmove-right)

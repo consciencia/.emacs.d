@@ -1,3 +1,25 @@
+(defun custom/map/create ()
+  (make-hash-table :test 'equal))
+
+(defun custom/map/get (key map)
+  (gethash key map))
+
+(defun custom/map/set (key val map)
+  (puthash key val map))
+
+(defun custom/map/len (map)
+  (hash-table-count map))
+
+(defun custom/map/clear (map)
+  (clrhash map))
+
+(defun custom/map/to-list (map)
+  (let ((acc nil))
+    (maphash (lambda (k v)
+               (setq acc (cons (cons k v) acc)))
+             map)
+    acc))
+
 (defun custom/keyboard-escape-quit ()
   "Modifies EMACs keyboard-escape-quit but withut window removal."
   (interactive)
@@ -210,34 +232,6 @@
   (interactive)
   (ido-completing-read question opts))
 
-(defun custom/parse-from-file (path)
-  (read (f-read-text path 'utf-8)))
-
-(defun custom/serialize-to-file (obj path)
-  (f-write-text (prin1-to-string obj) 'utf-8 path))
-
-(defun custom/map/create ()
-  (make-hash-table :test 'equal))
-
-(defun custom/map/get (key map)
-  (gethash key map))
-
-(defun custom/map/set (key val map)
-  (puthash key val map))
-
-(defun custom/map/len (map)
-  (hash-table-count map))
-
-(defun custom/map/clear (map)
-  (clrhash map))
-
-(defun custom/map/to-list (map)
-  (let ((acc nil))
-    (maphash (lambda (k v)
-               (setq acc (cons (cons k v) acc)))
-             map)
-    acc))
-
 (defun custom/mode ()
   major-mode)
 
@@ -258,13 +252,58 @@
                           (set-window-hscroll window 0)))
                     nil t))))
 
-;; rework to potentialy something else
-;; at least, its a good template for overloaded tab key
-;; (defun custom/c-indent-or-complete ()
-;;   (interactive)
-;;   (let ((old-point (point))
-;;         (old-tick (buffer-chars-modified-tick)))
-;;     (call-interactively 'c-indent-line-or-region)
-;;     (if (and (eq old-point (point))
-;;              (eq old-tick (buffer-chars-modified-tick)))
-;;         (call-interactively 'company-search-candidates))))
+(defun custom/create-imenu-list (new-f)
+  (select-frame-set-input-focus new-f)
+  (run-at-time "1" nil
+               (lambda ()
+                 (imenu-list-show)
+                 (other-window 1))))
+
+(defun custom/eval (string)
+  (eval (car (read-from-string (format "(progn %s)" string)))))
+
+(defun custom/default-completing-read (question candidates)
+  (run-at-time "0.5" nil
+               (lambda ()
+                 (minibuffer-complete)
+                 (switch-to-completions)
+                 (isearch-forward)))
+  (completing-read-default question candidates))
+
+(defun custom/projectile-add-known-project (project-root)
+  (interactive (list (read-directory-name "Add to known projects: ")))
+  (unless (projectile-ignored-project-p project-root)
+    (setq projectile-known-projects
+          (delete-dups
+           (cons (abbreviate-file-name project-root)
+                 projectile-known-projects))))
+  (projectile-save-known-projects)
+  project-root)
+
+(defun custom/project/generate-loader (proj-root proj-type)
+  (let ((loader-content (cond
+                         ((equal proj-type "C/C++ (generic)")
+                          (custom/ede/generate-generic-loader proj-root))
+                         (t nil)))
+        (loader-path (concat (file-name-as-directory proj-root)
+                             "PROJLOADER.el")))
+    (if loader-content
+        (f-write-text (prin1-to-string loader-content)
+                      'utf-8
+                      loader-path))))
+
+(setq VISITED-LOADERS (custom/map/create))
+(defun custom/project/load-loader (root)
+  (if (not (custom/map/get root VISITED-LOADERS))
+      (let ((loader-path (concat (file-name-as-directory root)
+                                 "PROJLOADER.el")))
+        (if (file-exists-p loader-path)
+            (progn
+              (custom/eval (f-read-text loader-path 'utf-8))
+              (custom/map/set root t VISITED-LOADERS))))))
+
+ 
+
+
+
+

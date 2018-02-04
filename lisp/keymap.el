@@ -125,8 +125,20 @@
   (define-key mc/keymap (kbd "<escape> <escape> <escape>") 'mc/keyboard-quit)
   
   ;; PROJECT MANAGEMENT BINDS
-  (define-key projectile-key-map (kbd "C-d C-s") 'projectile-switch-project)
-  (define-key projectile-key-map (kbd "C-d C-a") 'projectile-add-known-project)
+  (define-key projectile-key-map (kbd "C-d C-s")
+    (lambda ()
+      (interactive)
+      (projectile-switch-project)))
+  (define-key projectile-key-map (kbd "C-d C-a")
+    (lambda ()
+      (interactive)
+      (let ((proj-root (call-interactively 'custom/projectile-add-known-project))
+            (proj-type (custom/get-simple-input "Project type: "
+                                                '("C/C++ (generic)"
+                                                  "Other"))))
+        (if (and proj-root proj-type) 
+            (custom/project/generate-loader proj-root
+                                            proj-type)))))
   (define-key projectile-key-map (kbd "C-d C-i C-u")
     (lambda ()
       (interactive)
@@ -148,7 +160,7 @@
   (define-key projectile-key-map (kbd "C-o")
     (lambda ()
       (interactive)
-      (let* ((projectile-completion-system #'completing-read-default))
+      (let* ((projectile-completion-system #'custom/default-completing-read))
         (call-interactively 'projectile-find-file))))
   (define-key projectile-key-map (kbd "C-f C-f") 'projectile-grep)
   (define-key projectile-key-map (kbd "C-f C-r") 'projectile-replace)
@@ -157,6 +169,9 @@
   (define-key projectile-key-map (kbd "C-v C-l") 'magit-log-popup)
   (define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-and-checkout)
   (define-key projectile-key-map (kbd "C-v C-d") 'magit-diff-popup)
+  (define-key projectile-key-map (kbd "C-v C-b C-s") 'magit-blame)
+  (define-key projectile-key-map (kbd "C-v C-b C-p") 'magit-blame-popup)
+  (define-key projectile-key-map (kbd "C-v C-b C-q") 'magit-blame-quit)
   
   ;; BUFFER LOCAL SEARCHING BINDS
   (define-key search-key-map (kbd "C-r") 'vr/query-replace)
@@ -220,7 +235,7 @@
               (custom-paredit-init)))
   
   ;; C GENERAL BINDS
-  (setq custom/c-navigation-method-used "global")
+  (setq custom/c-navigation-method-used "semantic")
   (define-key ggtags-mode-map (kbd "C-,")
     (lambda ()
       (interactive)
@@ -267,14 +282,12 @@
   ;; C BINDS
   (add-hook 'c-mode-hook
             (lambda ()
-              ;; TODO
-              ))
+              (local-set-key (kbd "C-d") 'custom/mark-whole-word)))
   
   ;; C++ BINDS
   (add-hook 'c++-mode-hook
             (lambda ()
-              ;; TODO
-              ))
+              (local-set-key (kbd "C-d") 'custom/mark-whole-word)))
   
   ;; HEXL BINDS
   (add-hook 'hexl-mode-hook
