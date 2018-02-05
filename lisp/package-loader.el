@@ -41,4 +41,5 @@
   (load "eldoc-overlay__.el")
   (load "shackle__.el")
   (load "multiple-cursors__.el")
-  (load "magit__.el"))
+  (load "magit__.el")
+  (load "ecb__.el"))

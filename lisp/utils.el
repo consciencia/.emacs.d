@@ -256,8 +256,11 @@
   (select-frame-set-input-focus new-f)
   (run-at-time "1" nil
                (lambda ()
-                 (imenu-list-show)
-                 (other-window 1))))
+                 (if (not ecb-minor-mode)  
+                     (progn
+                       (imenu-list-show)
+                       (other-window 1))
+                   (ecb-redraw-layout-full)))))
 
 (defun custom/eval (string)
   (eval (car (read-from-string (format "(progn %s)" string)))))
