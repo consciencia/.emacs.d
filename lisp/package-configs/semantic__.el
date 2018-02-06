@@ -17,9 +17,7 @@
 (if (cedet-gnu-global-version-check t)
    (progn
      (semanticdb-enable-gnu-global-databases 'c-mode)
-     (semanticdb-enable-gnu-global-databases 'c++-mode))
- (progn
-   (message "FAILED TO CONNECT SEMANTIC TO GLOBAL")))
+     (semanticdb-enable-gnu-global-databases 'c++-mode)))
 
 (with-eval-after-load 'semantic
   (add-to-list 'semantic-inhibit-functions
@@ -34,32 +32,25 @@
 
 
 
+(defvar semantic-tags-location-ring (make-ring 200))
+
 (defun custom/ede/generate-generic-loader (proj-root)
   (let ((root-file (concat (file-name-as-directory proj-root)
-                           "PROJLOADER.el"))
-        (gtags-file (concat (file-name-as-directory proj-root)
-                            "GTAGS")))
+                           "PROJLOADER.el")))
     `(progn
        (ede-cpp-root-project ,(read-string "Project name: ")
                              :file ,root-file
                              :include-path '("/include"
                                              "../include")
-                             ;; abs path to foreign headers
                              :system-include-path '()
-                             ;; ("MACRO" . "VAL")
                              :spp-table '()
-                             ;; full path to header files with defs
                              :spp-files '())
        (custom/semantic-index-specific ,proj-root)
-       (if (not (eq system-type 'windows-nt)) 
+       (if (cedet-gnu-global-version-check t) 
            (progn
-             (if (not (file-exists-p ,gtags-file))
-                 (ggtags-create-tags ,proj-root))
-             (semantic-symref-detect-symref-tool)
-             ;; semantic-symref-tool should be "global" now
-             )))))
+             (cedet-gnu-global-create/update-database ,proj-root)
+             (semantic-symref-detect-symref-tool))))))
 
-(defvar semantic-tags-location-ring (make-ring 200))
 (defun custom/semantic-goto-definition (point)
   "Goto definition using semantic-ia-fast-jump   
 save the pointer marker if tag is found"
@@ -104,7 +95,10 @@ save the pointer marker if tag is found"
         (recenter))                                           
       (set-marker marker nil nil))))
 
-(defun custom/semantic-index-dir-recur (root)
+(defun test (&optional arg)
+  (message "Arg is %s" arg))
+
+(defun custom/semantic-index-dir-recur (root &optional selection-regex)
   (let ((root (file-name-as-directory root))
         (files (directory-files root t)))
     (setq files (delete (format "%s." root) files))
@@ -115,7 +109,9 @@ save the pointer marker if tag is found"
       (setq file (pop files))
       (if (not (file-accessible-directory-p file))
           (progn
-            (when (string-match-p ".*\\.\\(c\\|cpp\\)$"
+            (when (string-match-p (if selection-regex
+                                      selection-regex
+                                    ".*\\.\\(c\\|cpp\\)$")  
                                   file)
               (ignore-errors
                 (semanticdb-file-table-object file))))
@@ -139,14 +135,14 @@ save the pointer marker if tag is found"
   (custom/semantic-index-dir-recur (projectile-project-root))
   (semanticdb-save-all-db))
 
-;; maybe it can be used for fetch of project symbol DB instead of
-;; calling custom/semantic-index-this-projectile-project and hoping
-;; it will load most of the symbols from caches
-;;;;;;;;;;;;;;;;;
-;; semanticdb-current-database-list
-
-;; can inject preprocessor values
+;; inject preprocessor values into semantic
 ;; (semantic-c-add-preprocessor-symbol "__KERNEL__" "")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Add include directory which will then semnatic use for
+;; looking for header files, handy when writing some buildsystem
+;; scrapper
+;; c-mode || c++-mode
+;; (semantic-add-system-include include-root-dir symbol-for-mode)
 
 ;; WARNING after emacs update (together with CEDET)
 ;; you must delete whole semnatic cache becuase it is in invalid
