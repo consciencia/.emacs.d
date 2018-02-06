@@ -74,6 +74,20 @@ save the pointer marker if tag is found"
      (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
      (signal (car err) (cdr err)))))
 
+(defun custom/semantic-switch-proto ()
+  "Goto definition using semantic-ia-fast-jump   
+save the pointer marker if tag is found"
+  (interactive)
+  (condition-case err
+      (progn                            
+        (ring-insert semantic-tags-location-ring (point-marker))  
+        (semantic-analyze-proto-impl-toggle)
+        (recenter))
+    (error
+     ;;if not found remove the tag saved in the ring  
+     (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
+     (signal (car err) (cdr err)))))
+
 (defun custom/semantic-pop-tag-mark ()             
   "popup the tag save by semantic-goto-definition"   
   (interactive)                                                    

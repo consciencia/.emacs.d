@@ -120,30 +120,16 @@
         t
       nil)))
 
-(defun custom/mark-whole-word (&optional arg allow-extend)
-  "Put point at beginning of current word, set mark at end."
-  (interactive "p\np")
-  (setq arg (if arg arg 1))
-  (if (and allow-extend
-           (or (and (eq last-command this-command) (mark t))
-               (region-active-p)))
-      (set-mark
-       (save-excursion
-         (when (< (mark) (point))
-           (setq arg (- arg)))
-         (goto-char (mark))
-         (forward-word arg)
-         (point)))
-    (let ((wbounds (bounds-of-thing-at-point 'word)))
-      (unless (consp wbounds)
-        (error "No word at point"))
-      (if (>= arg 0)
-          (goto-char (car wbounds))
-        (goto-char (cdr wbounds)))
-      (push-mark (save-excursion
-                   (forward-word arg)
-                   (point)))
-      (activate-mark)))
+(defun custom/mark-whole-word ()
+  (interactive)
+  (let ((wbounds (bounds-of-thing-at-point 'symbol)))
+    (unless (consp wbounds)
+      (error "No word at point"))
+    (goto-char (car wbounds))
+    (push-mark (save-excursion
+                 (goto-char (cdr wbounds))
+                 (point)))
+    (activate-mark))
   ;; Secret sauce for standard selection behavior
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
@@ -228,6 +214,25 @@
           (add-to-list 'symbol-names name)
           (add-to-list 'name-and-pos (cons name position))))))))
 
+(defun custom/scroll-up ()
+  (interactive)
+  (scroll-up 4))
+
+(defun custom/scroll-down ()
+  (interactive)
+  (scroll-down 4))
+
+(setq ECB-ACTIVE nil)
+(defun custom/ecb-run ()
+  (interactive)
+  (ecb-activate)
+  (setq ECB-ACTIVE t))
+
+(defun custom/ecb-kill ()
+  (interactive)
+  (ecb-deactivate)
+  (setq ECB-ACTIVE nil))
+
 (defun custom/get-simple-input (question opts)
   (interactive)
   (ido-completing-read question opts))
@@ -256,7 +261,7 @@
   (select-frame-set-input-focus new-f)
   (run-at-time "1" nil
                (lambda ()
-                 (if (not ecb-minor-mode)  
+                 (if (not ECB-ACTIVE) ; (not ecb-minor-mode)  
                      (progn
                        (imenu-list-show)
                        (other-window 1))
