@@ -143,6 +143,9 @@ save the pointer marker if tag is found"
 ;; scrapper
 ;; c-mode || c++-mode
 ;; (semantic-add-system-include include-root-dir symbol-for-mode)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; controll loading of symbol tables
+;; semanticdb-find-default-throttle
 
 ;; WARNING after emacs update (together with CEDET)
 ;; you must delete whole semnatic cache becuase it is in invalid

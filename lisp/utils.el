@@ -1,3 +1,5 @@
+(require 'pp)
+
 (defun custom/map/create ()
   (make-hash-table :test 'equal))
 
@@ -191,9 +193,15 @@
       (setq position (cdr (assoc selected-symbol name-and-pos)))
       (cond
        ((overlayp position)
+        (if (or (equal major-mode 'c-mode)
+                (equal major-mode 'c++-mode))
+            (ring-insert semantic-tags-location-ring (point-marker)))
         (goto-char (overlay-start position))
         (recenter))
        (t
+        (if (or (equal major-mode 'c-mode)
+                (equal major-mode 'c++-mode))
+            (ring-insert semantic-tags-location-ring (point-marker)))
         (goto-char position)
         (recenter)))))
    ((listp symbol-list)
@@ -296,7 +304,7 @@
         (loader-path (concat (file-name-as-directory proj-root)
                              "PROJLOADER.el")))
     (if loader-content
-        (f-write-text (prin1-to-string loader-content)
+        (f-write-text (pp-to-string loader-content)
                       'utf-8
                       loader-path))))
 
