@@ -5,9 +5,16 @@
  ;; If there is more than one, they won't work right.
  '(company-backends
    (quote
-    (company-bbdb company-nxml company-css company-eclim company-xcode company-cmake
-                  (company-semantic)
-                  company-etags company-capf company-files company-clang company-oddmuse company-dabbrev)))
+    (company-bbdb company-nxml
+                  company-css
+                  company-eclim
+                  company-xcode
+                  company-cmake
+                  company-semantic
+                  company-capf
+                  company-files
+                  company-oddmuse
+                  company-dabbrev)))
  '(company-idle-delay 0.1)
  '(company-search-regexp-function (quote company-search-flex-regexp))
  '(company-selection-wrap-around t)
@@ -20,6 +27,7 @@
     ("fa2b58bb98b62c3b8cf3b6f02f058ef7827a8e497125de0254f56e373abee088" "bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" "b9e9ba5aeedcc5ba8be99f1cc9301f6679912910ff92fdf7980929c2fc83ab4d" "84d2f9eeb3f82d619ca4bfffe5f157282f4779732f48a5ac1484d94d5ff5b279" "a27c00821ccfd5a78b01e4f35dc056706dd9ede09a8b90c6955ae6a390eb1c1e" "c74e83f8aa4c78a121b52146eadb792c9facc5b1f02c917e3dbb454fca931223" "3c83b3676d796422704082049fc38b6966bcad960f896669dfc21a7a37a748fa" default)))
  '(ecb-layout-name "leftright2")
  '(ecb-new-ecb-frame t)
+ '(ecb-options-version "2.50")
  '(ecb-tip-of-the-day nil)
  '(ggtags-auto-jump-to-match nil)
  '(ggtags-sort-by-nearness t)

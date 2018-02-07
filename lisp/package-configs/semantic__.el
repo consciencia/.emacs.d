@@ -45,11 +45,12 @@
                              :system-include-path '()
                              :spp-table '()
                              :spp-files '())
-       (custom/semantic-index-specific ,proj-root)
        (if (cedet-gnu-global-version-check t) 
            (progn
              (cedet-gnu-global-create/update-database ,proj-root)
-             (semantic-symref-detect-symref-tool))))))
+             (semantic-symref-detect-symref-tool))
+         (progn
+           (custom/semantic-index-specific ,proj-root))))))
 
 (defun custom/semantic-goto-definition (point)
   "Goto definition using semantic-ia-fast-jump   
