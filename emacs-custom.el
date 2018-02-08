@@ -5,16 +5,7 @@
  ;; If there is more than one, they won't work right.
  '(company-backends
    (quote
-    (company-bbdb company-nxml
-                  company-css
-                  company-eclim
-                  company-xcode
-                  company-cmake
-                  company-semantic
-                  company-capf
-                  company-files
-                  company-oddmuse
-                  company-dabbrev)))
+    (company-bbdb company-nxml company-css company-eclim company-xcode company-cmake company-semantic company-capf company-files company-oddmuse company-dabbrev)))
  '(company-idle-delay 0.1)
  '(company-search-regexp-function (quote company-search-flex-regexp))
  '(company-selection-wrap-around t)
@@ -46,7 +37,7 @@
  '(neo-show-hidden-files t)
  '(package-selected-packages
    (quote
-    (adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
+    (git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
  '(semantic-complete-inline-analyzer-displayor-class (quote semantic-displayor-tooltip))
  '(semantic-edits-verbose-flag t)
  '(speedbar-use-images nil)
