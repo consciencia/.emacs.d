@@ -7,10 +7,6 @@ emacs-src/
 games/
 bookmarks
 ede-projects.el
-test.c
-test.cpp
-test.js
-*~
 url
 semanticdb
 file-backups/
