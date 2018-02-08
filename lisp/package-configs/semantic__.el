@@ -4,20 +4,31 @@
 (require 'ede)
 (require 'cedet-global)
 (require 'stickyfunc-enhance)
+(require 'semantic/idle)
 
 (global-semantic-idle-scheduler-mode t)
 (global-semanticdb-minor-mode t)
 (global-semantic-mru-bookmark-mode t)
-(global-semantic-stickyfunc-mode t)
+(global-semantic-stickyfunc-mode -1)
 (global-semantic-highlight-edits-mode t)
 (global-semantic-show-unmatched-syntax-mode t)
-(global-semantic-show-parser-state-mode t)
+(global-semantic-idle-summary-mode t)
+(global-semantic-highlight-func-mode t)
+(global-semantic-decoration-mode t)
+(global-semantic-idle-breadcrumbs-mode t)
 
+(setq semantic-idle-breadcrumbs-format-tag-function
+      'semantic-format-tag-summarize)
+(setq semantic-idle-work-parse-neighboring-files-flag t)
+(setq semantic-idle-work-update-headers-flag t)
+
+(setq CEDET-GLOBAL-STATE "failed")
 (setq cedet-global-command "global")
 (if (cedet-gnu-global-version-check t)
    (progn
      (semanticdb-enable-gnu-global-databases 'c-mode)
-     (semanticdb-enable-gnu-global-databases 'c++-mode)))
+     (semanticdb-enable-gnu-global-databases 'c++-mode)
+     (setq CEDET-GLOBAL-STATE "ok")))
 
 (with-eval-after-load 'semantic
   (add-to-list 'semantic-inhibit-functions

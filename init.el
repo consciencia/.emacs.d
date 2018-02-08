@@ -1,31 +1,20 @@
 (package-initialize)
 
+;; set up elisp include dirs
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 (let ((default-directory  "~/.emacs.d/lisp/"))
   (normal-top-level-add-subdirs-to-load-path))
+
 ;; set up EMACS custom settings file (used by UI settings manager)
 (setq custom-file "~/.emacs.d/emacs-custom.el")
+
 ;; set up EMACS C code tracking
 (setq find-function-C-source-directory
       (concat "~/.emacs.d/emacs-src/"
               (substring (emacs-version) 10 14)
               "/src"))
 
-(load "utils.el")
-
-(load "package-loader.el")
-(custom/setup-packages)
-
-(load "db.el")
-
-(load "ui.el")
-(custom/setup-ui)
-
-(load "keymap.el")
-(custom/setup-keymap)
-
-(load custom-file)
-
+;; set up backup rules
 (setq backup-directory-alist
       `(("." . "~/.emacs.d/file-backups")))
 (setq delete-old-versions nil
@@ -33,7 +22,15 @@
       kept-old-versions 10
       version-control t)
 
-;; SETUP cygwin when running on windows
+;; load whole mode
+(load "utils.el")
+(load "package-loader.el")
+(load "db.el")
+(load "ui.el")
+(load "keymap.el")
+(load custom-file)
+
+;; set up cygwin when running on windows
 (if (eq system-type 'windows-nt)
     (progn
       (load "cygwin-mount.el")
@@ -41,19 +38,3 @@
       (cygwin-mount-activate)
       (load "setup-cygwin.el")
       (require 'setup-cygwin)))
-
-;; These two are used for emacs state save before runs
-;; not works correctly with neotree and minimap
-;; some additional hacks must be done, maybe restarting minimap
-;; and neotree after desktop load
-;; in neotree, save somewhere current root and refresh it after its recreation
-;; after desktop-read
-;; to much work, ignore for now
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (desktop-save "~/.emacs.d/")
-;; (desktop-read)
-
-;; 9) setup python mode
-;; 8) setup JS/HTML/CSS mode
-;; install flycheck
-
