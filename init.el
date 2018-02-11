@@ -1,3 +1,6 @@
+;; We must load our custom CEDET before emacs loads its own...
+(load-file "~/.emacs.d/lisp/cedet/cedet/cedet-devel-load.el")
+
 (package-initialize)
 
 ;; set up elisp include dirs
