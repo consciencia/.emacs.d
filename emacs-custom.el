@@ -41,7 +41,7 @@
  '(neo-show-hidden-files t)
  '(package-selected-packages
    (quote
-    (git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
+    (pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
  '(semantic-complete-inline-analyzer-displayor-class (quote semantic-displayor-tooltip))
  '(semantic-edits-verbose-flag t)
  '(speedbar-use-images nil)

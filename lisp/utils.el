@@ -318,7 +318,46 @@
               (custom/eval (f-read-text loader-path 'utf-8))
               (custom/map/set root t VISITED-LOADERS))))))
 
- 
+(defun custom/special-c-return-handler ()
+  (interactive)
+  (cond
+   ((active-minibuffer-window)
+    (call-interactively 'ido-select-text))
+   ((equal major-mode 'imenu-list-major-mode)
+    (call-interactively 'imenu-list-display-entry))
+   ((equal major-mode 'occur-mode)
+    (call-interactively 'occur-mode-display-occurrence))
+   ((equal major-mode 'grep-mode)
+    (call-interactively 'compilation-display-error))
+   ((equal major-mode 'compilation-mode)
+    (call-interactively 'compilation-display-error))
+   (t (message "No bind in current context"))))
+
+(defun custom/special-m-return-handler ()
+  (interactive)
+  (cond
+   ((active-minibuffer-window)
+    (call-interactively 'ido-magic-forward-char))))
+
+(defun custom/enhance-isearch ()
+  (define-key isearch-mode-map
+    (kbd "C-<right>")
+    (lambda ()
+      (interactive)
+      (call-interactively 'isearch-repeat-forward)
+      (recenter)))
+  (define-key isearch-mode-map
+    (kbd "C-<left>")
+    (lambda ()
+      (interactive)
+      (call-interactively 'isearch-repeat-backward)
+      (recenter)))
+  (define-key isearch-mode-map (kbd "C-+") 'custom/scroll-up)
+  (define-key isearch-mode-map (kbd "C--") 'custom/scroll-down)
+  (define-key isearch-mode-map (kbd "C-v") 'isearch-yank-kill)
+  (define-key isearch-mode-map (kbd "<backspace>") 'isearch-del-char))
+
+
 
 
 

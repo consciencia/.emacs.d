@@ -162,13 +162,7 @@
     (switch-to-buffer-other-window "*Occur*")
     (shrink-window-if-larger-than-buffer)))
 (define-key search-key-map (kbd "C-g") 'grep)
-(add-hook 'isearch-mode-hook (lambda ()
-                               (define-key isearch-mode-map
-                                 (kbd "C-<right>")
-                                 'isearch-repeat-forward)
-                               (define-key isearch-mode-map
-                                 (kbd "C-<left>")
-                                 'isearch-repeat-backward)))
+(add-hook 'isearch-mode-hook 'custom/enhance-isearch)
 (define-key query-replace-map (kbd "<return>") 'act)
 
 ;; ELISP BINDS
@@ -273,12 +267,16 @@
                      (all-completions "" obarray 'commandp))))))
 (defvar custom-ido-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<C-return>") 'ido-select-text)
-    (define-key map (kbd "<M-return>") 'ido-magic-forward-char)
+    (define-key map (kbd "<C-return>") 'custom/special-c-return-handler)
+    (define-key map (kbd "<M-return>") 'custom/special-m-return-handler)
     map))
 (with-eval-after-load 'ido
-  (define-key ido-common-completion-map (kbd "<C-return>") 'ido-select-text)
-  (define-key ido-common-completion-map (kbd "<M-return>") 'ido-magic-forward-char))
+  (define-key ido-common-completion-map
+    (kbd "<C-return>")
+    'custom/special-c-return-handler)
+  (define-key ido-common-completion-map
+    (kbd "<M-return>")
+    'custom/special-m-return-handler))
 (add-to-ordered-list 'emulation-mode-map-alists
                      `((cua-mode . ,custom-ido-map))
                      0)

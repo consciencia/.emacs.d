@@ -13,6 +13,7 @@
            (package-install package))))
 
 (load "f__.el")
+(load "pcre2el__.el")
 (load "grizzl__.el")
 (load "visual-regex__.el")
 (load "adaptive-wrap__.el")
