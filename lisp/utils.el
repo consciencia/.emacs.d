@@ -355,10 +355,23 @@
   (define-key isearch-mode-map (kbd "C-+") 'custom/scroll-up)
   (define-key isearch-mode-map (kbd "C--") 'custom/scroll-down)
   (define-key isearch-mode-map (kbd "C-v") 'isearch-yank-kill)
+  (define-key isearch-mode-map (kbd "C-o") 'isearch-occur)
   (define-key isearch-mode-map (kbd "<backspace>") 'isearch-del-char))
 
+(defun custom/generate-dir-locals (path &optional forms guarded-forms)
+  (interactive (list (read-directory-name "Where to save dir locals? ")
+                     (read (read-string "Enter forms: "))
+                     (read (read-string "Enter guarded forms: "))))
+  (f-write-text (concat "((nil . ((eval . "
+                        (pp-to-string (let ((guard-var (gensym)))
+                                        `(progn
+                                           ,@forms
+                                           (if (not (boundp ',guard-var)) 
+                                               (progn
+                                                 (setq ,guard-var t)
+                                                 ,@guarded-forms)))))
+                        "))))")
+                'utf-8
+                (concat path ".dir-locals.el")))
 
-
-
-
-
+(load "monkey.el")

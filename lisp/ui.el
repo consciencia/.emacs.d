@@ -10,17 +10,18 @@
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
 (setq mouse-wheel-progressive-speed nil)
 (setq mouse-wheel-follow-mouse 't)
-
 (setq scroll-step 2)
 
 (global-linum-mode 1)
 (show-paren-mode 1)
 (setq show-paren-delay 0)
-(setq-default indent-tabs-mode nil)
-(setq-default c-basic-offset 4)
-(c-set-offset 'substatement-open 0)
+
 (setq-default tab-width 4)
-(setq-default tab-stop-list (number-sequence 4 120 4))
+(setq-default indent-tabs-mode nil)
+(setq-default c-basic-offset tab-width)
+(c-set-offset 'substatement-open 0)
+(c-set-offset 'case-label tab-width nil)
+(setq-default tab-stop-list (number-sequence tab-width 120 tab-width))
 (defvaralias 'c-basic-offset 'tab-width)
 (defvaralias 'cperl-indent-level 'tab-width)
 
