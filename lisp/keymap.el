@@ -27,6 +27,7 @@
 
 ;; GENERAL BINDS
 (global-set-key (kbd "<f2>") 'neotree-toggle)
+(global-set-key (kbd "<f3>") 'neotree-find)
 (global-set-key (kbd "<f12>") 'customize-group)
 (global-set-key (kbd "<f8>") 'toggle-frame-fullscreen)  
 (global-set-key (kbd "C-+") 'custom/scroll-up)
@@ -43,9 +44,6 @@
 (define-key general-key-map (kbd "C-r C-d") 'dired)
 (define-key general-key-map (kbd "C-r C-g") 'gdb)
 (define-key general-key-map (kbd "C-r C-m") 'man)
-(define-key global-map
-  (kbd "<escape> <escape> <escape>")
-  'custom/keyboard-escape-quit)
 (define-key minibuffer-local-completion-map
   (kbd "<tab>")
   (lambda ()
@@ -161,7 +159,7 @@
     (call-interactively 'occur)
     (switch-to-buffer-other-window "*Occur*")
     (shrink-window-if-larger-than-buffer)))
-(define-key search-key-map (kbd "C-g") 'grep)
+(define-key search-key-map (kbd "C-g") 'rgrep)
 (add-hook 'isearch-mode-hook 'custom/enhance-isearch)
 (define-key query-replace-map (kbd "<return>") 'act)
 

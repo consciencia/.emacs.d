@@ -33,11 +33,10 @@
 (global-whitespace-mode t)
 
 (add-hook 'buffer-list-update-hook
-          (lambda ()
-            (if (not (active-minibuffer-window))
-                (custom/truncate-lines))))
+          'custom/on-buffer-list-change)
 
-(add-hook 'prog-mode-hook 'whitespace-mode)
+(add-hook 'prog-mode-hook
+          'whitespace-mode)
 (set-face-attribute 'default nil :height 100)
 (setq scroll-conservatively 101)
 

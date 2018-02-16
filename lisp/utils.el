@@ -22,23 +22,6 @@
              map)
     acc))
 
-(defun custom/keyboard-escape-quit ()
-  "Modifies EMACs keyboard-escape-quit but withut window removal."
-  (interactive)
-  (cond ((eq last-command 'mode-exited) nil)
-	((region-active-p)
-	 (deactivate-mark))
-	((> (minibuffer-depth) 0)
-	 (abort-recursive-edit))
-	(current-prefix-arg
-	 nil)
-	((> (recursion-depth) 0)
-	 (exit-recursive-edit))
-	(buffer-quit-function
-	 (funcall buffer-quit-function))
-	((string-match "^ \\*" (buffer-name (current-buffer)))
-	 (bury-buffer))))
-
 (defun custom/universal-quit ()
   (interactive)
   (let* ((this-window (selected-window))
@@ -56,6 +39,8 @@
                   (save-buffers-kill-emacs))
               (progn
                 (delete-window this-window)
+                (setq custom/buffname-before-window-select nil)
+                (custom/neotree/reveal-file)
                 (if (only-default-ui-component-shown)
                     (if (> frame-count 1)
                         (delete-frame)  
@@ -66,19 +51,11 @@
 
 (defun custom/kill-buffer ()
   (interactive)
-  (if (string= (substring (buffer-name) 0 2) " *")
-      (progn
-        (message "You can not kill protected BUFFER"))
-    (progn
-      (if (string= (substring (buffer-name) 0 1) "*")
-          (progn
-            (call-interactively 'kill-buffer))
-        (progn
-          (call-interactively 'kill-buffer)
-          ;; (run-at-time "0.25 sec" nil
-          ;;              (lambda ()
-          ;;                (call-interactively 'windmove-right)))
-          )))))
+  (if (or (string= (substring (buffer-name) 0 2) " *")
+          (string= (buffer-name) "*scratch*")
+          (string= (buffer-name) "*Ilist*")) 
+      (message "You can not kill protected BUFFER")
+    (call-interactively 'kill-buffer)))
 
 (defun y-or-n-p-with-return (orig-func &rest args)
     (let ((query-replace-map (copy-keymap query-replace-map)))
@@ -374,4 +351,38 @@
                 'utf-8
                 (concat path ".dir-locals.el")))
 
+(defun custom/projectile-switch-proj-action (&rest args)
+  (custom/project/load-loader (projectile-project-root))
+  (let* ((projectile-completion-system #'custom/default-completing-read))
+    (apply 'projectile-find-file args)))
+
+(defun custom/neotree-startup ()
+  (interactive)
+  (neotree-show)
+  (call-interactively 'other-window))
+
+(defun custom/on-buffer-list-change ()
+  (if (not (active-minibuffer-window))
+      (custom/truncate-lines)))
+
+(setq custom/neotree/reveal-file--ignore-next nil)
+(defun custom/neotree/reveal-file ()
+  (if (not (or (string= (substring (buffer-name) 0 1) "*")
+               (string= (substring (buffer-name) 0 2) " *")
+               custom/neotree/reveal-file--ignore-next
+               (equal (buffer-name) custom/buffname-before-window-select)
+               (not (neo-global--window-exists-p))))
+      (progn
+        (let ((proj-root projectile-cached-project-root)
+              (old-buff (buffer-name)))
+          (if (and proj-root
+                   (not (equal (expand-file-name (substitute-in-file-name proj-root))
+                               neo-buffer--start-node)))
+              (neotree-dir proj-root))
+          (setq custom/neotree/reveal-file--ignore-next t)
+          (switch-to-buffer old-buff)))
+    (if custom/neotree/reveal-file--ignore-next
+        (setq custom/neotree/reveal-file--ignore-next nil))))
+
 (load "monkey.el")
+(load "custom-hooks.el")

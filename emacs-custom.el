@@ -20,6 +20,9 @@
  '(ecb-new-ecb-frame t)
  '(ecb-options-version "2.50")
  '(ecb-tip-of-the-day nil)
+ '(ede-project-directories
+   (quote
+    ("/home/box/Documents/Projects/Tests/EmacsCpp/CPPONE/include/cppone" "/home/box/Documents/Projects/Tests/EmacsCpp/CPPONE/src" "/home/box/Documents/Projects/Tests/EmacsCpp/CPPONE")))
  '(ggtags-auto-jump-to-match nil)
  '(ggtags-sort-by-nearness t)
  '(git-gutter:added-sign "++")
