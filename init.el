@@ -1,5 +1,8 @@
 ;; We must load our custom CEDET before emacs loads its own...
-;; Bugged SRecode
+;; Bugged SRecode ...
+;; Breaks completelly IMenu for elisp mode...
+;; and build process is bugged too
+;; HORRIBLE!!!
 ;; (load-file "~/.emacs.d/lisp/cedet/cedet/cedet-devel-load.el")
 
 (package-initialize)
@@ -42,3 +45,11 @@
       (cygwin-mount-activate)
       (load "setup-cygwin.el")
       (require 'setup-cygwin)))
+
+;;----------------------------------------------
+;; http://emacs-bootstrap.com/
+;; update mode to be follow best practises
+;;
+;; C-x keybind is free for customization
+;; C-p C-x is too free for customization
+;;----------------------------------------------

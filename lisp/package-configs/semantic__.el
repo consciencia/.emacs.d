@@ -6,12 +6,12 @@
 (require 'stickyfunc-enhance)
 (require 'semantic/idle)
 
-(global-semantic-idle-scheduler-mode t)
 (global-semanticdb-minor-mode t)
+(global-semantic-idle-scheduler-mode t)
 (global-semantic-mru-bookmark-mode t)
 (global-semantic-stickyfunc-mode -1)
 (global-semantic-highlight-edits-mode t)
-(global-semantic-show-unmatched-syntax-mode t)
+(global-semantic-show-unmatched-syntax-mode -1)
 (global-semantic-idle-summary-mode t)
 (global-semantic-highlight-func-mode t)
 (global-semantic-decoration-mode t)
@@ -40,7 +40,16 @@
 
 (semantic-mode 1)
 (global-ede-mode 1)
-;;(global-srecode-minor-mode 1)
+;; Bugged, must be disabled for now
+;; (global-srecode-minor-mode 1)
+
+
+
+(advice-add 'save-buffer :after 
+            (lambda (&rest args)
+              (if (or (equal major-mode 'c-mode)
+                      (equal major-mode 'c++-mode))
+                  (semantic-force-refresh))))
 
 
 
@@ -48,9 +57,8 @@
 
 (defun custom/ede/generate-generic-loader (proj-root)
   (let ((root-file (concat (file-name-as-directory proj-root)
-                           "PROJLOADER.el")))
-    `(progn
-       (ede-cpp-root-project ,(read-string "Project name: ")
+                           ".dir-locals.el")))
+    `((ede-cpp-root-project ,(read-string "Project name: ")
                              :file ,root-file
                              :include-path '("/include"
                                              "../include")
@@ -108,8 +116,60 @@ save the pointer marker if tag is found"
         (recenter))                                           
       (set-marker marker nil nil))))
 
-(defun test (&optional arg)
-  (message "Arg is %s" arg))
+(defun custom/semantic/complete-jump (sym)
+  (interactive (list
+                (thing-at-point 'symbol)))
+  (let ((tags (custom/semantic/deep-brute-tags-query sym)))
+    (if tags
+        (progn
+          (let* ((summaries (mapcar #'custom/semantic/tag-summary tags))
+                 (chosen-summary (ido-completing-read "Choose tag: "
+                                                      summaries))
+                 (chosen-tag (custom/semantic/get-tag-by-summary chosen-summary
+                                                                 tags)))
+            (if chosen-tag
+                (progn
+                  (if (boundp 'semantic-tags-location-ring)
+                      (ring-insert semantic-tags-location-ring (point-marker)))
+                  (push-mark)
+                  (find-file (nth 2 chosen-tag))
+                  (goto-char (nth 3 chosen-tag))
+                  (recenter)
+                  (pulse-momentary-highlight-region (nth 3 chosen-tag)
+                                                    (nth 4 chosen-tag)))
+              (message "Error, failed to pair tags and summaries -> REPORT BUG"))))
+      (message "No tags found for %s" sym))))
+
+(defun custom/semantic/tag-summary (tag)
+  (format "%s:%s -> %s"
+          (nth 0 tag)
+          (nth 1 tag)
+          (nth 2 tag)))
+
+(defun custom/semantic/get-tag-by-summary (summary tags)
+  (let ((res nil))
+    (dolist (tag tags)
+      (if (and (not res)
+               (string= summary
+                        (custom/semantic/tag-summary tag)))
+          (setq res tag)))
+    res))
+
+(defun custom/semantic/deep-brute-tags-query (sym &optional buff)
+  (let ((acc nil))
+    (dolist (tag (semanticdb-strip-find-results
+                  (semanticdb-brute-deep-find-tags-for-completion
+                   sym
+                   (if buff buff (current-buffer)))
+                  t))
+      (if (semantic-tag-buffer tag)
+          (setq acc (push (list (semantic-tag-class tag)
+                                (semantic-tag-name tag)
+                                (buffer-file-name (semantic-tag-buffer tag))
+                                (semantic-tag-start tag)
+                                (semantic-tag-end tag))
+                          acc))))
+    acc))
 
 (defun custom/semantic-index-dir-recur (root &optional selection-regex)
   (let ((root (file-name-as-directory root))
@@ -148,6 +208,10 @@ save the pointer marker if tag is found"
   (custom/semantic-index-dir-recur (projectile-project-root))
   (semanticdb-save-all-db))
 
+(defun custom/semantic/full-reparse ()
+  (interactive)
+  (bovinate t))
+
 ;; inject preprocessor values into semantic
 ;; (semantic-c-add-preprocessor-symbol "__KERNEL__" "")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -157,8 +221,6 @@ save the pointer marker if tag is found"
 ;; c-mode || c++-mode
 ;; (semantic-add-system-include include-root-dir symbol-for-mode)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; controll loading of symbol tables
-;; semanticdb-find-default-throttle
 
 ;; WARNING after emacs update (together with CEDET)
 ;; you must delete whole semnatic cache becuase it is in invalid

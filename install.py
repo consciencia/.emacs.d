@@ -7,12 +7,15 @@ import zipfile
 import re
 import urllib
 import tarfile
+import sys
 
 
 
 __author__ = "Consciencia"
 
 
+
+sys.dont_write_bytecode = True
 
 RESOURCE_DIR = os.path.sep.join([".","resources"])
 TARGET_EMACS_SRC_DIR = os.path.sep.join([".","emacs-src"])

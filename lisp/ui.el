@@ -4,7 +4,9 @@
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 (menu-bar-mode -1)
 (tool-bar-mode -1)
-(load-theme 'spacemacs-dark t)
+
+;; (load-theme 'spacemacs-dark t)
+(load-theme 'doom-vibrant t)
 
 (setq ring-bell-function 'ignore)
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))

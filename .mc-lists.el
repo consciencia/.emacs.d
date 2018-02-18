@@ -16,6 +16,7 @@
 
 (setq mc/cmds-to-run-once
       '(
+        cua-exchange-point-and-mark
         custom/mc/mark-next-like-this
         custom/mc/mark-prev-like-this
         custom/spawn-cursor-bottom

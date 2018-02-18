@@ -3,27 +3,21 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(company-backends
-   (quote
-    (company-bbdb company-nxml company-css company-eclim company-xcode company-cmake company-semantic company-capf company-files company-oddmuse company-dabbrev)))
- '(company-idle-delay 0.1)
- '(company-search-regexp-function (quote company-search-flex-regexp))
- '(company-selection-wrap-around t)
- '(company-show-numbers t)
- '(company-tooltip-idle-delay 0.1)
- '(company-tooltip-limit 15)
  '(custom-enabled-themes (quote (spacemacs-dark)))
+ '(custom-safe-themes
+   (quote
+    ("bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" default)))
  '(ecb-layout-name "leftright2")
  '(ecb-new-ecb-frame t)
  '(ecb-options-version "2.50")
  '(ecb-tip-of-the-day nil)
- '(git-gutter:added-sign "++")
- '(git-gutter:deleted-sign "--")
- '(git-gutter:modified-sign "  ")
- '(git-gutter:update-interval 1)
+ '(fci-rule-color "#62686E")
  '(hexl-bits 8)
  '(imenu-list-auto-resize t)
  '(imenu-list-size 0.2)
+ '(jdee-db-active-breakpoint-face-colors (cons "#1c1f24" "#51afef"))
+ '(jdee-db-requested-breakpoint-face-colors (cons "#1c1f24" "#7bc275"))
+ '(jdee-db-spec-breakpoint-face-colors (cons "#1c1f24" "#484854"))
  '(jit-lock-stealth-nice 0)
  '(mc/always-repeat-command t)
  '(mc/edit-lines-empty-lines (quote ignore))
@@ -31,16 +25,35 @@
  '(minimap-major-modes (quote (prog-mode)))
  '(minimap-minimum-width 20)
  '(minimap-window-location (quote right))
- '(neo-autorefresh nil)
- '(neo-create-file-auto-open nil)
- '(neo-show-hidden-files t)
  '(package-selected-packages
    (quote
-    (pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
+    (doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
  '(semantic-complete-inline-analyzer-displayor-class (quote semantic-displayor-tooltip))
  '(semantic-edits-verbose-flag t)
  '(speedbar-use-images nil)
- '(speedbar-use-imenu-flag nil))
+ '(speedbar-use-imenu-flag nil)
+ '(vc-annotate-background "#1c1f24")
+ '(vc-annotate-color-map
+   (list
+    (cons 20 "#7bc275")
+    (cons 40 "#a6c677")
+    (cons 60 "#d1ca79")
+    (cons 80 "#FCCE7B")
+    (cons 100 "#f4b96e")
+    (cons 120 "#eda461")
+    (cons 140 "#e69055")
+    (cons 160 "#db8981")
+    (cons 180 "#d082ae")
+    (cons 200 "#C57BDB")
+    (cons 220 "#d874b0")
+    (cons 240 "#eb6d86")
+    (cons 260 "#ff665c")
+    (cons 280 "#d15e59")
+    (cons 300 "#a35758")
+    (cons 320 "#754f56")
+    (cons 340 "#62686E")
+    (cons 360 "#62686E")))
+ '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

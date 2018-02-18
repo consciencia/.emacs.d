@@ -5,12 +5,10 @@
 (git-gutter:linum-setup)
 
 (custom-set-variables
- '(git-gutter:update-interval 1))
-
-(custom-set-variables
  '(git-gutter:modified-sign "  ")
  '(git-gutter:added-sign "++")
- '(git-gutter:deleted-sign "--"))
+ '(git-gutter:deleted-sign "--")
+ '(git-gutter:update-interval 1))
 
 (set-face-background 'git-gutter:modified "red")
 (set-face-foreground 'git-gutter:added "white")

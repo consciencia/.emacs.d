@@ -1,4 +1,6 @@
+(require 'imenu)
 (custom/install-package-when-needed 'imenu-list)
+(require 'imenu-list)
 
 (setq imenu-list-position 'right)
 (setq imenu-list-size 0.30)

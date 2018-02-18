@@ -39,8 +39,6 @@
                   (save-buffers-kill-emacs))
               (progn
                 (delete-window this-window)
-                (setq custom/buffname-before-window-select nil)
-                (custom/neotree/reveal-file)
                 (if (only-default-ui-component-shown)
                     (if (> frame-count 1)
                         (delete-frame)  
@@ -55,7 +53,9 @@
           (string= (buffer-name) "*scratch*")
           (string= (buffer-name) "*Ilist*")) 
       (message "You can not kill protected BUFFER")
-    (call-interactively 'kill-buffer)))
+    (progn
+      (call-interactively 'kill-buffer)
+      (custom/neotree/reveal-file))))
 
 (defun y-or-n-p-with-return (orig-func &rest args)
     (let ((query-replace-map (copy-keymap query-replace-map)))
@@ -277,23 +277,9 @@
   (let ((loader-content (cond
                          ((equal proj-type "C/C++ (generic)")
                           (custom/ede/generate-generic-loader proj-root))
-                         (t nil)))
-        (loader-path (concat (file-name-as-directory proj-root)
-                             "PROJLOADER.el")))
+                         (t nil))))
     (if loader-content
-        (f-write-text (pp-to-string loader-content)
-                      'utf-8
-                      loader-path))))
-
-(setq VISITED-LOADERS (custom/map/create))
-(defun custom/project/load-loader (root)
-  (if (not (custom/map/get root VISITED-LOADERS))
-      (let ((loader-path (concat (file-name-as-directory root)
-                                 "PROJLOADER.el")))
-        (if (file-exists-p loader-path)
-            (progn
-              (custom/eval (f-read-text loader-path 'utf-8))
-              (custom/map/set root t VISITED-LOADERS))))))
+        (custom/generate-dir-locals proj-root nil loader-content))))
 
 (defun custom/special-c-return-handler ()
   (interactive)
@@ -349,12 +335,7 @@
                                                  ,@guarded-forms)))))
                         "))))")
                 'utf-8
-                (concat path ".dir-locals.el")))
-
-(defun custom/projectile-switch-proj-action (&rest args)
-  (custom/project/load-loader (projectile-project-root))
-  (let* ((projectile-completion-system #'custom/default-completing-read))
-    (apply 'projectile-find-file args)))
+                (concat (file-name-as-directory path) ".dir-locals.el")))
 
 (defun custom/neotree-startup ()
   (interactive)
@@ -365,24 +346,25 @@
   (if (not (active-minibuffer-window))
       (custom/truncate-lines)))
 
-(setq custom/neotree/reveal-file--ignore-next nil)
-(defun custom/neotree/reveal-file ()
-  (if (not (or (string= (substring (buffer-name) 0 1) "*")
-               (string= (substring (buffer-name) 0 2) " *")
-               custom/neotree/reveal-file--ignore-next
-               (equal (buffer-name) custom/buffname-before-window-select)
-               (not (neo-global--window-exists-p))))
-      (progn
-        (let ((proj-root projectile-cached-project-root)
-              (old-buff (buffer-name)))
-          (if (and proj-root
-                   (not (equal (expand-file-name (substitute-in-file-name proj-root))
-                               neo-buffer--start-node)))
-              (neotree-dir proj-root))
-          (setq custom/neotree/reveal-file--ignore-next t)
-          (switch-to-buffer old-buff)))
-    (if custom/neotree/reveal-file--ignore-next
-        (setq custom/neotree/reveal-file--ignore-next nil))))
+(defun custom/elisp-slime/get-documentation (sym-name)
+  (interactive (list (elisp-slime-nav--read-symbol-at-point)))
+  (when sym-name
+    (let ((sym (intern sym-name)))
+      (message "Searching documentation for %s..." sym-name)
+      (cond
+       ((fboundp sym)
+        (describe-function sym)
+        (switch-to-buffer-other-window "*Help*"))
+       ((boundp sym)
+        (describe-variable sym)
+        (switch-to-buffer-other-window "*Help*"))
+       ((or (featurep sym) (locate-library sym-name))
+        (describe-package sym-name)
+        (switch-to-buffer-other-window "*Help*"))
+       ((facep sym)
+        (describe-face sym)
+        (switch-to-buffer-other-window "*Help*"))
+       (t
+        (error "Don't know how to find documentation for '%s'" sym))))))
 
 (load "monkey.el")
-(load "custom-hooks.el")
