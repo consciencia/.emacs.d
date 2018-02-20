@@ -187,7 +187,7 @@
             (local-set-key (kbd "C-l C-f C-l") 'find-library)
             (local-set-key (kbd "C-l C-i") 'ielm)
             (local-set-key (kbd "C-l C-l") 'custom/mark-whole-line)
-            (local-set-key (kbd "M--") 'find-function-on-key)
+            (local-set-key (kbd "c-.") 'find-function-on-key)
             (custom-paredit-init)))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
