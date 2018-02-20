@@ -80,6 +80,8 @@ save the pointer marker if tag is found"
       (progn                            
         (ring-insert semantic-tags-location-ring (point-marker))  
         (semantic-ia-fast-jump point)
+        (if (not semantic-idle-scheduler-mode)
+            (semantic-idle-scheduler-mode))
         (recenter))
     (error
      ;;if not found remove the tag saved in the ring  
@@ -94,6 +96,8 @@ save the pointer marker if tag is found"
       (progn                            
         (ring-insert semantic-tags-location-ring (point-marker))  
         (semantic-analyze-proto-impl-toggle)
+        (if (not semantic-idle-scheduler-mode)
+            (semantic-idle-scheduler-mode))
         (recenter))
     (error
      ;;if not found remove the tag saved in the ring  
@@ -118,7 +122,7 @@ save the pointer marker if tag is found"
 
 (defun custom/semantic/complete-jump (sym)
   (interactive (list
-                (thing-at-point 'symbol)))
+                (read-string "Look for symbol: " (thing-at-point 'symbol))))
   (let ((tags (custom/semantic/deep-brute-tags-query sym)))
     (if tags
         (progn
@@ -134,6 +138,8 @@ save the pointer marker if tag is found"
                   (push-mark)
                   (find-file (nth 2 chosen-tag))
                   (goto-char (nth 3 chosen-tag))
+                  (if (not semantic-idle-scheduler-mode)
+                      (semantic-idle-scheduler-mode))
                   (recenter)
                   (pulse-momentary-highlight-region (nth 3 chosen-tag)
                                                     (nth 4 chosen-tag)))
