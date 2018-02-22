@@ -5,6 +5,7 @@
 ;; HORRIBLE!!!
 ;; (load-file "~/.emacs.d/lisp/cedet/cedet/cedet-devel-load.el")
 
+;; (toggle-debug-on-error)
 (package-initialize)
 
 ;; set up elisp include dirs

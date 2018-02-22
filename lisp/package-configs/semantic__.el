@@ -164,7 +164,7 @@ save the pointer marker if tag is found"
 (defun custom/semantic/deep-brute-tags-query (sym &optional buff)
   (let ((acc nil))
     (dolist (tag (semanticdb-strip-find-results
-                  (semanticdb-brute-deep-find-tags-for-completion
+                  (semanticdb-brute-deep-find-tags-by-name
                    sym
                    (if buff buff (current-buffer)))
                   t))

@@ -187,7 +187,7 @@
             (local-set-key (kbd "C-l C-f C-l") 'find-library)
             (local-set-key (kbd "C-l C-i") 'ielm)
             (local-set-key (kbd "C-l C-l") 'custom/mark-whole-line)
-            (local-set-key (kbd "c-.") 'find-function-on-key)
+            (local-set-key (kbd "C-.") 'find-function-on-key)
             (custom-paredit-init)))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
@@ -225,7 +225,10 @@
                              (call-interactively 'semantic-ia-show-doc)
                              (switch-to-buffer-other-window "*TAG DOCUMENTATION*")))
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
-            (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)))
+            (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
+            (local-set-key (kbd "C-6") 'senator-next-tag)
+            (local-set-key (kbd "C-4") 'senator-previous-tag)
+            (local-set-key (kbd "C-8") 'senator-fold-tag-toggle)))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -243,7 +246,10 @@
                              (call-interactively 'semantic-ia-show-doc)
                              (switch-to-buffer-other-window "*TAG DOCUMENTATION*")))
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
-            (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)))
+            (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
+            (local-set-key (kbd "C-6") 'senator-next-tag)
+            (local-set-key (kbd "C-4") 'senator-previous-tag)
+            (local-set-key (kbd "C-8") 'senator-fold-tag-toggle)))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook

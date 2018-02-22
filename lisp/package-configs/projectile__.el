@@ -5,4 +5,9 @@
 
 (projectile-mode)
 
+(defun custom/projectile-switch-proj-action (&rest args)
+  (let* ((projectile-completion-system
+          #'custom/default-completing-read))
+    (apply 'projectile-find-file args)))
 
+(setq projectile-switch-project-action 'custom/projectile-switch-proj-action)
