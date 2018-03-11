@@ -2916,7 +2916,7 @@ This is independent of context -- it doesn't check what state the
 
 ;;;; Initialization
 
-;; TODO HANDLE KEY BIND TURN OFF SMARTER WAY
+;; TODO: HANDLE KEY BIND TURN OFF SMARTER WAY
 ;; (paredit-define-keys)
 (paredit-annotate-mode-with-examples)
 (paredit-annotate-functions-with-examples)

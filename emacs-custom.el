@@ -12,6 +12,10 @@
  '(ecb-options-version "2.50")
  '(ecb-tip-of-the-day nil)
  '(fci-rule-color "#62686E")
+ '(git-gutter:added-sign "++")
+ '(git-gutter:deleted-sign "--")
+ '(git-gutter:modified-sign "  ")
+ '(git-gutter:update-interval 1)
  '(hexl-bits 8)
  '(imenu-list-auto-resize t)
  '(imenu-list-size 0.2)
@@ -27,7 +31,7 @@
  '(minimap-window-location (quote right))
  '(package-selected-packages
    (quote
-    (doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
+    (browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
  '(semantic-complete-inline-analyzer-displayor-class (quote semantic-displayor-tooltip))
  '(semantic-edits-verbose-flag t)
  '(speedbar-use-images nil)

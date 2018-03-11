@@ -30,6 +30,10 @@
       kept-old-versions 10
       version-control t)
 
+(if (eq system-type 'windows-nt)
+    (setq custom/fs-separator "\\")
+  (setq custom/fs-separator "/"))
+
 ;; load whole mode
 (load "utils.el")
 (load "package-loader.el")

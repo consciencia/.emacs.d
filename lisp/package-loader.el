@@ -13,6 +13,8 @@
            (package-install package))))
 
 (load "f__.el")
+(load "s__.el")
+(load "browse-kill-ring__.el")
 (load "pcre2el__.el")
 (load "grizzl__.el")
 (load "visual-regex__.el")
@@ -39,4 +41,3 @@
 (load "multiple-cursors__.el")
 (load "magit__.el")
 (load "git-gutter__.el")
-(load "ecb__.el")
