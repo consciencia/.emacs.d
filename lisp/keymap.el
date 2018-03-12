@@ -213,11 +213,10 @@
             (local-set-key (kbd "C-.") 'find-function-on-key)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
-            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
-            (custom-paredit-init)))
+            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
-            (custom-paredit-init)))
+            ))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -225,10 +224,10 @@
 ;; COMMON LISP BINDS
 (add-hook 'lisp-mode-hook
           (lambda ()
-            (custom-paredit-init)))
+            ))
 (add-hook 'lisp-interaction-mode-hook
           (lambda ()
-            (custom-paredit-init)))
+            ))
 
 ;; C BINDS
 (add-hook 'c-mode-hook
@@ -249,7 +248,9 @@
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
-            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)))
+            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
+            (local-set-key (kbd "M-d") 'mark-defun)
+            (c-toggle-auto-newline 1)))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -270,7 +271,9 @@
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
-            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)))
+            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
+            (local-set-key (kbd "M-d") 'mark-defun)
+            (c-toggle-auto-newline 1)))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook
@@ -288,6 +291,7 @@
 (define-key neotree-mode-map (kbd "C-<down>") 'neotree-select-down-node)
 (define-key neotree-mode-map (kbd "C-<right>") 'neotree-select-next-sibling-node)
 (define-key neotree-mode-map (kbd "C-<left>") 'neotree-select-previous-sibling-node)
+(define-key neotree-mode-map (kbd "C-s") 'isearch-forward)
 
 ;; IDO BINDS
 (global-set-key (kbd "M-x")

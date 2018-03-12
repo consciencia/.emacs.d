@@ -3,8 +3,6 @@
 ;; format (better said, incompatible with new version) and semantic
 ;; simply silently fails instead of detecting incompatibility
 
-(custom/install-package-when-needed 'stickyfunc-enhance)
-
 (require 'cc-mode)
 (require 'semantic)
 (require 'ede)
@@ -15,6 +13,11 @@
 (require 'semantic/db-ebrowse)
 (require 'srecode)
 (require 'json)
+(if (not (featurep 'semantic/db-cscope))
+    (load "external-semantic-db-cscope.el")
+  (require 'semantic/db-cscope))
+
+
 
 (global-semanticdb-minor-mode t)
 (global-semantic-idle-scheduler-mode t)
@@ -79,7 +82,8 @@
 
 (semantic-mode 1)
 (global-ede-mode 1)
-(global-srecode-minor-mode 1)
+(if (not (equal (substring (emacs-version) 10 14) "25.3"))
+    (global-srecode-minor-mode 1))
 
 
 
@@ -137,13 +141,15 @@
                 (append source-roots
                         (custom/map/get "source-roots" raw-config))))
       (if (not (equal raw-config nil))
-          (error "BAD FORMAT OF %s" config-path)))
+          (error "BAD FORMAT OF %s" config-path)
+        (custom/ede/generate-config-file
+         (file-name-as-directory proj-root))))
     (ede-cpp-root-project name
                           :file root-file
-                          :include-path local-includes   
-                          :system-include-path global-includes
-                          :spp-table macro-table
-                          :spp-files macro-files)
+                          :include-path (delete-dups local-includes)   
+                          :system-include-path (delete-dups global-includes) 
+                          :spp-table (delete-dups macro-table) 
+                          :spp-files (delete-dups macro-files))
     (cond
      ((cedet-gnu-global-version-check t)
       (custom/make-link-farm (concat (file-name-as-directory proj-root)
@@ -167,6 +173,18 @@
                                "consuming for big project [only for first time])"))
           (dolist (r (delete-dups source-roots))
             (custom/semantic-index-specific r)))))))
+
+(defun custom/ede/generate-config-file (proj-root)
+  (f-write-text (concat "{\n"
+                        "\t\"local-includes\": [\"/include\",\"../include\"],\n"
+                        "\t\"global-includes\": [],\n"
+                        "\t\"source-root\": [],\n"
+                        "\t\"macro-table\": {},\n"
+                        "\t\"macro-files\": []\n"
+                        "}")
+                'utf-8
+                (concat proj-root
+                        "emacs-project-config.json")))
 
 (defun custom/ede/generate-generic-loader (proj-root)
   (let ((proj-name (read-string "Project name: "

@@ -6,6 +6,7 @@
         autopair-insert-opening
         beginning-of-visual-line
         cua--prefix-override-handler
+        cua-paste
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit
