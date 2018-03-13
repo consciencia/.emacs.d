@@ -41,3 +41,4 @@
 (load "multiple-cursors__.el")
 (load "magit__.el")
 (load "git-gutter__.el")
+(load "call-graph__.el")

@@ -99,7 +99,11 @@
 (global-set-key (kbd "C-l") 'custom/mark-whole-line)
 (global-set-key (kbd "C-z") 'undo)
 (global-set-key (kbd "C-S-z") 'redo)
-(global-set-key (kbd "C-u") 'undo-tree-visualize)
+(global-set-key (kbd "C-u")
+                (lambda ()
+                  (interactive)
+                  (call-interactively 'undo-tree-visualize)
+                  (call-interactively 'undo-tree-visualizer-toggle-diff)))
 (global-set-key (kbd "C-<right>") 'custom/forward-symbol)
 (global-set-key (kbd "C-<left>") 'custom/backward-symbol)
 (global-set-key (kbd "C-<down>") 'forward-paragraph)
@@ -213,7 +217,8 @@
             (local-set-key (kbd "C-.") 'find-function-on-key)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
-            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)))
+            (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
+            (local-set-key (kbd "M-d") 'mark-defun)))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
             ))
@@ -244,13 +249,18 @@
                              (interactive)
                              (call-interactively 'semantic-ia-show-doc)
                              (switch-to-buffer-other-window "*TAG DOCUMENTATION*")))
+            (local-set-key (kbd "M-<kp-divide>")
+                           (lambda ()
+                             (interactive)
+                             (call-graph
+                              (make-symbol (custom/c-api/get-enclosing-function-name)))))
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
             (local-set-key (kbd "M-d") 'mark-defun)
-            (c-toggle-auto-newline 1)))
+            (c-toggle-auto-newline -1)))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -267,13 +277,18 @@
                              (interactive)
                              (call-interactively 'semantic-ia-show-doc)
                              (switch-to-buffer-other-window "*TAG DOCUMENTATION*")))
+            (local-set-key (kbd "M-<kp-divide>")
+                           (lambda ()
+                             (interactive)
+                             (call-graph
+                              (make-symbol (custom/c-api/get-enclosing-function-name)))))
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "M-n") 'senator-next-tag)
             (local-set-key (kbd "M-N") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
             (local-set-key (kbd "M-d") 'mark-defun)
-            (c-toggle-auto-newline 1)))
+            (c-toggle-auto-newline -1)))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook

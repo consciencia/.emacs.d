@@ -3,6 +3,12 @@
 ;; format (better said, incompatible with new version) and semantic
 ;; simply silently fails instead of detecting incompatibility
 
+;; may be handy
+;;
+;; semanticdb-find-default-throttle
+;; (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
+;; (semantic-add-system-include include-root-dir symbol-for-mode)
+
 (require 'cc-mode)
 (require 'semantic)
 (require 'ede)
@@ -16,8 +22,6 @@
 (if (not (featurep 'semantic/db-cscope))
     (load "external-semantic-db-cscope.el")
   (require 'semantic/db-cscope))
-
-
 
 (global-semanticdb-minor-mode t)
 (global-semantic-idle-scheduler-mode t)
@@ -73,12 +77,6 @@
                   (if (or (equal major-mode 'c-mode)
                           (equal major-mode 'c++-mode))
                       (call-interactively 'semantic-force-refresh))))))
-
-;; may be handy
-;;
-;; semanticdb-find-default-throttle
-;; (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
-;; (semantic-add-system-include include-root-dir symbol-for-mode)
 
 (semantic-mode 1)
 (global-ede-mode 1)

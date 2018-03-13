@@ -15,4 +15,5 @@ file-backups/
 .DB.data
 network-security.data
 srecode-map.el
+thumbs
 *.pyc
