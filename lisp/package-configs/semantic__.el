@@ -373,3 +373,19 @@ provided"
 (defun custom/semantic/full-reparse ()
   (interactive)
   (bovinate t))
+
+(defun custom/semantic/debug-ia-fast-jump (point)
+  (interactive "d")
+  (let* ((ctxt (semantic-analyze-current-context point))
+         (pf (and ctxt (reverse (oref ctxt prefix))))
+         (first (car pf)))
+    (if (semantic-tag-p first)
+        (progn
+          (setq PRIMARY-DEBUG first)
+          (setq SECONDARY-DEBUG nil)
+          (when (semantic-tag-prototype-p first)
+            (let* ((refs (semantic-analyze-tag-references first))
+                   (impl (semantic-analyze-refs-impl refs t)))
+              (when impl
+                (setq SECONDARY-DEBUG (car impl))))))
+      (error "No context!"))))
