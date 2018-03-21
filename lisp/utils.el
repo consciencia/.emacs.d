@@ -394,8 +394,20 @@
         (make-symbolic-link target (concat base name) t)))))
 
 (defun custom/nop (&rest args)
-  (interactive)
-  ;; no operation
-  )
+  (interactive))
+
+(defun custom/in-comment ()
+  (or (company-in-string-or-comment)
+      (custom/in-comment-font-lock)))
+
+(defun custom/in-comment-font-lock ()
+  (let ((fontfaces (get-text-property (point) 'face)))
+    (when (not (listp fontfaces))
+      (setf fontfaces (list fontfaces)))
+    (delq nil
+          (mapcar #'(lambda (f)
+                      (or (eq f 'font-lock-comment-face)
+                          (eq f 'font-lock-comment-delimiter-face)))
+                  fontfaces))))
 
 (load "monkey.el")

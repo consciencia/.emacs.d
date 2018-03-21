@@ -34,12 +34,11 @@
 (global-semantic-decoration-mode t)
 (global-semantic-idle-breadcrumbs-mode t)
 
-(setq-default semantic-idle-breadcrumbs-format-tag-function
-              'semantic-format-tag-summarize)
-(setq-default semantic-idle-work-parse-neighboring-files-flag t)
-(setq-default semantic-idle-work-update-headers-flag t)
-(setq-default senator-step-at-tag-classes nil)
-(setq-default senator-step-at-start-end-tag-classes (list 'function))
+(setq-default semantic-idle-breadcrumbs-format-tag-function 'semantic-format-tag-summarize
+              semantic-idle-work-parse-neighboring-files-flag t
+              semantic-idle-work-update-headers-flag t
+              senator-step-at-tag-classes nil
+              senator-step-at-start-end-tag-classes (list 'function))
 
 (setq cedet-global-command "global")
 (if (cedet-gnu-global-version-check t)
@@ -66,7 +65,11 @@
                     (if (or (equal major-mode 'c-mode)
                             (equal major-mode 'c++-mode)
                             (equal major-mode 'emacs-lisp-mode))
-                        (call-interactively 'semantic-force-refresh)))))
+                        (progn
+                          (semantic-force-refresh)
+                          (if (cedet-gnu-global-root)
+                              (cedet-gnu-global-create/update-database
+                               (cedet-gnu-global-root))))))))
   (progn
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
@@ -76,13 +79,25 @@
                 (lambda (&rest args)
                   (if (or (equal major-mode 'c-mode)
                           (equal major-mode 'c++-mode))
-                      (call-interactively 'semantic-force-refresh))))))
+                      (progn
+                        (semantic-force-refresh)
+                        (if (cedet-gnu-global-root)
+                            (cedet-gnu-global-create/update-database
+                             (cedet-gnu-global-root)))))))))
 
 (semantic-mode 1)
 (global-ede-mode 1)
 (if (not (equal (substring (emacs-version) 10 14) "25.3"))
     (global-srecode-minor-mode 1))
 
+(run-with-idle-timer 0.2 t
+                     (lambda ()
+                       (if (or (equal major-mode 'c-mode)
+                               (equal major-mode 'c++-mode)
+                               (equal major-mode 'emacs-lisp-mode))
+                           (if (custom/in-comment)
+                               (if semantic-mode (semantic-mode -1))
+                             (if (not semantic-mode) (semantic-mode 1))))))
 
 
 (defvar semantic-tags-location-ring (make-ring 200))

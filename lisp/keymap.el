@@ -215,10 +215,18 @@
             (local-set-key (kbd "C-l C-i") 'ielm)
             (local-set-key (kbd "C-l C-l") 'custom/mark-whole-line)
             (local-set-key (kbd "C-.") 'find-function-on-key)
-            (local-set-key (kbd "M-n") 'senator-next-tag)
-            (local-set-key (kbd "M-N") 'senator-previous-tag)
+            (local-set-key (kbd "M-<next>") 'senator-next-tag)
+            (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
-            (local-set-key (kbd "M-d") 'mark-defun)))
+            (local-set-key (kbd "M-d")
+                           (lambda ()
+                             (interactive)
+                             (mark-defun)
+                             (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (set (make-local-variable 'company-backends)
+                 '((company-capf
+                    company-files
+                    company-dabbrev-code)))))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
             ))
@@ -252,10 +260,18 @@
             (local-set-key (kbd "M-<kp-divide>") 'call-graph)
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
-            (local-set-key (kbd "M-n") 'senator-next-tag)
-            (local-set-key (kbd "M-N") 'senator-previous-tag)
+            (local-set-key (kbd "M-<next>") 'senator-next-tag)
+            (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
-            (local-set-key (kbd "M-d") 'mark-defun)
+            (local-set-key (kbd "M-d")
+                           (lambda ()
+                             (interactive)
+                             (mark-defun)
+                             (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (set (make-local-variable 'company-backends)
+                 '((company-semantic
+                    company-files
+                    company-c-headers)))
             (c-toggle-auto-newline -1)))
 
 ;; C++ BINDS
@@ -276,10 +292,18 @@
             (local-set-key (kbd "M-<kp-divide>") 'call-graph)
             (local-set-key (kbd "C-,") 'custom/semantic-switch-proto)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
-            (local-set-key (kbd "M-n") 'senator-next-tag)
-            (local-set-key (kbd "M-N") 'senator-previous-tag)
+            (local-set-key (kbd "M-<next>") 'senator-next-tag)
+            (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
-            (local-set-key (kbd "M-d") 'mark-defun)
+            (local-set-key (kbd "M-d")
+                           (lambda ()
+                             (interactive)
+                             (mark-defun)
+                             (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (set (make-local-variable 'company-backends)
+                 '((company-semantic
+                    company-files
+                    company-c-headers)))
             (c-toggle-auto-newline -1)))
 
 ;; HEXL BINDS

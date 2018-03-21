@@ -1,4 +1,7 @@
 (custom/install-package-when-needed 'company)
+(custom/install-package-when-needed 'company-c-headers)
+(require 'company)
+(require 'company-c-headers)
 
 (add-hook 'after-init-hook 'global-company-mode)
 
@@ -9,16 +12,32 @@
       company-show-numbers t
       company-tooltip-idle-delay 0.1
       company-tooltip-limit 15
-      company-backends '(company-bbdb
+      company-dabbrev-downcase nil
+      company-backends '((company-files
+                          company-capf)
+                         (company-semantic
+                          company-keywords
+                          company-files)
+                         company-cmake
                          company-nxml
                          company-css
-                         company-eclim
-                         company-xcode
-                         company-cmake
-                         company-semantic
-                         company-capf
+                         (company-etags
+                          company-dabbrev-code
+                          company-keywords)
                          company-files
+                         company-xcode
+                         company-bbdb
                          company-oddmuse
-                         company-dabbrev))
+                         company-dabbrev)
+      company-c-headers-path-system (lambda ()
+                                      (when ede-object
+                                        (ede-system-include-path ede-object))))
 
-
+(run-with-idle-timer 0.2 t
+                     (lambda ()
+                       (if (or (equal major-mode 'c-mode)
+                               (equal major-mode 'c++-mode)
+                               (equal major-mode 'emacs-lisp-mode))
+                           (if (custom/in-comment)
+                               (if company-mode (company-mode -1))
+                             (if (not company-mode) (company-mode 1))))))
