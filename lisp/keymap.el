@@ -225,8 +225,8 @@
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
             (set (make-local-variable 'company-backends)
                  '((company-capf
-                    company-files
-                    company-dabbrev-code)))))
+                    company-dabbrev-code
+                    company-files)))))
 (add-hook 'eval-expression-minibuffer-setup-hook
           (lambda ()
             ))
@@ -270,7 +270,6 @@
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
             (set (make-local-variable 'company-backends)
                  '((company-semantic
-                    company-files
                     company-c-headers)))
             (c-toggle-auto-newline -1)))
 
@@ -302,7 +301,6 @@
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
             (set (make-local-variable 'company-backends)
                  '((company-semantic
-                    company-files
                     company-c-headers)))
             (c-toggle-auto-newline -1)))
 

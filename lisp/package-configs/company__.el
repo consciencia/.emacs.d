@@ -13,17 +13,16 @@
       company-tooltip-idle-delay 0.1
       company-tooltip-limit 15
       company-dabbrev-downcase nil
-      company-backends '((company-files
-                          company-capf)
-                         (company-semantic
-                          company-keywords
+      company-backends '((company-capf
                           company-files)
-                         company-cmake
-                         company-nxml
-                         company-css
+                         (company-semantic
+                          company-c-headers)
                          (company-etags
                           company-dabbrev-code
                           company-keywords)
+                         company-css
+                         company-nxml
+                         company-cmake                         
                          company-files
                          company-xcode
                          company-bbdb
@@ -33,7 +32,7 @@
                                       (when ede-object
                                         (ede-system-include-path ede-object))))
 
-(run-with-idle-timer 0.2 t
+(run-with-idle-timer 0.1 t
                      (lambda ()
                        (if (or (equal major-mode 'c-mode)
                                (equal major-mode 'c++-mode)
