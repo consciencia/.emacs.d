@@ -6,12 +6,12 @@
 (add-hook 'after-init-hook 'global-company-mode)
 
 (setq company-minimum-prefix-length 1
-      company-idle-delay 0.1
+      company-idle-delay 2
       company-search-regexp-function 'company-search-flex-regexp
       company-selection-wrap-around t
       company-show-numbers t
-      company-tooltip-idle-delay 0.1
-      company-tooltip-limit 15
+      company-tooltip-idle-delay 2
+      company-tooltip-limit 10
       company-dabbrev-downcase nil
       company-backends '((company-capf
                           company-files)

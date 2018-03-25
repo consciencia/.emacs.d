@@ -22,8 +22,6 @@
 (global-set-key (kbd "C-p") 'projectile-key-map)
 (define-prefix-command 'search-key-map)
 (global-set-key (kbd "C-f") 'search-key-map)
-(define-prefix-command 'ace-jump-key-map)
-(global-set-key (kbd "C-g") 'ace-jump-key-map)
 
 ;; GENERAL BINDS
 (global-set-key (kbd "<f2>") 'neotree-toggle)
@@ -113,7 +111,7 @@
                   (interactive)
                   (call-interactively 'mark-defun)
                   (setq transient-mark-mode (cons 'only transient-mark-mode))))
-(define-key ace-jump-key-map (kbd "C-g") 'goto-line)
+(global-set-key (kbd "C-g") 'goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
 (global-set-key (kbd "M-c") 'comment-or-uncomment-region)
 (define-key bookmarks-key-map (kbd "C-j")
@@ -124,22 +122,15 @@
 (define-key bookmarks-key-map (kbd "C-s") 'bookmark-set)
 (define-key bookmarks-key-map (kbd "C-l") 'list-bookmarks)
 (global-set-key  (kbd "C-b") 'ido-switch-buffer)
-(define-key ace-jump-key-map  (kbd "C-l") 'ace-jump-line-mode)
-(define-key ace-jump-key-map (kbd "C-w") 'ace-jump-word-mode)
-(define-key ace-jump-key-map (kbd "C-c") 'ace-jump-char-mode)
-(define-key ace-jump-key-map (kbd "C-z") 'ace-jump-mode-pop-mark)
-(global-set-key (kbd "C-SPC") 'ace-jump-word-mode)
-(global-set-key (kbd "C-M-SPC") 'ace-jump-mode-pop-mark)
+(global-set-key (kbd "M-j") 'ace-jump-word-mode)
+(global-set-key (kbd "M-J") 'ace-jump-mode-pop-mark)
 (global-set-key (kbd "C-r") 'ido-goto-symbol)
 (global-set-key (kbd "M-m") 'custom/mc/mark-next-like-this)
 (global-set-key (kbd "M-M") 'custom/mc/mark-prev-like-this)
 (define-key mc/keymap (kbd "<escape>") 'mc/keyboard-quit)
 
 ;; PROJECT MANAGEMENT BINDS
-(define-key projectile-key-map (kbd "C-d C-s")
-  (lambda ()
-    (interactive)
-    (projectile-switch-project)))
+(define-key projectile-key-map (kbd "C-d C-s") 'projectile-switch-project)
 (define-key projectile-key-map (kbd "C-d C-a")
   (lambda ()
     (interactive)
@@ -150,7 +141,9 @@
       (if (and proj-root proj-type) 
           (custom/project/generate-loader proj-root
                                           proj-type)))))
-
+(define-key projectile-key-map (kbd "C-d C-k") 'projectile-kill-buffers)
+(define-key projectile-key-map (kbd "C-d C-r") 'projectile-remove-known-project)
+(define-key projectile-key-map (kbd "C-d C-o") 'projectile-find-other-file)
 (define-key projectile-key-map (kbd "C-o")
   (lambda ()
     (interactive)
@@ -349,5 +342,4 @@
 
 (require 'company)
 (define-key company-active-map (kbd "<tab>") 'company-search-candidates)
-
-
+(global-set-key (kbd "C-SPC") 'company-complete-common)

@@ -67,10 +67,10 @@
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
                           (semantic-force-refresh)
-                          (if (and (ignore-errors (projectile-project-root))
-                                   (cedet-cscope-support-for-directory (projectile-project-root))) 
-                              (cedet-cscope-create/update-database
-                               (projectile-project-root)))
+                          (ignore-errors (if (and (ignore-errors (projectile-project-root))
+                                                  (cedet-cscope-support-for-directory (projectile-project-root))) 
+                                             (cedet-cscope-create/update-database
+                                              (projectile-project-root))))
                           (if (cedet-gnu-global-root)
                               (cedet-gnu-global-create/update-database
                                (cedet-gnu-global-root))))))))
@@ -85,10 +85,10 @@
                           (equal major-mode 'c++-mode))
                       (progn
                         (semantic-force-refresh)
-                        (if (and (ignore-errors (projectile-project-root))
-                                   (cedet-cscope-support-for-directory (projectile-project-root))) 
-                              (cedet-cscope-create/update-database
-                               (projectile-project-root)))
+                        (ignore-errors (if (and (ignore-errors (projectile-project-root))
+                                                (cedet-cscope-support-for-directory (projectile-project-root))) 
+                                           (cedet-cscope-create/update-database
+                                            (projectile-project-root)))) 
                         (if (cedet-gnu-global-root)
                             (cedet-gnu-global-create/update-database
                              (cedet-gnu-global-root)))))))))
@@ -98,23 +98,24 @@
 (if (not (equal (substring (emacs-version) 10 14) "25.3"))
     (global-srecode-minor-mode 1))
 
-(advice-add 'semantic-analyze-possible-completions :before 
-            (lambda (&rest args)
-              (setq gc-cons-threshold most-positive-fixnum)))
+;; MEMORY LEAK in "25.1.1"
+;; (advice-add 'semantic-analyze-possible-completions :before 
+;;             (lambda (&rest args)
+;;               (setq gc-cons-threshold most-positive-fixnum)))
+;; (advice-add 'semantic-analyze-possible-completions :after 
+;;             (lambda (&rest args)
+;;               (setq gc-cons-threshold 800000)
+;;               (garbage-collect)))
 
-(advice-add 'semantic-analyze-possible-completions :after 
-            (lambda (&rest args)
-              (setq gc-cons-threshold 800000)
-              (garbage-collect)))
-
-(run-with-idle-timer 0.1 t
-                     (lambda ()
-                       (if (or (equal major-mode 'c-mode)
-                               (equal major-mode 'c++-mode)
-                               (equal major-mode 'emacs-lisp-mode))
-                           (if (custom/in-comment)
-                               (if semantic-mode (semantic-mode -1))
-                             (if (not semantic-mode) (semantic-mode 1))))))
+;; NOT as good as expected
+;; (run-with-idle-timer 0.1 t
+;;                      (lambda ()
+;;                        (if (or (equal major-mode 'c-mode)
+;;                                (equal major-mode 'c++-mode)
+;;                                (equal major-mode 'emacs-lisp-mode))
+;;                            (if (custom/in-comment)
+;;                                (if semantic-mode (semantic-mode -1))
+;;                              (if (not semantic-mode) (semantic-mode 1))))))
 
 
 
