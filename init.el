@@ -59,12 +59,4 @@
 ;; C-p C-x is too free for customization
 ;;----------------------------------------------
 
-;; make neotree update via idle timer, not monkey patching...
-;;
-;; in switch-to-buffer, modify get-buffer-window to search only in
-;; current frame
-;; use system advices without modifying any function itself
-;; hook pre and after switch-to-buffer which will control
-;; filtering function above get-buffer-window
-;;
 ;; try IVY for projectile file open

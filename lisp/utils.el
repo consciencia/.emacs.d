@@ -56,8 +56,7 @@
           (string= (buffer-name) "*Ilist*")) 
       (message "You can not kill protected BUFFER")
     (progn
-      (call-interactively 'kill-buffer)
-      (custom/neotree/reveal-file))))
+      (call-interactively 'kill-buffer))))
 
 (defun y-or-n-p-with-return (orig-func &rest args)
     (let ((query-replace-map (copy-keymap query-replace-map)))
@@ -395,6 +394,9 @@
 
 (defun custom/nop (&rest args)
   (interactive))
+
+(defun custom/get-project-root ()
+  (ignore-errors (projectile-project-root)))
 
 (defun custom/in-comment ()
   (or (company-in-string-or-comment)

@@ -98,25 +98,6 @@
 (if (not (equal (substring (emacs-version) 10 14) "25.3"))
     (global-srecode-minor-mode 1))
 
-;; MEMORY LEAK in "25.1.1"
-;; (advice-add 'semantic-analyze-possible-completions :before 
-;;             (lambda (&rest args)
-;;               (setq gc-cons-threshold most-positive-fixnum)))
-;; (advice-add 'semantic-analyze-possible-completions :after 
-;;             (lambda (&rest args)
-;;               (setq gc-cons-threshold 800000)
-;;               (garbage-collect)))
-
-;; NOT as good as expected
-;; (run-with-idle-timer 0.1 t
-;;                      (lambda ()
-;;                        (if (or (equal major-mode 'c-mode)
-;;                                (equal major-mode 'c++-mode)
-;;                                (equal major-mode 'emacs-lisp-mode))
-;;                            (if (custom/in-comment)
-;;                                (if semantic-mode (semantic-mode -1))
-;;                              (if (not semantic-mode) (semantic-mode 1))))))
-
 
 
 (defvar semantic-tags-location-ring (make-ring 200))

@@ -216,24 +216,14 @@
                              (interactive)
                              (mark-defun)
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-capf
                     company-dabbrev-code
                     company-files)))))
-(add-hook 'eval-expression-minibuffer-setup-hook
-          (lambda ()
-            ))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
-
-;; COMMON LISP BINDS
-(add-hook 'lisp-mode-hook
-          (lambda ()
-            ))
-(add-hook 'lisp-interaction-mode-hook
-          (lambda ()
-            ))
 
 ;; C BINDS
 (add-hook 'c-mode-hook
@@ -261,6 +251,7 @@
                              (interactive)
                              (mark-defun)
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-semantic
                     company-c-headers)))
@@ -292,6 +283,7 @@
                              (interactive)
                              (mark-defun)
                              (setq transient-mark-mode (cons 'only transient-mark-mode))))
+            (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-semantic
                     company-c-headers)))
