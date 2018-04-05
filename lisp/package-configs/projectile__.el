@@ -6,8 +6,8 @@
 (projectile-mode)
 
 (defun custom/projectile-switch-proj-action (&rest args)
-  (let* ((projectile-completion-system
-          #'custom/default-completing-read))
+  ;; #'custom/default-completing-read
+  (let* ((projectile-completion-system 'ivy))
     (apply 'projectile-find-file args)))
 
 (setq projectile-switch-project-action 'custom/projectile-switch-proj-action)

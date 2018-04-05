@@ -59,4 +59,7 @@
 ;; C-p C-x is too free for customization
 ;;----------------------------------------------
 
-;; try IVY for projectile file open
+;; rework install script (no CEDET)
+;; add flycheck
+;; add support for python
+;; add support for javascript HTML CSS LESS

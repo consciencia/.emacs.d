@@ -42,3 +42,5 @@
 (load "magit__.el")
 (load "git-gutter__.el")
 (load "call-graph__.el")
+(load "ws-butler__.el")
+(load "ivy__.el")

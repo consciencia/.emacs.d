@@ -111,7 +111,8 @@
                   (interactive)
                   (call-interactively 'mark-defun)
                   (setq transient-mark-mode (cons 'only transient-mark-mode))))
-(global-set-key (kbd "C-g") 'goto-line)
+
+(global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
 (global-set-key (kbd "M-c") 'comment-or-uncomment-region)
 (define-key bookmarks-key-map (kbd "C-j")
@@ -147,12 +148,14 @@
 (define-key projectile-key-map (kbd "C-o")
   (lambda ()
     (interactive)
-    (let* ((projectile-completion-system #'custom/default-completing-read))
+    ;; #'custom/default-completing-read
+    (let* ((projectile-completion-system 'ivy))
       (call-interactively 'projectile-find-file))))
 (global-set-key (kbd "C-t")
                 (lambda ()
                   (interactive)
-                  (let* ((projectile-completion-system #'custom/default-completing-read))
+                  ;; #'custom/default-completing-read
+                  (let* ((projectile-completion-system 'ivy))
                     (call-interactively 'projectile-find-file))))
 (define-key projectile-key-map (kbd "C-f C-f") 'projectile-grep)
 (define-key projectile-key-map (kbd "C-f C-r") 'projectile-replace)

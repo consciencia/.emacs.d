@@ -412,4 +412,15 @@
                           (eq f 'font-lock-comment-delimiter-face)))
                   fontfaces))))
 
+(defun custom/goto-line ()
+  (interactive)
+  (if (or (equal major-mode 'c-mode)
+          (equal major-mode 'c++-mode))
+      (ring-insert semantic-tags-location-ring (point-marker)))
+  (if (equal major-mode 'emacs-lisp-mode)
+      (xref-push-marker-stack))
+  (call-interactively 'goto-line)
+  (recenter)
+  (pulse-momentary-highlight-one-line (point)))
+
 (load "monkey.el")
