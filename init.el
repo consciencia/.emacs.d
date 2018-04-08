@@ -1,11 +1,9 @@
-;; We must load our custom CEDET before emacs loads its own...
-;; Bugged SRecode ...
-;; Breaks completelly IMenu for elisp mode...
-;; and build process is bugged too
-;; HORRIBLE!!!
-;; (load-file "~/.emacs.d/lisp/cedet/cedet/cedet-devel-load.el")
+(advice-add #'file-exists-p
+            :around (lambda (oldfn filename)
+                      (if filename
+                          (apply oldfn (list filename))
+                        nil)))
 
-;; (toggle-debug-on-error)
 (package-initialize)
 
 ;; set up elisp include dirs
@@ -59,7 +57,5 @@
 ;; C-p C-x is too free for customization
 ;;----------------------------------------------
 
-;; rework install script (no CEDET)
-;; add flycheck
 ;; add support for python
 ;; add support for javascript HTML CSS LESS

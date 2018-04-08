@@ -423,4 +423,9 @@
   (recenter)
   (pulse-momentary-highlight-one-line (point)))
 
+(defun custom/lint-this-buffer ()
+  (interactive)
+  (flycheck-list-errors)
+  (switch-to-buffer-other-window "*Flycheck errors*"))
+
 (load "monkey.el")

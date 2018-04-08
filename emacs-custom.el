@@ -7,35 +7,14 @@
  '(custom-safe-themes
    (quote
     ("bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" default)))
- '(ecb-layout-name "leftright2")
- '(ecb-new-ecb-frame t)
- '(ecb-options-version "2.50")
- '(ecb-tip-of-the-day nil)
  '(fci-rule-color "#62686E")
  '(git-gutter:added-sign "++")
  '(git-gutter:deleted-sign "--")
  '(git-gutter:modified-sign "  ")
  '(git-gutter:update-interval 1)
- '(hexl-bits 8)
- '(imenu-list-auto-resize t)
- '(imenu-list-size 0.2)
- '(jdee-db-active-breakpoint-face-colors (cons "#1c1f24" "#51afef"))
- '(jdee-db-requested-breakpoint-face-colors (cons "#1c1f24" "#7bc275"))
- '(jdee-db-spec-breakpoint-face-colors (cons "#1c1f24" "#484854"))
- '(jit-lock-stealth-nice 0)
- '(mc/always-repeat-command t)
- '(mc/edit-lines-empty-lines (quote ignore))
- '(minimap-automatically-delete-window nil)
- '(minimap-major-modes (quote (prog-mode)))
- '(minimap-minimum-width 20)
- '(minimap-window-location (quote right))
  '(package-selected-packages
    (quote
-    (ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
- '(semantic-complete-inline-analyzer-displayor-class (quote semantic-displayor-tooltip))
- '(semantic-edits-verbose-flag t)
- '(speedbar-use-images nil)
- '(speedbar-use-imenu-flag nil)
+    (elpy flycheck ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
  '(vc-annotate-background "#1c1f24")
  '(vc-annotate-color-map
    (list
@@ -64,5 +43,4 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(ace-jump-face-foreground ((t (:foreground "white" :underline (:color "lightblue" :style wave)))))
- '(ecb-default-highlight-face ((t (:background "white" :foreground "black"))))
  '(whitespace-line ((t (:foreground "red")))))

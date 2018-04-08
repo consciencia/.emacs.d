@@ -4,6 +4,11 @@
 (global-git-gutter-mode t)
 (git-gutter:linum-setup)
 
+(setq git-gutter:added-sign "++"
+      git-gutter:deleted-sign "--"
+      git-gutter:modified-sign "  "
+      git-gutter:update-interval 0.5)
+
 (custom-set-variables
  '(git-gutter:modified-sign "  ")
  '(git-gutter:added-sign "++")

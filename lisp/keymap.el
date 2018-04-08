@@ -27,7 +27,7 @@
 (global-set-key (kbd "<f2>") 'neotree-toggle)
 (global-set-key (kbd "<f3>") 'neotree-find)
 (global-set-key (kbd "<f12>") 'customize-group)
-(global-set-key (kbd "<f11>") 'toggle-frame-fullscreen)  
+(global-set-key (kbd "<f11>") 'toggle-frame-fullscreen)
 (global-set-key (kbd "<f10>") 'customize-face)
 (global-set-key (kbd "<next>") 'custom/scroll-up)
 (global-set-key (kbd "<prior>") 'custom/scroll-down)
@@ -124,6 +124,7 @@
 (define-key bookmarks-key-map (kbd "C-l") 'list-bookmarks)
 (global-set-key  (kbd "C-b") 'ido-switch-buffer)
 (global-set-key (kbd "M-j") 'ace-jump-word-mode)
+(define-key c++-mode-map (kbd "M-j") 'ace-jump-word-mode)
 (global-set-key (kbd "M-J") 'ace-jump-mode-pop-mark)
 (global-set-key (kbd "C-r") 'ido-goto-symbol)
 (global-set-key (kbd "M-m") 'custom/mc/mark-next-like-this)
@@ -338,3 +339,6 @@
 (require 'company)
 (define-key company-active-map (kbd "<tab>") 'company-search-candidates)
 (global-set-key (kbd "C-SPC") 'company-complete-common)
+
+;; Flycheck BINDS
+(global-set-key (kbd "M-l") 'custom/lint-this-buffer)

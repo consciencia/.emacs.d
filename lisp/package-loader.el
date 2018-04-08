@@ -2,6 +2,8 @@
 (require 'package)
 (require 'whitespace)
 
+(setq package-check-signature nil)
+
 (package-initialize)
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/"))
@@ -44,3 +46,5 @@
 (load "call-graph__.el")
 (load "ws-butler__.el")
 (load "ivy__.el")
+(load "flycheck__.el")
+;;(load "elpy__.el")

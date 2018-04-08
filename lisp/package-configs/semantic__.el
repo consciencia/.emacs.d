@@ -14,7 +14,6 @@
 (require 'ede)
 (require 'cedet-global)
 (require 'cedet-cscope)
-(require 'stickyfunc-enhance)
 (require 'semantic/idle)
 (require 'semantic/db-ebrowse)
 (require 'srecode)
@@ -37,6 +36,10 @@
 (setq-default semantic-idle-breadcrumbs-format-tag-function 'semantic-format-tag-summarize
               semantic-idle-work-parse-neighboring-files-flag t
               semantic-idle-work-update-headers-flag t
+              semantic-complete-inline-analyzer-displayor-class 'semantic-displayor-tooltip
+              semantic-edits-verbose-flag t
+              speedbar-use-images nil
+              speedbar-use-imenu-flag t
               senator-step-at-tag-classes nil
               senator-step-at-start-end-tag-classes (list 'function))
 

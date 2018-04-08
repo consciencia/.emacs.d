@@ -1,6 +1,9 @@
 (custom/install-package-when-needed 'multiple-cursors)
 (require 'multiple-cursors)
 
+(setq mc/always-repeat-command t
+      mc/edit-lines-empty-lines 'ignore)
+
 (defun custom/mc/mark-next-like-this (arg)
   (interactive "p")
   (if (< arg 0)

@@ -5,8 +5,7 @@
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 
-;; (load-theme 'spacemacs-dark t)
-(load-theme 'doom-vibrant t)
+(load-theme 'spacemacs-dark t)
 
 (setq ring-bell-function 'ignore)
 (setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
@@ -48,9 +47,8 @@
 (fset 'yes-or-no-p 'y-or-n-p)
 (advice-add 'y-or-n-p :around #'y-or-n-p-with-return)
 
-(setq
- gdb-many-windows t
- gdb-show-main t)
+(setq gdb-many-windows t
+      gdb-show-main t)
 
 (setq split-height-threshold 40)
 (setq split-width-threshold 80)
@@ -59,3 +57,10 @@
 (setq visible-cursor nil)
 
 (global-visual-line-mode t)
+
+(custom-set-faces
+ '(ace-jump-face-foreground ((t (:foreground "white" :underline (:color "lightblue" :style wave)))))
+ '(whitespace-line ((t (:foreground "red")))))
+
+(setq hexl-bits 8
+      jit-lock-stealth-nice 0)
