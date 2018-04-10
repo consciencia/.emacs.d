@@ -80,7 +80,7 @@
 ;; (global-set-key (kbd "C-5") 'ace-window)
 (define-key general-key-map (kbd "C-f C-o") 'other-frame)
 (define-key general-key-map (kbd "C-f C-n") 'make-frame)
-(global-set-key (kbd "C-q") 'custom/universal-quit) 
+(global-set-key (kbd "C-q") 'custom/universal-quit)
 
 ;; BUFFER MANIPULATION BINDS
 (global-set-key (kbd "C-o") 'find-file)
@@ -89,6 +89,7 @@
 (global-set-key (kbd "C-0") 'ido-switch-buffer)
 (global-set-key (kbd "C-y") nil)
 (global-set-key (kbd "C-s") 'save-buffer)
+(global-set-key (kbd "C-S-s") 'save-some-buffers)
 (global-set-key (kbd "C-w") 'custom/kill-buffer)
 
 ;; GENERIC TEXT MANIPULATION BINDS
@@ -123,8 +124,9 @@
 (define-key bookmarks-key-map (kbd "C-s") 'bookmark-set)
 (define-key bookmarks-key-map (kbd "C-l") 'list-bookmarks)
 (global-set-key  (kbd "C-b") 'ido-switch-buffer)
-(global-set-key (kbd "M-j") 'ace-jump-word-mode)
-(define-key c++-mode-map (kbd "M-j") 'ace-jump-word-mode)
+(global-set-key (kbd "M-j") 'custom/ace-jump-word-mode)
+(define-key c++-mode-map (kbd "M-j") 'custom/ace-jump-word-mode)
+(define-key c-mode-map (kbd "M-j") 'custom/ace-jump-word-mode)
 (global-set-key (kbd "M-J") 'ace-jump-mode-pop-mark)
 (global-set-key (kbd "C-r") 'ido-goto-symbol)
 (global-set-key (kbd "M-m") 'custom/mc/mark-next-like-this)

@@ -428,4 +428,13 @@
   (flycheck-list-errors)
   (switch-to-buffer-other-window "*Flycheck errors*"))
 
+(defun custom/ace-jump-word-mode ()
+  (interactive)
+  (if (or (equal major-mode 'c-mode)
+          (equal major-mode 'c++-mode))
+      (ring-insert semantic-tags-location-ring (point-marker)))
+  (if (equal major-mode 'emacs-lisp-mode)
+      (xref-push-marker-stack))
+  (call-interactively 'ace-jump-word-mode))
+
 (load "monkey.el")

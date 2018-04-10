@@ -63,18 +63,21 @@
                      (not (or (equal major-mode 'c-mode)
                               (equal major-mode 'c++-mode)
                               (equal major-mode 'emacs-lisp-mode)))))
-      (advice-add 'save-buffer :after 
+      (advice-add 'save-buffer :after
                   (lambda (&rest args)
                     (if (or (equal major-mode 'c-mode)
                             (equal major-mode 'c++-mode)
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
-                          (semantic-force-refresh)
-                          (ignore-errors (if (and (ignore-errors (projectile-project-root))
-                                                  (cedet-cscope-support-for-directory (projectile-project-root))) 
+                          (call-interactively 'semantic-force-refresh)
+                          (ignore-errors (if (and (cedet-cscope-version-check t)
+                                                  (ignore-errors (projectile-project-root))
+                                                  (cedet-cscope-support-for-directory
+                                                   (projectile-project-root)))
                                              (cedet-cscope-create/update-database
                                               (projectile-project-root))))
-                          (if (cedet-gnu-global-root)
+                          (if (and (cedet-gnu-global-version-check t)
+                                   (cedet-gnu-global-root))
                               (cedet-gnu-global-create/update-database
                                (cedet-gnu-global-root))))))))
   (progn
@@ -82,17 +85,20 @@
                  (lambda ()
                    (not (or (equal major-mode 'c-mode)
                             (equal major-mode 'c++-mode)))))
-    (advice-add 'save-buffer :after 
+    (advice-add 'save-buffer :after
                 (lambda (&rest args)
                   (if (or (equal major-mode 'c-mode)
                           (equal major-mode 'c++-mode))
                       (progn
-                        (semantic-force-refresh)
-                        (ignore-errors (if (and (ignore-errors (projectile-project-root))
-                                                (cedet-cscope-support-for-directory (projectile-project-root))) 
+                        (call-interactively 'semantic-force-refresh)
+                        (ignore-errors (if (and (cedet-cscope-version-check t)
+                                                (ignore-errors (projectile-project-root))
+                                                (cedet-cscope-support-for-directory
+                                                 (projectile-project-root)))
                                            (cedet-cscope-create/update-database
-                                            (projectile-project-root)))) 
-                        (if (cedet-gnu-global-root)
+                                            (projectile-project-root))))
+                        (if (and (cedet-gnu-global-version-check t)
+                                 (cedet-gnu-global-root))
                             (cedet-gnu-global-create/update-database
                              (cedet-gnu-global-root)))))))))
 
@@ -123,7 +129,7 @@
           (setq raw-config
                 (json-read-from-string (f-read-text config-path
                                                     'utf-8)))))
-    (if (hash-table-p raw-config)  
+    (if (hash-table-p raw-config)
         (progn
           (if (and (not (null (custom/map/get "local-includes" raw-config)))
                    (not (listp (custom/map/get "local-includes" raw-config))))
