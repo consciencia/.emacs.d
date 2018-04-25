@@ -64,3 +64,6 @@
 
 (setq hexl-bits 8
       jit-lock-stealth-nice 0)
+
+(add-hook 'before-save-hook
+          'delete-trailing-whitespace)

@@ -59,3 +59,5 @@
 
 ;; add support for python
 ;; add support for javascript HTML CSS LESS
+;; refactor whole thing
+;; write some doc about it
