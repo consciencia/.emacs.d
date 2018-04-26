@@ -117,7 +117,8 @@
          (config-path (concat proj-root
                               "emacs-project-config.json"))
          (raw-config nil)
-         (local-includes (list "/include" "../include"))
+         (local-includes (list "/include"
+                               "../include"))
          (global-includes nil)
          (macro-table nil)
          (macro-files nil)
@@ -159,31 +160,37 @@
           (if (and (not (null (custom/map/get "source-roots" raw-config)))
                    (not (listp (custom/map/get "source-roots" raw-config))))
               (error "BAD source-roots in emacs-project-config.json"))
+          (if (and (not (null (custom/map/get "source-root" raw-config)))
+                   (not (listp (custom/map/get "source-root" raw-config))))
+              (error "BAD source-root in emacs-project-config.json"))
           (setq source-roots
                 (append source-roots
-                        (custom/map/get "source-roots" raw-config))))
+                        (or (custom/map/get "source-roots"
+                                            raw-config)
+                            (custom/map/get "source-root"
+                                            raw-config)))))
       (if (not (equal raw-config nil))
           (error "BAD FORMAT OF %s" config-path)
         (custom/ede/generate-config-file
          (file-name-as-directory proj-root))))
     (ede-cpp-root-project name
                           :file root-file
-                          :include-path (delete-dups local-includes)   
-                          :system-include-path (delete-dups global-includes) 
-                          :spp-table (delete-dups macro-table) 
+                          :include-path (delete-dups local-includes)
+                          :system-include-path (delete-dups global-includes)
+                          :spp-table (delete-dups macro-table)
                           :spp-files (delete-dups macro-files))
     (cond
      ((cedet-gnu-global-version-check t)
       (custom/make-link-farm (concat (file-name-as-directory proj-root)
-                                     ".emacs-project-src-roots")
+                                     "emacs-project-src-roots")
                              source-roots)
       (cedet-gnu-global-create/update-database
        (file-name-directory proj-root))
       (semantic-symref-detect-symref-tool))
-     ((and (cedet-cscope-version-check t) 
+     ((and (cedet-cscope-version-check t)
            (functionp 'semanticdb-enable-cscope-databases))
       (custom/make-link-farm (concat (file-name-as-directory proj-root)
-                                     ".emacs-project-src-roots")
+                                     "emacs-project-src-roots")
                              source-roots)
       (cedet-cscope-create/update-database
        (file-name-directory proj-root))
@@ -200,7 +207,7 @@
   (f-write-text (concat "{\n"
                         "\t\"local-includes\": [\"/include\",\"../include\"],\n"
                         "\t\"global-includes\": [],\n"
-                        "\t\"source-root\": [],\n"
+                        "\t\"source-roots\": [],\n"
                         "\t\"macro-table\": {},\n"
                         "\t\"macro-files\": []\n"
                         "}")
@@ -218,51 +225,51 @@
                                ,(file-name-as-directory proj-root)))))
 
 (defun custom/semantic-goto-definition (point)
-  "Goto definition using semantic-ia-fast-jump   
+  "Goto definition using semantic-ia-fast-jump
 save the pointer marker if tag is found"
   (interactive "d")
   (condition-case err
-      (progn                            
-        (ring-insert semantic-tags-location-ring (point-marker))  
+      (progn
+        (ring-insert semantic-tags-location-ring (point-marker))
         (semantic-ia-fast-jump point)
         (if (not semantic-idle-scheduler-mode)
             (semantic-idle-scheduler-mode))
         (recenter))
     (error
-     ;;if not found remove the tag saved in the ring  
+     ;;if not found remove the tag saved in the ring
      (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
      (signal (car err) (cdr err)))))
 
 (defun custom/semantic-switch-proto ()
-  "Goto definition using semantic-ia-fast-jump   
+  "Goto definition using semantic-ia-fast-jump
 save the pointer marker if tag is found"
   (interactive)
   (condition-case err
-      (progn                            
-        (ring-insert semantic-tags-location-ring (point-marker))  
+      (progn
+        (ring-insert semantic-tags-location-ring (point-marker))
         (semantic-analyze-proto-impl-toggle)
         (if (not semantic-idle-scheduler-mode)
             (semantic-idle-scheduler-mode))
         (recenter))
     (error
-     ;;if not found remove the tag saved in the ring  
+     ;;if not found remove the tag saved in the ring
      (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
      (signal (car err) (cdr err)))))
 
-(defun custom/semantic-pop-tag-mark ()             
-  "popup the tag save by semantic-goto-definition"   
-  (interactive)                                                    
-  (if (ring-empty-p semantic-tags-location-ring)                   
-      (message "%s" "No more tags available")                      
-    (let* ((marker (ring-remove semantic-tags-location-ring 0))    
-           (buff (marker-buffer marker))                        
-           (pos (marker-position marker)))                   
-      (if (not buff)                                               
-          (message "Buffer has been deleted")                    
-        (switch-to-buffer buff)                                    
+(defun custom/semantic-pop-tag-mark ()
+  "popup the tag save by semantic-goto-definition"
+  (interactive)
+  (if (ring-empty-p semantic-tags-location-ring)
+      (message "%s" "No more tags available")
+    (let* ((marker (ring-remove semantic-tags-location-ring 0))
+           (buff (marker-buffer marker))
+           (pos (marker-position marker)))
+      (if (not buff)
+          (message "Buffer has been deleted")
+        (switch-to-buffer buff)
         (goto-char pos)
         (pulse-momentary-highlight-one-line pos)
-        (recenter))                                           
+        (recenter))
       (set-marker marker nil nil))))
 
 (defun custom/semantic/complete-jump (sym)
@@ -316,14 +323,14 @@ save the pointer marker if tag is found"
 "Query CEDET Semantic system for tag descriptors with sended name.
 SYM: Name of symbol to find all occurences in DB.
 
-OPTIONAL LIVE-TAGS: When t, tags are linked into Semantic machinery, that means, they 
-are updated when some buffer changes. On the other hand, dead tags are unlinked 
-from Semantic machinery and thus they are never changed even when some buffer contents 
+OPTIONAL LIVE-TAGS: When t, tags are linked into Semantic machinery, that means, they
+are updated when some buffer changes. On the other hand, dead tags are unlinked
+from Semantic machinery and thus they are never changed even when some buffer contents
 changes. Dead tags are usually the thing which you want.
 
-BUFF: Buffer from which search should originate. Used for detection of project 
+BUFF: Buffer from which search should originate. Used for detection of project
 and thus the retrival of all project tables used for deep search. Usually,
-you want to search through current project so current buffer is automatically 
+you want to search through current project so current buffer is automatically
 provided"
   (let ((acc nil))
     (dolist (tag (semanticdb-strip-find-results
@@ -370,7 +377,7 @@ provided"
           (progn
             (when (string-match-p (if selection-regex
                                       selection-regex
-                                    ".*\\.\\(c\\|cpp\\)$")  
+                                    ".*\\.\\(c\\|cpp\\)$")
                                   file)
               (ignore-errors
                 (semanticdb-file-table-object file))))
