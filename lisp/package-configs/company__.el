@@ -17,12 +17,14 @@
                           company-files)
                          (company-semantic
                           company-c-headers)
+                         (elpy-company-backend
+                          company-files)
                          (company-etags
                           company-dabbrev-code
                           company-keywords)
                          company-css
                          company-nxml
-                         company-cmake                         
+                         company-cmake
                          company-files
                          company-xcode
                          company-bbdb

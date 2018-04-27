@@ -62,11 +62,13 @@
                    (lambda ()
                      (not (or (equal major-mode 'c-mode)
                               (equal major-mode 'c++-mode)
+                              (equal major-mode 'python-mode)
                               (equal major-mode 'emacs-lisp-mode)))))
       (advice-add 'save-buffer :after
                   (lambda (&rest args)
                     (if (or (equal major-mode 'c-mode)
                             (equal major-mode 'c++-mode)
+                            (equal major-mode 'python-mode)
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
                           (call-interactively 'semantic-force-refresh)
@@ -84,10 +86,12 @@
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
                    (not (or (equal major-mode 'c-mode)
+                            (equal major-mode 'python-mode)
                             (equal major-mode 'c++-mode)))))
     (advice-add 'save-buffer :after
                 (lambda (&rest args)
                   (if (or (equal major-mode 'c-mode)
+                          (equal major-mode 'python-mode)
                           (equal major-mode 'c++-mode))
                       (progn
                         (call-interactively 'semantic-force-refresh)

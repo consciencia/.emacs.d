@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # # -*- coding: utf-8 -*-
 import os
@@ -14,10 +13,12 @@ __author__ = "Consciencia"
 
 sys.dont_write_bytecode = True
 
+
 def unzip(path, to):
     zip_ref = zipfile.ZipFile(path, 'r')
     zip_ref.extractall(to)
     zip_ref.close()
+
 
 def execute(command, wd = None):
     oldwd = os.getcwd()
@@ -27,14 +28,17 @@ def execute(command, wd = None):
     if wd:
         os.chdir(oldwd)
 
+
 def getEmacsVersion():
     raw = os.popen("emacs --version").read()
     full = re.search(".*?(\d+\.\d+\.\d+).*",raw).group(1)
     return ".".join(full.split(".")[:2])
 
+
 def getEmacsSrcURL():
     version = getEmacsVersion()
     return "http://mirror.kumi.systems/gnu/emacs/emacs-%s.tar.gz" % version
+
 
 def getEmacsRootConfDir():
     if os.name == "nt":
@@ -44,11 +48,14 @@ def getEmacsRootConfDir():
     else:
         raise Exception("Unknown platform %s" % os.name)
 
+
 def getEmacsConfSourceDir():
     return getEmacsRootConfDir() + os.path.sep + "emacs-src"
 
+
 def hasSudo():
     return os.name == "posix"
+
 
 def donwloadEmacsSrc():
     srcArch = getEmacsConfSourceDir() + os.path.sep + getEmacsVersion() + ".tar.gz"
@@ -61,21 +68,25 @@ def donwloadEmacsSrc():
     os.remove(srcArch)
     shutil.rmtree(targetPath)
 
+
 def errorRemoveReadonly(func, path, exc):
     excvalue = exc[1]
     if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         func(path)
     else:
         raise Exception("Failed to delete %s" % path)
+
 
 def removeTree(path):
     if os.path.exists(path):
         shutil.rmtree(path, onerror = errorRemoveReadonly)
 
+
 def packageFound(name):
     from distutils.spawn import find_executable
     return find_executable(name) is not None
+
 
 def actionDownloadEmacsSource():
     print("Downloading Emacs sources (used for introspection):")
@@ -84,10 +95,12 @@ def actionDownloadEmacsSource():
     donwloadEmacsSrc()
     print("Done.")
 
+
 def actionInstallEmacsSources():
     print("Installing EMACS packages:")
     execute("emacs --batch --load init.el")
     print("Done.")
+
 
 def actionInstallPackages():
     print("Installing packages:")
@@ -112,6 +125,7 @@ def actionInstallPackages():
         else:
             print("Found.")
     print("Done.")
+
 
 def main():
     parser = argparse.ArgumentParser()

@@ -46,4 +46,4 @@
 (load "call-graph__.el")
 (load "ivy__.el")
 (load "flycheck__.el")
-;;(load "elpy__.el")
+(load "elpy__.el")

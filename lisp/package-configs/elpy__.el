@@ -1,3 +1,32 @@
 (custom/install-package-when-needed 'elpy)
+(require 'elpy)
+
+;; elpy-mode-map
+(define-key elpy-mode-map (kbd "<C-down>")
+  'elpy-nav-forward-block)
+(define-key elpy-mode-map (kbd "<C-up>")
+  'elpy-nav-backward-block)
+(define-key elpy-mode-map (kbd "<C-left>")
+  'elpy-nav-backward-indent)
+(define-key elpy-mode-map (kbd "<C-right>")
+  'elpy-nav-forward-indent)
+(define-key elpy-mode-map (kbd "<tab>")
+  'company-indent-or-complete-common)
+(define-key elpy-mode-map (kbd "<M-down>") nil)
+(define-key elpy-mode-map (kbd "<M-up>") nil)
+(define-key elpy-mode-map (kbd "<M-left>") nil)
+(define-key elpy-mode-map (kbd "<M-right>") nil)
+(define-key elpy-mode-map (kbd "M-*") 'elpy-doc)
+
+(if (not (fboundp 'xref-find-definitions))
+    (define-key elpy-mode-map (kbd "M-.") 'elpy-goto-definition))
+(if (not (fboundp 'xref-find-definitions-other-window))
+    (define-key elpy-mode-map (kbd "C-x 4 M-.") 'elpy-goto-definition-other-window)
+  (define-key elpy-mode-map (kbd "C-x 4 M-.") 'xref-find-definitions-other-window))
+(if (fboundp 'xref-pop-marker-stack)
+    (define-key elpy-mode-map (kbd "M-,") 'xref-pop-marker-stack))
+
+(setq elpy-modules (delq 'elpy-module-company elpy-modules)
+      elpy-rpc-backend "jedi")
 
 (elpy-enable)
