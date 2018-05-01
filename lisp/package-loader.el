@@ -47,3 +47,4 @@
 (load "ivy__.el")
 (load "flycheck__.el")
 (load "elpy__.el")
+(load "js2-mode__.el")
