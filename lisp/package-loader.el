@@ -48,3 +48,5 @@
 (load "flycheck__.el")
 (load "elpy__.el")
 (load "js2-mode__.el")
+(load "markdown-mode__.el")
+;; (load "tern__.el")

@@ -5,6 +5,8 @@ projectile.cache
 ido.last
 auto-save-list/
 emacs-src/
+tern/
+lisp/.tern-port
 games/
 bookmarks
 ede-projects.el
