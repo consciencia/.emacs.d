@@ -1,7 +1,9 @@
 (custom/install-package-when-needed 'company)
 (custom/install-package-when-needed 'company-c-headers)
+(custom/install-package-when-needed 'company-web)
 (require 'company)
 (require 'company-c-headers)
+(require 'company-web-html)
 
 (add-hook 'after-init-hook 'global-company-mode)
 

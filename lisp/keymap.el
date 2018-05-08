@@ -141,8 +141,9 @@
     (let ((proj-root (call-interactively 'custom/projectile-add-known-project))
           (proj-type (custom/get-simple-input "Project type: "
                                               '("C/C++ (generic)"
+                                                "Javascript"
                                                 "Other"))))
-      (if (and proj-root proj-type) 
+      (if (and proj-root proj-type)
           (custom/project/generate-loader proj-root
                                           proj-type)))))
 (define-key projectile-key-map (kbd "C-d C-k") 'projectile-kill-buffers)

@@ -52,11 +52,4 @@
 ;;----------------------------------------------
 ;; http://emacs-bootstrap.com/
 ;; update mode to be follow best practises
-;;
-;; C-x keybind is free for customization
-;; C-p C-x is too free for customization
 ;;----------------------------------------------
-
-;; add support for javascript HTML CSS LESS
-;; refactor whole thing
-;; write some doc about it

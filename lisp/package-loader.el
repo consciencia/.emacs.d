@@ -49,4 +49,6 @@
 (load "elpy__.el")
 (load "js2-mode__.el")
 (load "markdown-mode__.el")
-;; (load "tern__.el")
+(load "tern__.el")
+(load "web-mode__.el")
+(load "less-mode__.el")

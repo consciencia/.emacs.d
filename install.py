@@ -6,12 +6,27 @@ import zipfile
 import re
 import urllib
 import tarfile
-import sys
 import argparse
+import subprocess
+import sys
+import platform
 
 __author__ = "Consciencia"
 
 sys.dont_write_bytecode = True
+
+
+def assertCommands(commands):
+    for command in commands:
+        try:
+            subprocess.call([command, "--help"],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except:
+            print("Not found command '" + command + "'.")
+            if command == "emacs":
+                print("In case of EMACS, you must add its binary into" +
+                      " PATH yourself to be visible in command line")
+            exit(1)
 
 
 def unzip(path, to):
@@ -20,13 +35,19 @@ def unzip(path, to):
     zip_ref.close()
 
 
-def execute(command, wd = None):
+def execute(command, wd=None):
     oldwd = os.getcwd()
     if wd:
         os.chdir(wd)
     os.system(command)
     if wd:
         os.chdir(oldwd)
+
+
+def getInstallCommand():
+    if platform.dist()[0] == "fedora":
+        return "sudo dnf install -y %s"
+    return None
 
 
 def getEmacsVersion():
@@ -41,16 +62,16 @@ def getEmacsSrcURL():
 
 
 def getEmacsRootConfDir():
-    if os.name == "nt":
-        raise Exception("Unsupported platform Winsows")
-    elif os.name == "posix":
-        return os.path.expanduser("~") + os.path.sep + ".emacs.d"
-    else:
-        raise Exception("Unknown platform %s" % os.name)
+    command = "emacs" +\
+              " --no-init-file" +\
+              " --batch" +\
+              " --eval" +\
+              " \"(print (expand-file-name user-emacs-directory))\""
+    return os.popen(command).read()[2:-2]
 
 
 def getEmacsConfSourceDir():
-    return getEmacsRootConfDir() + os.path.sep + "emacs-src"
+    return getEmacsRootConfDir() + "emacs-src"
 
 
 def hasSudo():
@@ -96,7 +117,7 @@ def actionDownloadEmacsSource():
     print("Done.")
 
 
-def actionInstallEmacsSources():
+def actionInstallEmacsPackages():
     print("Installing EMACS packages:")
     execute("emacs --batch --load init.el")
     print("Done.")
@@ -127,8 +148,49 @@ def actionInstallPackages():
     print("Done.")
 
 
+def actionDownloadTern():
+    print("Installing Tern:")
+    ternDir = getEmacsRootConfDir() + "tern" + os.path.sep
+    if not os.path.exists(ternDir):
+        os.mkdir(ternDir)
+        execute("git clone https://github.com/ternjs/tern.git",
+                wd=ternDir)
+        print("Cloned.")
+    else:
+        execute("git pull",
+                wd=ternDir)
+        print("Updated.")
+    print("Installing Tern dependecies:")
+    execute("npm install",
+            wd=ternDir + "tern" + os.path.sep)
+    print("Installed.")
+
+
+def actionInstallOsPackages():
+    print("Installing os packages:")
+    command = getInstallCommand()
+    if command:
+        packages = ["emacs",
+                    "global",
+                    "cscope"]
+        for package in packages:
+            print("Installing %s" % package)
+            try:
+                execute(command % package)
+            except:
+                print("Failed to install %s." % package)
+            else:
+                print("Installed.")
+    else:
+        print("Skipping, no info for host system (emacs global cscope).")
+
+
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--info",
+                        action = "store_true",
+                        required = False,
+                        help = "Display EMACS info and exit.")
     parser.add_argument("--emacsSource",
                         action = "store_true",
                         required = False,
@@ -137,26 +199,64 @@ def main():
                         action = "store_true",
                         required = False,
                         help = "Only download EMACS packages.")
+    parser.add_argument("--osPackages",
+                        action = "store_true",
+                        required = False,
+                        help = "Only download OS packages.")
     parser.add_argument("--packages",
                         action = "store_true",
                         required = False,
                         help = "Only download system packages.")
+    parser.add_argument("--jsSetup",
+                        action = "store_true",
+                        required = False,
+                        help = "Only setup support for JS.")
     args = parser.parse_args()
 
+    info = args.info
     emacsSource = args.emacsSource
     emacsPackages = args.emacsPackages
+    osPackages = args.osPackages
     packages = args.packages
+    jsSetup = args.jsSetup
+
+    allFlags = emacsSource or\
+               emacsPackages or\
+               packages or\
+               jsSetup or\
+               osPackages
+    if not allFlags:
+        emacsSource = True
+        emacsPackages = True
+        packages = True
+        jsSetup = True
+        osPackages = True
 
     print("Hello.")
     print("Emacs version is " + getEmacsVersion() + ".")
-    if not os.path.isdir(getEmacsRootConfDir() + os.path.sep + "semanticdb"):
-        os.mkdir(getEmacsRootConfDir() + os.path.sep + "semanticdb")
+    print("Emacs home is " + getEmacsRootConfDir() + ".")
+    if info:
+        exit(0)
+
+    if osPackages:
+        actionInstallOsPackages()
+
+    assertCommands(["emacs",
+                    "git",
+                    "npm",
+                    "pip"])
+
+    if not os.path.isdir(getEmacsRootConfDir() + "semanticdb"):
+        os.mkdir(getEmacsRootConfDir() + "semanticdb")
+    print("Setup started.")
     if emacsSource:
         actionDownloadEmacsSource()
     if emacsPackages:
-        actionInstallEmacsSources()
+        actionInstallEmacsPackages()
     if packages:
         actionInstallPackages()
+    if jsSetup:
+        actionDownloadTern()
     print("EMACS is ready to be used!")
     print("Good flight.")
 

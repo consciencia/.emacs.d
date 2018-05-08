@@ -15,6 +15,12 @@
 (defun custom/map/clear (map)
   (clrhash map))
 
+(defun custom/map/vectorize (key map)
+  (custom/map/set key
+                  (apply 'vector
+                         (custom/map/get key map))
+                  map))
+
 (defun custom/map/to-alist (map)
   (if (hash-table-p map)
       (let ((acc nil))
@@ -37,14 +43,14 @@
           (progn
             (if (only-minimal-default-ui-component-shown)
                 (if (> frame-count 1)
-                    (delete-frame)  
+                    (delete-frame)
                   (save-buffers-kill-emacs))
               (progn
                 (delete-window this-window)
                 (if (only-default-ui-component-shown)
                     (if (> frame-count 1)
-                        (delete-frame)  
-                      (save-buffers-kill-emacs))))))  
+                        (delete-frame)
+                      (save-buffers-kill-emacs))))))
         (if (> frame-count 1)
             (delete-frame)
           (save-buffers-kill-emacs))))))
@@ -53,7 +59,7 @@
   (interactive)
   (if (or (string= (substring (buffer-name) 0 2) " *")
           (string= (buffer-name) "*scratch*")
-          (string= (buffer-name) "*Ilist*")) 
+          (string= (buffer-name) "*Ilist*"))
       (message "You can not kill protected BUFFER")
     (progn
       (call-interactively 'kill-buffer))))
@@ -72,7 +78,7 @@
 
 (defun get-window-active-buffers ()
   (let ((res nil))
-    (dolist (win (window-list)) 
+    (dolist (win (window-list))
       (setq res
             (cons (buffer-name
                    (window-buffer win))
@@ -241,7 +247,7 @@
   (select-frame-set-input-focus new-f)
   (run-at-time "1" nil
                (lambda ()
-                 (if (not ECB-ACTIVE) ; (not ecb-minor-mode)  
+                 (if (not ECB-ACTIVE) ; (not ecb-minor-mode)
                      (progn
                        (imenu-list-show)
                        (other-window 1))
@@ -272,6 +278,8 @@
   (let ((loader-content (cond
                          ((equal proj-type "C/C++ (generic)")
                           (custom/ede/generate-generic-loader proj-root))
+                         ((equal proj-type "Javascript")
+                          (custom/tern/generare-generic-loader proj-root))
                          (t nil))))
     (if loader-content
         (custom/generate-dir-locals proj-root nil loader-content))))
@@ -324,7 +332,7 @@
                         (pp-to-string (let ((guard-var (custom/persistent-gensym)))
                                         `(progn
                                            ,@forms
-                                           (if (not (boundp ',guard-var)) 
+                                           (if (not (boundp ',guard-var))
                                                (progn
                                                  (setq ,guard-var t)
                                                  ,@guarded-forms)))))

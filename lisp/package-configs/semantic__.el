@@ -18,6 +18,7 @@
 (require 'semantic/db-ebrowse)
 (require 'srecode)
 (require 'json)
+(require 'seq)
 (if (not (featurep 'semantic/db-cscope))
     (load "external-semantic-db-cscope.el")
   (require 'semantic/db-cscope))
@@ -145,8 +146,9 @@
                     (append local-includes
                             (custom/map/get "local-includes"
                                             raw-config))))
-          (setq global-includes
-                (custom/map/get "global-includes" raw-config))
+          (if (custom/map/get "global-includes" raw-config)
+              (setq global-includes
+                    (custom/map/get "global-includes" raw-config)))
           (if (and (not (null global-includes))
                    (not (listp global-includes)))
               (error "BAD global-includes in emacs-project-config.json"))
@@ -156,8 +158,9 @@
           (if (and (not (null macro-table))
                    (not (listp macro-table)))
               (error "BAD macro-table in emacs-project-config.json"))
-          (setq macro-files
-                (custom/map/get "macro-files" raw-config))
+          (if (custom/map/get "macro-files" raw-config)
+              (setq macro-files
+                    (custom/map/get "macro-files" raw-config)))
           (if (and (not (null macro-files))
                    (not (listp macro-files)))
               (error "BAD macro-files in emacs-project-config.json"))
@@ -177,6 +180,31 @@
           (error "BAD FORMAT OF %s" config-path)
         (custom/ede/generate-config-file
          (file-name-as-directory proj-root))))
+    (let ((not-found-files (seq-remove 'file-exists-p macro-files)))
+      (if (length not-found-files)
+          (progn
+            (setq macro-files
+                  (seq-filter 'file-exists-p macro-files))
+            (if (and (hash-table-p raw-config)
+                     (yes-or-no-p (concat "Found nonexistent macro files "
+                                          (format "%s" not-found-files)
+                                          ". Do you want to remove them from JSON config?")))
+                (progn
+                  (custom/map/set "macro-files"
+                                  (apply 'vector macro-files)
+                                  raw-config)
+                  (custom/map/vectorize "global-includes"
+                                        raw-config)
+                  (custom/map/vectorize "local-includes"
+                                        raw-config)
+                  (custom/map/vectorize "source-roots"
+                                        raw-config)
+                  (let ((json-encoding-pretty-print t)
+                        (json-encoding-default-indentation "    ")
+                        (json-encoding-object-sort-predicate 'string<))
+                    (f-write-text (json-encode raw-config)
+                                  'utf-8
+                                  config-path)))))))
     (ede-cpp-root-project name
                           :file root-file
                           :include-path (delete-dups local-includes)
