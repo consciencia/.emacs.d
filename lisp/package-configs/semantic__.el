@@ -72,7 +72,8 @@
                             (equal major-mode 'python-mode)
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
-                          (call-interactively 'semantic-force-refresh)
+                          (save-mark-and-excursion
+                           (call-interactively 'semantic-force-refresh))
                           (ignore-errors (if (and (cedet-cscope-version-check t)
                                                   (ignore-errors (projectile-project-root))
                                                   (cedet-cscope-support-for-directory
@@ -95,7 +96,8 @@
                           (equal major-mode 'python-mode)
                           (equal major-mode 'c++-mode))
                       (progn
-                        (call-interactively 'semantic-force-refresh)
+                        (save-mark-and-excursion
+                           (call-interactively 'semantic-force-refresh))
                         (ignore-errors (if (and (cedet-cscope-version-check t)
                                                 (ignore-errors (projectile-project-root))
                                                 (cedet-cscope-support-for-directory

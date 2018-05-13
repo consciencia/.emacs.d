@@ -1,11 +1,3 @@
-(advice-add #'file-exists-p
-            :around (lambda (oldfn filename)
-                      (if filename
-                          (apply oldfn (list filename))
-                        nil)))
-
-(package-initialize)
-
 ;; set up elisp include dirs
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 (let ((default-directory  "~/.emacs.d/lisp/"))
@@ -32,7 +24,14 @@
     (setq custom/fs-separator "\\")
   (setq custom/fs-separator "/"))
 
+(advice-add #'file-exists-p
+            :around (lambda (oldfn filename)
+                      (if filename
+                          (apply oldfn (list filename))
+                        nil)))
+
 ;; load whole mode
+(require 'sysdef)
 (load "utils.el")
 (load "package-loader.el")
 (load "db.el")

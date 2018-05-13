@@ -10,6 +10,8 @@ import argparse
 import subprocess
 import sys
 import platform
+import stat
+import errno
 
 __author__ = "Consciencia"
 
@@ -52,7 +54,7 @@ def getInstallCommand():
 
 def getEmacsVersion():
     raw = os.popen("emacs --version").read()
-    full = re.search(".*?(\d+\.\d+\.\d+).*",raw).group(1)
+    full = re.search(".*?(\d+\.\d+\.\d+).*", raw).group(1)
     return ".".join(full.split(".")[:2])
 
 
@@ -79,7 +81,8 @@ def hasSudo():
 
 
 def donwloadEmacsSrc():
-    srcArch = getEmacsConfSourceDir() + os.path.sep + getEmacsVersion() + ".tar.gz"
+    srcArch = getEmacsConfSourceDir() + os.path.sep +\
+              getEmacsVersion() + ".tar.gz"
     targetPath = ".".join(srcArch.split(".")[:-2]) + "_"
     urllib.urlretrieve(getEmacsSrcURL(),
                        srcArch)
@@ -101,7 +104,7 @@ def errorRemoveReadonly(func, path, exc):
 
 def removeTree(path):
     if os.path.exists(path):
-        shutil.rmtree(path, onerror = errorRemoveReadonly)
+        shutil.rmtree(path, onerror=errorRemoveReadonly)
 
 
 def packageFound(name):
@@ -132,7 +135,8 @@ def actionInstallPackages():
                 ("jedi", "pip install jedi"),
                 ("flake8", "pip install flake8"),
                 ("autopep8", "pip install autopep8"),
-                ("yapf", "pip install yapf")]
+                ("yapf", "pip install yapf"),
+                ("tern", "npm install -g tern")]
     for packageName, packageInstall in packages:
         print("\t" + packageName + " - " + packageInstall)
     for packageName, packageInstall in packages:
@@ -146,24 +150,6 @@ def actionInstallPackages():
         else:
             print("Found.")
     print("Done.")
-
-
-def actionDownloadTern():
-    print("Installing Tern:")
-    ternDir = getEmacsRootConfDir() + "tern" + os.path.sep
-    if not os.path.exists(ternDir):
-        os.mkdir(ternDir)
-        execute("git clone https://github.com/ternjs/tern.git",
-                wd=ternDir)
-        print("Cloned.")
-    else:
-        execute("git pull",
-                wd=ternDir)
-        print("Updated.")
-    print("Installing Tern dependecies:")
-    execute("npm install",
-            wd=ternDir + "tern" + os.path.sep)
-    print("Installed.")
 
 
 def actionInstallOsPackages():
@@ -188,29 +174,25 @@ def actionInstallOsPackages():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--info",
-                        action = "store_true",
-                        required = False,
-                        help = "Display EMACS info and exit.")
+                        action="store_true",
+                        required=False,
+                        help="Display EMACS info and exit.")
     parser.add_argument("--emacsSource",
-                        action = "store_true",
-                        required = False,
-                        help = "Only download EMACS source.")
+                        action="store_true",
+                        required=False,
+                        help="Only download EMACS source.")
     parser.add_argument("--emacsPackages",
-                        action = "store_true",
-                        required = False,
-                        help = "Only download EMACS packages.")
+                        action="store_true",
+                        required=False,
+                        help="Only download EMACS packages.")
     parser.add_argument("--osPackages",
-                        action = "store_true",
-                        required = False,
-                        help = "Only download OS packages.")
+                        action="store_true",
+                        required=False,
+                        help="Only download OS packages.")
     parser.add_argument("--packages",
-                        action = "store_true",
-                        required = False,
-                        help = "Only download system packages.")
-    parser.add_argument("--jsSetup",
-                        action = "store_true",
-                        required = False,
-                        help = "Only setup support for JS.")
+                        action="store_true",
+                        required=False,
+                        help="Only download system packages.")
     args = parser.parse_args()
 
     info = args.info
@@ -218,18 +200,13 @@ def main():
     emacsPackages = args.emacsPackages
     osPackages = args.osPackages
     packages = args.packages
-    jsSetup = args.jsSetup
 
-    allFlags = emacsSource or\
-               emacsPackages or\
-               packages or\
-               jsSetup or\
-               osPackages
+    allFlags = emacsSource or emacsPackages
+    allFlags = allFlags or packages or osPackages
     if not allFlags:
         emacsSource = True
         emacsPackages = True
         packages = True
-        jsSetup = True
         osPackages = True
 
     print("Hello.")
@@ -255,10 +232,10 @@ def main():
         actionInstallEmacsPackages()
     if packages:
         actionInstallPackages()
-    if jsSetup:
-        actionDownloadTern()
+
     print("EMACS is ready to be used!")
     print("Good flight.")
+
 
 if __name__ == "__main__":
     main()

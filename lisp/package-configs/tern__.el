@@ -1,43 +1,43 @@
-(setq custom/tern-emacs-dir
-      (concat user-emacs-directory
-              "tern/tern/emacs/"))
-(if (file-directory-p custom/tern-emacs-dir)
-    (progn
-      (add-to-list 'load-path
-                   custom/tern-emacs-dir)
-      (autoload 'tern-mode "tern.el" nil t)
-      (require 'tern)
+(custom/install-package-when-needed 'tern)
+(custom/install-package-when-needed 'company-tern)
+(require 'tern)
+(require 'company-tern)
 
-      (custom/install-package-when-needed 'company-tern)
-      (require 'company-tern)
-      (setq company-tern-property-marker " <p>")
+(setq company-tern-property-marker " <p>")
 
-      (add-hook 'js-mode-hook
-                (lambda ()
-                  (set (make-local-variable 'company-backends)
-                       '(company-tern
-                         company-files))
-                  (tern-mode t)))
+(tern-mode)
 
-      (tern-mode)
+(add-hook 'js-mode-hook
+          (lambda ()
+            (set (make-local-variable 'company-backends)
+                 '(company-tern
+                   company-files))
+            (tern-mode t)))
 
-      (advice-add #'tern-go-to-position
+(advice-add #'tern-go-to-position
             :after (lambda (&rest args)
                      (pulse-momentary-highlight-one-line (point))
                      (recenter)
                      (js2-reparse nil)))
 
-      (define-key tern-mode-keymap (kbd "M-.") 'tern-find-definition)
-      (define-key tern-mode-keymap (kbd "M-,") 'tern-pop-find-definition)
-      (define-key tern-mode-keymap (kbd "M-*") 'tern-get-docs)
-      (define-key tern-mode-keymap (kbd "M-d")
-        (lambda ()
-          (interactive)
-          (call-interactively 'js2-mark-defun)
-          (setq transient-mark-mode (cons 'only transient-mark-mode))))
-      (define-key tern-mode-keymap (kbd "<tab>") 'company-indent-or-complete-common)))
-
-
+(define-key tern-mode-keymap (kbd "M-.") 'tern-find-definition)
+(define-key tern-mode-keymap (kbd "M-,") 'tern-pop-find-definition)
+(define-key tern-mode-keymap (kbd "M-*") 'tern-get-docs)
+(define-key tern-mode-keymap (kbd "M-d")
+  (lambda ()
+    (interactive)
+    (call-interactively 'js2-mark-defun)
+    (setq transient-mark-mode (cons 'only transient-mark-mode))))
+;; js2-narrow-to-defun
+;; extract info from js2 system and implement following features
+;; ...
+;; (define-key tern-mode-keymap (kbd "M-<next>") 'senator-next-tag)
+;; (define-key tern-mode-keymap (kbd "M-<prior>") 'senator-previous-tag)
+;; (define-key tern-mode-keymap (kbd "M-f") 'senator-fold-tag-toggle)
+(define-key tern-mode-keymap (kbd "M-<next>") nil)
+(define-key tern-mode-keymap (kbd "M-<prior>") nil)
+(define-key tern-mode-keymap (kbd "M-f") nil)
+(define-key tern-mode-keymap (kbd "<tab>") 'company-indent-or-complete-common)
 
 (defun custom/tern/generare-generic-loader (proj-root)
   (let ((proj-name (read-string "Project name: "
