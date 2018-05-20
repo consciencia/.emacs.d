@@ -6,9 +6,16 @@
 
 
 
+(advice-add #'file-exists-p
+            :around (lambda (oldfn filename)
+                      (if filename
+                          (apply oldfn (list filename))
+                        nil)))
+
 (defun safe-local-variable-p (sym val)
-  "Ugly hack to prevent dir-locals floading user with 
-qustions..."
+  "Ugly hack to prevent dir-locals floading user with
+qustions. On the other side, it opens a way to exploits based
+on local directory elisp code. TODO, solve this somehow!"
   t)
 
 (defun keyboard-escape-quit ()

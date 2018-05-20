@@ -1,10 +1,7 @@
-(require 'sysdef)
-
-
-(sysdef/prepare-external-system-manager)
 (defalias
   'custom/install-package-when-needed
   'sysdef/load-external-system)
+
 
 
 (load "f__.el")

@@ -154,18 +154,8 @@
   (lambda ()
     (interactive)
     (dired (projectile-project-root))))
-(define-key projectile-key-map (kbd "C-o")
-  (lambda ()
-    (interactive)
-    ;; #'custom/default-completing-read
-    (let* ((projectile-completion-system 'ivy))
-      (call-interactively 'projectile-find-file))))
-(global-set-key (kbd "C-t")
-                (lambda ()
-                  (interactive)
-                  ;; #'custom/default-completing-read
-                  (let* ((projectile-completion-system 'ivy))
-                    (call-interactively 'projectile-find-file))))
+(define-key projectile-key-map (kbd "C-o") 'projectile-find-file)
+(global-set-key (kbd "C-t") 'projectile-find-file)
 (define-key projectile-key-map (kbd "C-f C-f") 'projectile-grep)
 (define-key projectile-key-map (kbd "C-f C-r") 'projectile-replace)
 (define-key projectile-key-map (kbd "C-f C-o")
@@ -178,8 +168,13 @@
 (define-key projectile-key-map (kbd "C-v C-l") 'magit-log-popup)
 (define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-and-checkout)
 (define-key projectile-key-map (kbd "C-v C-d") 'magit-diff-popup)
-(define-key projectile-key-map (kbd "C-v C-b C-s") 'magit-blame-popup)
-(define-key projectile-key-map (kbd "C-v C-b C-q") 'magit-blame-quit)
+;; magit-blame-mode
+(define-key projectile-key-map (kbd "C-v C-b")
+  (lambda ()
+    (interactive)
+    (if magit-blame-mode
+        (magit-blame-quit)
+      (magit-blame-popup))))
 (global-set-key (kbd "C-<prior>") 'git-gutter:previous-hunk)
 (global-set-key (kbd "C-<next>") 'git-gutter:next-hunk)
 

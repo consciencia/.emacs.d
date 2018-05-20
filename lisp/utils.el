@@ -248,14 +248,6 @@
 (defun custom/eval (string)
   (eval (car (read-from-string (format "(progn %s)" string)))))
 
-(defun custom/default-completing-read (question candidates)
-  (run-at-time "0.5" nil
-               (lambda ()
-                 (minibuffer-complete)
-                 (switch-to-completions)
-                 (isearch-forward)))
-  (completing-read-default question candidates))
-
 (defun custom/projectile-add-known-project (project-root)
   (interactive (list (read-directory-name "Add to known projects: ")))
   (unless (projectile-ignored-project-p project-root)
