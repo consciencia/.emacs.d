@@ -74,16 +74,17 @@
                         (progn
                           (save-mark-and-excursion
                            (call-interactively 'semantic-force-refresh))
-                          (ignore-errors (if (and (cedet-cscope-version-check t)
-                                                  (ignore-errors (projectile-project-root))
-                                                  (cedet-cscope-support-for-directory
-                                                   (projectile-project-root)))
-                                             (cedet-cscope-create/update-database
-                                              (projectile-project-root))))
-                          (if (and (cedet-gnu-global-version-check t)
-                                   (cedet-gnu-global-root))
-                              (cedet-gnu-global-create/update-database
-                               (cedet-gnu-global-root))))))))
+                          ;; (ignore-errors (if (and (cedet-cscope-version-check t)
+                          ;;                         (ignore-errors (projectile-project-root))
+                          ;;                         (cedet-cscope-support-for-directory
+                          ;;                          (projectile-project-root)))
+                          ;;                    (cedet-cscope-create/update-database
+                          ;;                     (projectile-project-root))))
+                          ;; (if (and (cedet-gnu-global-version-check t)
+                          ;;          (cedet-gnu-global-root))
+                          ;;     (cedet-gnu-global-create/update-database
+                          ;;      (cedet-gnu-global-root)))
+                          )))))
   (progn
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
@@ -98,16 +99,17 @@
                       (progn
                         (save-mark-and-excursion
                            (call-interactively 'semantic-force-refresh))
-                        (ignore-errors (if (and (cedet-cscope-version-check t)
-                                                (ignore-errors (projectile-project-root))
-                                                (cedet-cscope-support-for-directory
-                                                 (projectile-project-root)))
-                                           (cedet-cscope-create/update-database
-                                            (projectile-project-root))))
-                        (if (and (cedet-gnu-global-version-check t)
-                                 (cedet-gnu-global-root))
-                            (cedet-gnu-global-create/update-database
-                             (cedet-gnu-global-root)))))))))
+                        ;; (ignore-errors (if (and (cedet-cscope-version-check t)
+                        ;;                         (ignore-errors (projectile-project-root))
+                        ;;                         (cedet-cscope-support-for-directory
+                        ;;                          (projectile-project-root)))
+                        ;;                    (cedet-cscope-create/update-database
+                        ;;                     (projectile-project-root))))
+                        ;; (if (and (cedet-gnu-global-version-check t)
+                        ;;          (cedet-gnu-global-root))
+                        ;;     (cedet-gnu-global-create/update-database
+                        ;;      (cedet-gnu-global-root)))
+                        ))))))
 
 (semantic-mode 1)
 (global-ede-mode 1)
