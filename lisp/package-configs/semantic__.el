@@ -73,18 +73,11 @@
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
                           (save-mark-and-excursion
-                           (call-interactively 'semantic-force-refresh))
-                          ;; (ignore-errors (if (and (cedet-cscope-version-check t)
-                          ;;                         (ignore-errors (projectile-project-root))
-                          ;;                         (cedet-cscope-support-for-directory
-                          ;;                          (projectile-project-root)))
-                          ;;                    (cedet-cscope-create/update-database
-                          ;;                     (projectile-project-root))))
-                          ;; (if (and (cedet-gnu-global-version-check t)
-                          ;;          (cedet-gnu-global-root))
-                          ;;     (cedet-gnu-global-create/update-database
-                          ;;      (cedet-gnu-global-root)))
-                          )))))
+                           (semantic-force-refresh))
+                          (if (or (equal major-mode 'c-mode)
+                                  (equal major-mode 'c++-mode))
+                              (custom/ede/create-update-index
+                               (projectile-project-root))))))))
   (progn
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
@@ -98,158 +91,158 @@
                           (equal major-mode 'c++-mode))
                       (progn
                         (save-mark-and-excursion
-                           (call-interactively 'semantic-force-refresh))
-                        ;; (ignore-errors (if (and (cedet-cscope-version-check t)
-                        ;;                         (ignore-errors (projectile-project-root))
-                        ;;                         (cedet-cscope-support-for-directory
-                        ;;                          (projectile-project-root)))
-                        ;;                    (cedet-cscope-create/update-database
-                        ;;                     (projectile-project-root))))
-                        ;; (if (and (cedet-gnu-global-version-check t)
-                        ;;          (cedet-gnu-global-root))
-                        ;;     (cedet-gnu-global-create/update-database
-                        ;;      (cedet-gnu-global-root)))
-                        ))))))
+                         (semantic-force-refresh))
+                        (if (or (equal major-mode 'c-mode)
+                                (equal major-mode 'c++-mode))
+                            (custom/ede/create-update-index
+                             (projectile-project-root)))))))))
 
 (semantic-mode 1)
 (global-ede-mode 1)
-(if (not (equal (substring (emacs-version) 10 14) "25.3"))
-    (global-srecode-minor-mode 1))
 
 
 
-(defvar semantic-tags-location-ring (make-ring 200))
-
-(defun custom/ede/load-project (name proj-root)
-  (let* ((root-file (concat (file-name-as-directory proj-root)
-                            ".dir-locals.el"))
-         (config-path (concat proj-root
-                              "emacs-project-config.json"))
-         (raw-config nil)
-         (local-includes (list "/include"
-                               "../include"))
-         (global-includes nil)
-         (macro-table nil)
-         (macro-files nil)
-         (source-roots (list proj-root)))
+(defun custom/ede/load-config-file (proj-root)
+  (let ((config-path (concat proj-root
+                             "emacs-project-config.json"))
+        (config nil))
     (if (file-exists-p config-path)
         (let ((json-object-type 'hash-table)
               (json-array-type 'list)
               (json-key-type 'string))
-          (setq raw-config
-                (json-read-from-string (f-read-text config-path
-                                                    'utf-8)))))
-    (if (hash-table-p raw-config)
+          (setq config (json-read-from-string
+                        (f-read-text config-path
+                                     'utf-8)))))
+    (if (hash-table-p config)
         (progn
-          (if (and (not (null (custom/map/get "local-includes" raw-config)))
-                   (not (listp (custom/map/get "local-includes" raw-config))))
+          (if (and (not (null (custom/map/get "local-includes" config)))
+                   (not (listp (custom/map/get "local-includes" config))))
               (error "BAD local-includes in emacs-project-config.json"))
-          (if (listp (custom/map/get "local-includes"
-                                     raw-config))
-              (setq local-includes
-                    (append local-includes
-                            (custom/map/get "local-includes"
-                                            raw-config))))
-          (if (custom/map/get "global-includes" raw-config)
-              (setq global-includes
-                    (custom/map/get "global-includes" raw-config)))
-          (if (and (not (null global-includes))
-                   (not (listp global-includes)))
+          (if (and (not (null (custom/map/get "global-includes" config)))
+                   (not (listp (custom/map/get "global-includes" config))))
               (error "BAD global-includes in emacs-project-config.json"))
-          (setq macro-table
-                (custom/map/to-alist (custom/map/get "macro-table"
-                                                     raw-config)))
-          (if (and (not (null macro-table))
-                   (not (listp macro-table)))
+          (if (and (not (null (custom/map/get "macro-table" config)))
+                   (not (hash-table-p (custom/map/get "macro-table" config))))
               (error "BAD macro-table in emacs-project-config.json"))
-          (if (custom/map/get "macro-files" raw-config)
-              (setq macro-files
-                    (custom/map/get "macro-files" raw-config)))
-          (if (and (not (null macro-files))
-                   (not (listp macro-files)))
+          (if (hash-table-p (custom/map/get "macro-table" config))
+              (custom/map/set "macro-table"
+                              (custom/map/to-alist (custom/map/get "macro-table"
+                                                                   config))
+                              config))
+          (if (and (not (null (custom/map/get "macro-files" config)))
+                   (not (listp (custom/map/get "macro-files" config))))
               (error "BAD macro-files in emacs-project-config.json"))
-          (if (and (not (null (custom/map/get "source-roots" raw-config)))
-                   (not (listp (custom/map/get "source-roots" raw-config))))
+          (if (and (not (null (custom/map/get "source-roots" config)))
+                   (not (listp (custom/map/get "source-roots" config))))
               (error "BAD source-roots in emacs-project-config.json"))
-          (if (and (not (null (custom/map/get "source-root" raw-config)))
-                   (not (listp (custom/map/get "source-root" raw-config))))
-              (error "BAD source-root in emacs-project-config.json"))
-          (setq source-roots
-                (append source-roots
-                        (or (custom/map/get "source-roots"
-                                            raw-config)
-                            (custom/map/get "source-root"
-                                            raw-config)))))
-      (if (not (equal raw-config nil))
-          (error "BAD FORMAT OF %s" config-path)
-        (custom/ede/generate-config-file
-         (file-name-as-directory proj-root))))
-    (let ((not-found-files (seq-remove 'file-exists-p macro-files)))
-      (if (length not-found-files)
-          (progn
-            (setq macro-files
-                  (seq-filter 'file-exists-p macro-files))
-            (if (and (hash-table-p raw-config)
-                     (yes-or-no-p (concat "Found nonexistent macro files "
-                                          (format "%s" not-found-files)
-                                          ". Do you want to remove them from JSON config?")))
+          (let* ((macro-files (custom/map/get "macro-files"
+                                              config))
+                 (not-found-files (seq-remove 'file-exists-p
+                                              macro-files)))
+            (if (not (equal (length not-found-files) 0))
                 (progn
-                  (custom/map/set "macro-files"
-                                  (apply 'vector macro-files)
-                                  raw-config)
-                  (custom/map/vectorize "global-includes"
-                                        raw-config)
-                  (custom/map/vectorize "local-includes"
-                                        raw-config)
-                  (custom/map/vectorize "source-roots"
-                                        raw-config)
-                  (let ((json-encoding-pretty-print t)
-                        (json-encoding-default-indentation "    ")
-                        (json-encoding-object-sort-predicate 'string<))
-                    (f-write-text (json-encode raw-config)
-                                  'utf-8
-                                  config-path)))))))
+                  (setq macro-files (seq-filter 'file-exists-p macro-files))
+                  (if (and (hash-table-p config)
+                           (yes-or-no-p (concat "Found nonexistent macro files "
+                                                (format "%s" not-found-files)
+                                                ". Do you want to remove them from JSON config?")))
+                      (progn
+                        (custom/map/set "macro-files" macro-files config)
+                        (let ((json-encoding-pretty-print t)
+                              (json-encoding-default-indentation "    ")
+                              (json-encoding-object-sort-predicate 'string<))
+                          (f-write-text (json-encode config)
+                                        'utf-8
+                                        config-path))))))))
+      (if (not (equal config nil))
+          (error "BAD FORMAT OF %s" config-path)
+        (custom/ede/generate-config-file (file-name-as-directory proj-root))))
+    config))
+
+(defun custom/ede/load-project (name proj-root)
+  (let* ((config (custom/ede/load-config-file proj-root)))
     (ede-cpp-root-project name
-                          :file root-file
-                          :include-path (delete-dups local-includes)
-                          :system-include-path (delete-dups global-includes)
-                          :spp-table (delete-dups macro-table)
-                          :spp-files (delete-dups macro-files))
-    (cond
-     ((cedet-gnu-global-version-check t)
-      (custom/make-link-farm (concat (file-name-as-directory proj-root)
-                                     "emacs-project-src-roots")
-                             source-roots)
-      (cedet-gnu-global-create/update-database
-       (file-name-directory proj-root))
-      (semantic-symref-detect-symref-tool))
-     ((and (cedet-cscope-version-check t)
-           (functionp 'semanticdb-enable-cscope-databases))
-      (custom/make-link-farm (concat (file-name-as-directory proj-root)
-                                     "emacs-project-src-roots")
-                             source-roots)
-      (cedet-cscope-create/update-database
-       (file-name-directory proj-root))
-      (semantic-symref-detect-symref-tool))
-     (t
-      (if (yes-or-no-p (concat "No GNU Global nor CTags found, do you want to "
-                               "prefetch all symbols from all source roots "
-                               "in this project? (may be time and memory "
-                               "consuming for big project [only for first time])"))
-          (dolist (r (delete-dups source-roots))
-            (custom/semantic-index-specific r)))))))
+                          :file (concat (file-name-as-directory proj-root)
+                                        ".dir-locals.el")
+                          :include-path (delete-dups
+                                         (append (custom/map/get
+                                                  "local-includes"
+                                                  config)
+                                                 (list "/include" "../include")))
+                          :system-include-path (delete-dups
+                                                (custom/map/get
+                                                 "global-includes"
+                                                 config))
+                          :spp-table (delete-dups (custom/map/get
+                                                   "macro-table"
+                                                   config))
+                          :spp-files (delete-dups (custom/map/get
+                                                   "macro-files"
+                                                   config)))
+    (custom/ede/create-update-index proj-root
+                                    (custom/map/get "source-roots" config))))
+
+(defvar *should-semantic-parse-all* nil)
+(defun custom/ede/create-update-index (root &optional dependecies)
+  (interactive (projectile-project-root))
+  (if (equal dependecies nil)
+      (setq dependecies
+            (custom/map/get "source-roots"
+                            (custom/ede/load-config-file root))))
+  (cond
+   ((cedet-gnu-global-version-check t)
+    (setq dependecies (mapcar #'file-truename dependecies))
+    (dolist (dep dependecies)
+      (cedet-gnu-global-create/update-database dep))
+    (setenv "GTAGSLIBPATH" (string-join dependecies ":"))
+    (cedet-gnu-global-create/update-database root)
+    (semantic-symref-detect-symref-tool))
+   ((and (cedet-cscope-version-check t)
+         (functionp 'semanticdb-enable-cscope-databases))
+    (custom/make-link-farm (concat (file-name-as-directory root)
+                                   "emacs-project-src-roots")
+                           dependecies)
+    (cedet-cscope-create/update-database root)
+    (semantic-symref-detect-symref-tool))
+   (t
+    (if (equal *should-semantic-parse-all* nil)
+        (setq *should-semantic-parse-all*
+              (if (yes-or-no-p
+                   (concat "No GNU Global nor CTags found, do you want to "
+                           "prefetch all symbols from all source roots "
+                           "in this project? (may be time and memory "
+                           "consuming for big project [only for first time])"))
+                  "yes"
+                "no")))
+
+    (if (equal *should-semantic-parse-all* "yes")
+        (dolist (r (delete-dups dependecies))
+          (custom/semantic-index-specific r))))))
 
 (defun custom/ede/generate-config-file (proj-root)
-  (f-write-text (concat "{\n"
-                        "\t\"local-includes\": [\"/include\",\"../include\"],\n"
-                        "\t\"global-includes\": [],\n"
-                        "\t\"source-roots\": [],\n"
-                        "\t\"macro-table\": {},\n"
-                        "\t\"macro-files\": []\n"
-                        "}")
-                'utf-8
-                (concat proj-root
-                        "emacs-project-config.json")))
+  (if (yes-or-no-p
+       (format "Do you want to create default C/C++ config file at %s?"
+               proj-root))
+      (f-write-text (concat "{\n"
+                            "\t\"local-includes\": [\"/include\",\"../include\"],\n"
+                            "\t\"global-includes\": [],\n"
+                            "\t\"source-roots\": [],\n"
+                            "\t\"macro-table\": {},\n"
+                            "\t\"macro-files\": []\n"
+                            "}")
+                    'utf-8
+                    (concat proj-root
+                            "emacs-project-config.json"))))
+
+(defun custom/ede/refresh-global-deps (root)
+  (let* ((config (custom/ede/load-config-file root))
+         (deps (if config
+                   (custom/map/get "source-roots" config)
+                 nil)))
+    (if deps
+        (progn
+          (setq deps (mapcar #'file-truename deps))
+          (setenv "GTAGSLIBPATH" (string-join deps ":"))))))
 
 (defun custom/ede/generate-generic-loader (proj-root)
   (let ((proj-name (read-string "Project name: "
@@ -260,20 +253,23 @@
     `((custom/ede/load-project ,proj-name
                                ,(file-name-as-directory proj-root)))))
 
+(defun custom/ede/generate-generic-refresher (proj-root)
+  `((custom/ede/refresh-global-deps
+     ,(file-name-as-directory proj-root))))
+
 (defun custom/semantic-goto-definition (point)
   "Goto definition using semantic-ia-fast-jump
 save the pointer marker if tag is found"
   (interactive "d")
   (condition-case err
       (progn
-        (ring-insert semantic-tags-location-ring (point-marker))
+        (xref-push-marker-stack)
         (semantic-ia-fast-jump point)
         (if (not semantic-idle-scheduler-mode)
             (semantic-idle-scheduler-mode))
         (recenter))
     (error
-     ;;if not found remove the tag saved in the ring
-     (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
+     (xref-pop-marker-stack)
      (signal (car err) (cdr err)))))
 
 (defun custom/semantic-switch-proto ()
@@ -282,31 +278,20 @@ save the pointer marker if tag is found"
   (interactive)
   (condition-case err
       (progn
-        (ring-insert semantic-tags-location-ring (point-marker))
+        (xref-push-marker-stack)
         (semantic-analyze-proto-impl-toggle)
         (if (not semantic-idle-scheduler-mode)
             (semantic-idle-scheduler-mode))
         (recenter))
     (error
-     ;;if not found remove the tag saved in the ring
-     (set-marker (ring-remove semantic-tags-location-ring 0) nil nil)
+     (xref-pop-marker-stack)
      (signal (car err) (cdr err)))))
 
 (defun custom/semantic-pop-tag-mark ()
   "popup the tag save by semantic-goto-definition"
   (interactive)
-  (if (ring-empty-p semantic-tags-location-ring)
-      (message "%s" "No more tags available")
-    (let* ((marker (ring-remove semantic-tags-location-ring 0))
-           (buff (marker-buffer marker))
-           (pos (marker-position marker)))
-      (if (not buff)
-          (message "Buffer has been deleted")
-        (switch-to-buffer buff)
-        (goto-char pos)
-        (pulse-momentary-highlight-one-line pos)
-        (recenter))
-      (set-marker marker nil nil))))
+  (xref-pop-marker-stack)
+  (pulse-momentary-highlight-one-line (point)))
 
 (defun custom/semantic/complete-jump (sym)
   (interactive (list
@@ -327,9 +312,8 @@ save the pointer marker if tag is found"
                                                                  tags)))
             (if chosen-tag
                 (progn
-                  (if (boundp 'semantic-tags-location-ring)
-                      (ring-insert semantic-tags-location-ring (point-marker)))
                   (push-mark)
+                  (xref-push-marker-stack)
                   (find-file (buffer-file-name (semantic-tag-buffer chosen-tag)))
                   (goto-char (semantic-tag-start chosen-tag))
                   (if (not semantic-idle-scheduler-mode)
@@ -401,7 +385,7 @@ provided"
     (c-defun-name)))
 
 (defun custom/semantic-index-dir-recur (root &optional selection-regex)
-  (let ((root (file-name-as-directory root))
+  (let ((root (file-name-as-directory (file-truename root)))
         (files (directory-files root t)))
     (setq files (delete (format "%s." root) files))
     (setq files (delete (format "%s.." root) files))

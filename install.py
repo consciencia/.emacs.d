@@ -13,7 +13,9 @@ import platform
 import stat
 import errno
 
+
 __author__ = "Consciencia"
+
 
 sys.dont_write_bytecode = True
 
@@ -26,9 +28,8 @@ def assertCommands(commands):
         except:
             print("Not found command '" + command + "'.")
             if command == "emacs":
-                print("In case of EMACS, you must add its binary into" +
-                      " PATH yourself to be visible in command line")
-            exit(1)
+                raise Exception("In case of EMACS, you must add its binary into" +
+                                " PATH yourself to be visible in command line")
 
 
 def unzip(path, to):
@@ -155,10 +156,10 @@ def actionInstallPackages():
 def actionInstallOsPackages():
     print("Installing os packages:")
     command = getInstallCommand()
+    packages = ["emacs",
+                "global",
+                "cscope"]
     if command:
-        packages = ["emacs",
-                    "global",
-                    "cscope"]
         for package in packages:
             print("Installing %s" % package)
             try:
@@ -168,7 +169,7 @@ def actionInstallOsPackages():
             else:
                 print("Installed.")
     else:
-        print("Skipping, no info for host system (emacs global cscope).")
+        print("Skipping, no info for host system %s." % packages)
 
 
 def main():

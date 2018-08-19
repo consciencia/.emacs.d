@@ -264,9 +264,15 @@
                           (custom/ede/generate-generic-loader proj-root))
                          ((equal proj-type "Javascript")
                           (custom/tern/generare-generic-loader proj-root))
-                         (t nil))))
-    (if loader-content
-        (custom/generate-dir-locals proj-root nil loader-content))))
+                         (t nil)))
+        (refresher-content (cond
+                            ((equal proj-type "C/C++ (generic)")
+                             (custom/ede/generate-generic-refresher proj-root))
+                            (t nil))))
+    (if (or loader-content refresher-content)
+        (custom/generate-dir-locals proj-root
+                                    refresher-content
+                                    loader-content))))
 
 (defun custom/special-c-return-handler ()
   (interactive)
@@ -422,14 +428,49 @@
   (call-interactively 'ace-jump-word-mode))
 
 (defun custom/universal-push-mark ()
-  (if (or (equal major-mode 'c-mode)
-          (equal major-mode 'c++-mode))
-      (ring-insert semantic-tags-location-ring (point-marker)))
   (if (or (equal major-mode 'python-mode)
-          (equal major-mode 'emacs-lisp-mode))
+          (equal major-mode 'emacs-lisp-mode)
+          (equal major-mode 'c-mode)
+          (equal major-mode 'c++-mode))
       (xref-push-marker-stack))
   (if (equal major-mode 'js2-mode)
       (push (cons (buffer-file-name) (point))
             tern-find-definition-stack)))
+
+(defun custom/is-c-file (path)
+  (string-match-p ".*\\.\\(c\\|cpp\\|h\\|hpp\\)$"
+                  path))
+
+(defun custom/is-js-file (path)
+  (string-match-p ".*\\.js$"
+                  path))
+
+(defun custom/is-el-file (path)
+  (string-match-p ".*\\.el$"
+                  path))
+
+(defun custom/is-py-file (path)
+  (string-match-p ".*\\.py$"
+                  path))
+
+(defun custom/get-files-recur (root predicate)
+  (let ((root (file-name-as-directory (file-truename root)))
+        (file nil)
+        (files (directory-files root t))
+        (acc nil))
+    (setq files (delete (format "%s." root) files))
+    (setq files (delete (format "%s.." root) files))
+    (setq files (delete (format "%s.git" root) files))
+    (setq files (delete (format "%s.hg" root) files))
+    (while files
+      (setq file (pop files))
+      (if (not (file-accessible-directory-p file))
+          (if (apply predicate (list file))
+            (setq acc (cons file acc)))
+        (setq acc (append acc
+                          (custom/get-files-recur file
+                                                  predicate)))
+        ))
+    acc))
 
 (load "monkey.el")
