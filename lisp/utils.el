@@ -30,6 +30,11 @@
         acc)
     nil))
 
+(defun custom/get-buffer (name)
+  (loop for buff in (buffer-list)
+        for buffname = (buffer-name buff)
+        if (equal buffname name) return (cons buffname buff)))
+
 (defun custom/universal-quit ()
   (interactive)
   (let* ((this-window (selected-window))
@@ -472,5 +477,76 @@
                                                   predicate)))
         ))
     acc))
+
+(defun custom/define-buffer-key (key func)
+  (let ((name (format "%s-magic" (buffer-name))))
+    (eval
+     `(define-minor-mode ,(intern name)
+        "Automagically built minor mode to define buffer-local keys."))
+    (let* ((mapname (format "%s-map" name))
+           (map (intern mapname)))
+      (unless (boundp (intern mapname))
+        (set map (make-sparse-keymap)))
+      (eval
+       `(define-key ,map ,key func)))
+    (funcall (intern name) t)))
+
+(defun custom/eieo-inspect (obj)
+  (require 'eieio-datadebug)
+  (data-debug-new-buffer "*Inspector*")
+  (data-debug-insert-object-slots obj ">>"))
+
+(defun custom/simple-pop-up (name content)
+  (let ((buff (custom/get-buffer name)))
+    (if buff
+        (setq buff (cdr buff))
+      (setq buff (generate-new-buffer name)))
+    (with-current-buffer buff
+      (read-only-mode -1)
+      (erase-buffer)
+      (insert content)
+      (read-only-mode t))
+    (switch-to-buffer-other-window name)
+    (shrink-window-if-larger-than-buffer)))
+
+(defmacro custom/with-simple-pop-up (name &rest content)
+  (declare (indent 1) (debug t))
+  (let ((buffsym (gensym)))
+    `(let ((,buffsym (custom/get-buffer ,name)))
+       (if ,buffsym
+           (setq ,buffsym (cdr ,buffsym))
+         (setq ,buffsym (generate-new-buffer ,name)))
+       (with-current-buffer ,buffsym
+         (read-only-mode -1)
+         (erase-buffer)
+         ,@content
+         (read-only-mode t))
+       (switch-to-buffer-other-window ,name)
+       (shrink-window-if-larger-than-buffer)
+       (goto-char (point-min)))))
+
+(defun custom/list-overlays-at (&optional pos)
+  (interactive)
+  (setq pos (or pos (point)))
+  (let ((overlays (overlays-at pos))
+        (obuf (current-buffer))
+        (buf (get-buffer-create "*Overlays*"))
+        start end text)
+    (if (not overlays)
+        (message "None.")
+      (set-buffer buf)
+      (erase-buffer)
+      (dolist (o overlays)
+        (setq start (overlay-start o)
+              end (overlay-end o)
+              text (with-current-buffer obuf
+                     (buffer-substring start end)))
+        (when (> (- end start) 13)
+          (setq text (concat (substring text 0 10) "...")))
+        (insert (format "From %d to %d: \"%s\":\n" start end text))
+        (dolist (p (overlay-properties o))
+          (when (overlay-get o p)
+            (insert (format " %15S: %S\n" p (overlay-get o p))))))
+      (pop-to-buffer buf))))
 
 (load "monkey.el")
