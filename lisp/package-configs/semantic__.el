@@ -29,8 +29,8 @@
 (global-semantic-idle-breadcrumbs-mode t)
 
 (setq-default semantic-idle-breadcrumbs-format-tag-function 'semantic-format-tag-summarize
-              semantic-idle-work-parse-neighboring-files-flag t
-              semantic-idle-work-update-headers-flag t
+              semantic-idle-work-parse-neighboring-files-flag nil
+              semantic-idle-work-update-headers-flag nil
               semantic-complete-inline-analyzer-displayor-class 'semantic-displayor-tooltip
               semantic-edits-verbose-flag t
               speedbar-use-images nil

@@ -165,7 +165,8 @@
     (switch-to-buffer-other-window "*Occur*")
     (shrink-window-if-larger-than-buffer)))
 (define-key projectile-key-map (kbd "C-v C-s") 'magit-status)
-(define-key projectile-key-map (kbd "C-v C-l") 'magit-log-popup)
+(define-key projectile-key-map (kbd "C-v C-l C-l") 'magit-log-popup)
+(define-key projectile-key-map (kbd "C-v C-l C-f") 'magit-log-buffer-file)
 (define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-and-checkout)
 (define-key projectile-key-map (kbd "C-v C-d") 'magit-diff-popup)
 ;; magit-blame-mode
@@ -174,7 +175,9 @@
     (interactive)
     (if magit-blame-mode
         (magit-blame-quit)
-      (magit-blame-popup))))
+      (magit-blame nil
+                   (buffer-file-name
+                    (current-buffer))))))
 (global-set-key (kbd "C-<prior>") 'git-gutter:previous-hunk)
 (global-set-key (kbd "C-<next>") 'git-gutter:next-hunk)
 
@@ -213,6 +216,9 @@
                                (message "Failed to perform macroexpand"))))
             (local-set-key (kbd "C-l C-f C-l") 'find-library)
             (local-set-key (kbd "C-l C-i") 'ielm)
+            (local-set-key (kbd "C-l C-p C-r") 'profiler-start)
+            (local-set-key (kbd "C-l C-p C-p") 'profiler-report)
+            (local-set-key (kbd "C-l C-p C-s") 'profiler-stop)
             (local-set-key (kbd "C-l C-l") 'custom/mark-whole-line)
             (local-set-key (kbd "C-.") 'find-function-on-key)
             (local-set-key (kbd "M-<next>") 'senator-next-tag)
