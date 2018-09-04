@@ -3,7 +3,7 @@
 (require 'imenu-list)
 
 (setq imenu-list-position 'right
-      imenu-list-size 0.3
+      imenu-list-size 0.25
       imenu-list-auto-resize nil
       imenu-list-focus-after-activation nil)
 

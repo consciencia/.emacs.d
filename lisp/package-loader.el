@@ -31,7 +31,6 @@
 (load "shackle__.el")
 (load "multiple-cursors__.el")
 (load "magit__.el")
-(load "git-gutter__.el")
 (load "call-graph__.el")
 (load "ivy__.el")
 (load "flycheck__.el")

@@ -51,13 +51,6 @@
 (define-key regs-key-map (kbd "C-a") 'append-to-register)
 (define-key regs-key-map (kbd "C-p") 'prepend-to-register)
 (define-key regs-key-map (kbd "C-l") 'list-registers)
-(define-key minibuffer-local-completion-map
-  (kbd "<tab>")
-  (lambda ()
-    (interactive)
-    (call-interactively 'minibuffer-complete)
-    (call-interactively 'switch-to-completions)
-    (call-interactively 'isearch-forward)))
 (define-key completion-list-mode-map
   (kbd "C-f")
   'isearch-forward)

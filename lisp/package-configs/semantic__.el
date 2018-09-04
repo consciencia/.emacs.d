@@ -28,6 +28,17 @@
 (global-semantic-decoration-mode t)
 (global-semantic-idle-breadcrumbs-mode t)
 
+(advice-add #'yes-or-no-p
+            :around
+            (lambda (oldfun &rest args)
+              ;; eat all messages
+              (setq eldoc-message-function
+                    (lambda (&rest args) nil))
+              (prog1
+                  (apply oldfun args)
+                (setq eldoc-message-function
+                      #'eldoc-minibuffer-message))))
+
 (setq-default semantic-idle-breadcrumbs-format-tag-function 'semantic-format-tag-summarize
               semantic-idle-work-parse-neighboring-files-flag nil
               semantic-idle-work-update-headers-flag nil
@@ -338,24 +349,53 @@ save the pointer marker if tag is found"
   (recenter)
   (pulse-momentary-highlight-one-line (point)))
 
+(defvar-local *is-prefix-pointer-state*
+  (cons nil 'allow))
 (defun custom/semantic/is-prefix-pointer-p (&optional point)
   (interactive "d")
   (if (not point)
       (setq point (point)))
-  (let* ((prefix (oref (semantic-analyze-current-context point)
-                       prefix))
+  (let* ((guess-if-pointer
+          (lambda (sym)
+            (if sym
+                (let ((case-fold-search nil))
+                  (s-match (pcre-to-elisp/cached "^p[A-Z].*") sym)))))
+         (ctx-sym (cadr (semantic-ctxt-current-symbol-and-bounds point)))
+         (curr-fun-name (custom/semantic/get-current-function-name))
+         (decision (not (and (equal curr-fun-name
+                                    (car *is-prefix-pointer-state*))
+                             (not (equal (cdr *is-prefix-pointer-state*)
+                                         'allow)))))
+         (ctx-with-time
+          (custom/with-measure-time
+              (if decision
+                  (ignore-errors (semantic-analyze-current-context point)))))
+         (ctx (car ctx-with-time))
+         (run-time (cdr ctx-with-time))
+         (prefix (if ctx (oref ctx prefix) nil))
          (last-pref (car (last prefix))))
+    (when (> run-time 1)
+      (setq *is-prefix-pointer-state*
+            (cons curr-fun-name 'no-ctx-fetch))
+      (when (yes-or-no-p (format
+                          (concat "Context fetch was too slow (%s) so it was "
+                                  "disabled temporary for this function (%s). Do "
+                                  "you want to enable type guessing (pSomething "
+                                  "is considered as a pointer)?")
+                          run-time
+                          curr-fun-name))
+        (setq *is-prefix-pointer-state*
+              (cons curr-fun-name 'guess))))
     (if last-pref
         (if (semantic-tag-p last-pref)
             (semantic-tag-get-attribute last-pref
                                         :pointer)
-          ;; TODO
-          ;;   Else do analysis of string
-          ;;   when prefix starts like this:
-          ;;     pSomething...
-          ;;   it is pointer too
-          nil)
-      nil)))
+          (if (equal (cdr *is-prefix-pointer-state*)
+                     'guess)
+              (funcall guess-if-pointer ctx-sym)))
+      (if (equal (cdr *is-prefix-pointer-state*)
+                 'guess)
+          (funcall guess-if-pointer ctx-sym)))))
 
 ;; SOME NOTES ABOUT SEMANTIC RESEARCH
 ;;

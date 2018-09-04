@@ -510,7 +510,7 @@
     (shrink-window-if-larger-than-buffer)))
 
 (defmacro custom/with-simple-pop-up (name &rest content)
-  (declare (indent 1) (debug t))
+  (declare (indent 1))
   (let ((buffsym (gensym)))
     `(let ((,buffsym (custom/get-buffer ,name)))
        (if ,buffsym
@@ -548,5 +548,12 @@
           (when (overlay-get o p)
             (insert (format " %15S: %S\n" p (overlay-get o p))))))
       (pop-to-buffer buf))))
+
+(defmacro custom/with-measure-time (&rest body)
+  (declare (indent 1))
+  `(let ((time (current-time)))
+     (cons (progn
+             ,@body)
+           (float-time (time-since time)))))
 
 (load "monkey.el")
