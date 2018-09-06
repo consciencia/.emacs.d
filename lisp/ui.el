@@ -1,7 +1,8 @@
 (require 'whitespace)
 
 (which-function-mode t)
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
+(add-to-list 'default-frame-alist
+             '(fullscreen . maximized))
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 
@@ -19,11 +20,14 @@
 
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
-(setq-default c-basic-offset tab-width)
+(defvaralias 'c-basic-offset 'tab-width)
 (c-set-offset 'substatement-open 0)
 (c-set-offset 'case-label tab-width nil)
-(setq-default tab-stop-list (number-sequence tab-width 120 tab-width))
-(defvaralias 'c-basic-offset 'tab-width)
+(c-set-offset 'inextern-lang 0)
+(setq-default tab-stop-list
+              (number-sequence tab-width
+                               120
+                               tab-width))
 (defvaralias 'cperl-indent-level 'tab-width)
 
 (setq inhibit-startup-screen t)
@@ -45,10 +49,9 @@
 (add-to-list 'completion-styles 'initials t)
 
 (fset 'yes-or-no-p 'y-or-n-p)
-(advice-add 'y-or-n-p :around #'y-or-n-p-with-return)
-
-(setq gdb-many-windows t
-      gdb-show-main t)
+(advice-add 'y-or-n-p
+            :around
+            #'y-or-n-p-with-return)
 
 (setq split-height-threshold 40)
 (setq split-width-threshold 80)
@@ -59,11 +62,17 @@
 (global-visual-line-mode t)
 
 (custom-set-faces
- '(ace-jump-face-foreground ((t (:foreground "white" :underline (:color "lightblue" :style wave)))))
+ '(ace-jump-face-foreground ((t (:foreground "white"
+                                 :underline (:color "lightblue"
+                                             :style wave)))))
  '(whitespace-line ((t (:foreground "red")))))
 
-(setq hexl-bits 8
-      jit-lock-stealth-nice 0)
+(setq hexl-bits 8)
+
+(setq font-lock-maximum-decoration t)
+(setq jit-lock-mode t)
+(setq jit-lock-stealth-nice 0.3)
+(setq jit-lock-stealth-time 0.3)
 
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)

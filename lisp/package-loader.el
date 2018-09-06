@@ -40,3 +40,4 @@
 (load "tern__.el")
 (load "web-mode__.el")
 (load "less-mode__.el")
+(load "highlight-indentation__.el")

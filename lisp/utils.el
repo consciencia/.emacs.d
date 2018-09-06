@@ -401,19 +401,33 @@
 (defun custom/get-project-root ()
   (ignore-errors (projectile-project-root)))
 
-(defun custom/in-comment ()
-  (or (company-in-string-or-comment)
-      (custom/in-comment-font-lock)))
-
-(defun custom/in-comment-font-lock ()
-  (let ((fontfaces (get-text-property (point) 'face)))
+(defun custom/pos-is-in-comment (&optional pos)
+  "Returns t when position is in comment. This function
+can detect comment via `syntax-ppss' or using test for font
+face placed there by font-lock. This function is reasonable
+fast for so dont be shy.
+POS is optional position in file where to search for comment."
+  (interactive)
+  (if (not pos)
+      (setq pos (point)))
+  (let ((fontfaces (get-text-property pos 'face))
+        (comment-faces '(font-lock-comment-face
+                         font-lock-comment-delimiter-face))
+        (result nil))
     (when (not (listp fontfaces))
       (setf fontfaces (list fontfaces)))
-    (delq nil
-          (mapcar #'(lambda (f)
-                      (or (eq f 'font-lock-comment-face)
-                          (eq f 'font-lock-comment-delimiter-face)))
-                  fontfaces))))
+    (setq result
+          (if font-lock-mode
+              (loop for font-face in fontfaces
+                    if (memq font-face comment-faces)
+                    return t)
+            (let ((ppss (syntax-ppss)))
+              (or (car (setq ppss (nthcdr 3 ppss)))
+                  (car (setq ppss (cdr ppss)))
+                  (nth 3 ppss)))))
+    (if (called-interactively-p 'any)
+        (message "Comment state: %s" result)
+      result)))
 
 (defun custom/goto-line ()
   (interactive)

@@ -38,9 +38,13 @@
 
 (run-with-idle-timer 0.1 t
                      (lambda ()
-                       (if (or (equal major-mode 'c-mode)
-                               (equal major-mode 'c++-mode)
-                               (equal major-mode 'emacs-lisp-mode))
-                           (if (custom/in-comment)
-                               (if company-mode (company-mode -1))
-                             (if (not company-mode) (company-mode 1))))))
+                       (if (custom/pos-is-in-comment)
+                           (if company-mode (company-mode -1))
+                         (if (not company-mode)
+                             (company-mode 1)))))
+
+(define-key company-active-map (kbd "<tab>") 'company-search-candidates)
+(define-key company-search-map (kbd "<prior>") 'company-search-repeat-backward)
+(define-key company-search-map (kbd "<next>") 'company-search-repeat-forward)
+(define-key company-search-map (kbd "<tab>") 'company-search-abort)
+(global-set-key (kbd "C-SPC") 'company-complete-common)

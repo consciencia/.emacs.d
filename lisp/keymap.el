@@ -2,20 +2,21 @@
 (require 'elisp-slime-nav)
 
 (setq local-function-key-map
-      (delq '(kp-tab . [9]) local-function-key-map))
+      (delq '(kp-tab . [9])
+            local-function-key-map))
 
 ;; CUA SETUP
 (cua-mode t)
-(setq cua-auto-tabify-rectangles nil)
 (transient-mark-mode 1)
+(setq cua-auto-tabify-rectangles nil)
 (setq cua-keep-region-after-copy t)
+(setq bookmark-save-flag 1)
 
 ;; KEYMAPS SETUP
 (define-prefix-command 'general-key-map)
 (global-set-key (kbd "C-e") 'general-key-map)
 (define-prefix-command 'regs-key-map)
 (define-key general-key-map (kbd "C-r") 'regs-key-map)
-(setq bookmark-save-flag 1)
 (define-prefix-command 'bookmarks-key-map)
 (define-key general-key-map (kbd "C-b") 'bookmarks-key-map)
 (define-prefix-command 'projectile-key-map)
@@ -37,6 +38,19 @@
 (define-key general-key-map (kbd "C-l C-r") 'list-registers)
 (define-key general-key-map (kbd "C-l C-a") 'list-abbrevs)
 (define-key general-key-map (kbd "C-l C-k") 'browse-kill-ring)
+(define-key general-key-map (kbd "C-d C-k") 'describe-key)
+(define-key general-key-map (kbd "C-d C-f") 'describe-function)
+(define-key general-key-map (kbd "C-d C-p" ) 'describe-package)
+(define-key general-key-map (kbd "C-p C-s") 'profiler-start)
+(define-key general-key-map (kbd "C-p C-p")
+  (lambda ()
+    (interactive)
+    (call-interactively 'profiler-report)
+    (call-interactively 'profiler-stop)))
+(define-key general-key-map (kbd "C-f C-f") 'find-function)
+(define-key general-key-map (kbd "C-f C-k") 'find-function-on-key)
+(define-key general-key-map (kbd "C-f C-l") 'find-library)
+(define-key general-key-map (kbd "C-i") 'ielm)
 (define-key browse-kill-ring-mode-map (kbd "C-<down>") 'browse-kill-ring-forward)
 (define-key browse-kill-ring-mode-map (kbd "C-<up>") 'browse-kill-ring-previous)
 (define-key browse-kill-ring-mode-map (kbd "<down>") 'browse-kill-ring-forward)
@@ -81,6 +95,7 @@
 (global-set-key (kbd "C-S-<prior>") 'next-buffer)
 (global-set-key (kbd "C-S-<next>") 'previous-buffer)
 (global-set-key (kbd "C-0") 'ido-switch-buffer)
+(global-set-key  (kbd "C-b") 'ido-switch-buffer)
 (global-set-key (kbd "C-y") nil)
 (global-set-key (kbd "C-s") 'save-buffer)
 (global-set-key (kbd "C-S-s") 'save-some-buffers)
@@ -101,11 +116,6 @@
 (global-set-key (kbd "C-<left>") 'custom/backward-symbol)
 (global-set-key (kbd "C-<down>") 'forward-paragraph)
 (global-set-key (kbd "C-<up>") 'backward-paragraph)
-(global-set-key (kbd "C-5")
-                (lambda ()
-                  (interactive)
-                  (call-interactively 'mark-defun)
-                  (setq transient-mark-mode (cons 'only transient-mark-mode))))
 
 (global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
@@ -117,14 +127,13 @@
     (recenter)))
 (define-key bookmarks-key-map (kbd "C-s") 'bookmark-set)
 (define-key bookmarks-key-map (kbd "C-l") 'list-bookmarks)
-(global-set-key  (kbd "C-b") 'ido-switch-buffer)
 (global-set-key (kbd "M-j") 'custom/ace-jump-word-mode)
 (define-key c++-mode-map (kbd "M-j") 'custom/ace-jump-word-mode)
 (define-key c-mode-map (kbd "M-j") 'custom/ace-jump-word-mode)
 (global-set-key (kbd "M-J") 'ace-jump-mode-pop-mark)
 (global-set-key (kbd "C-r") 'ido-goto-symbol)
-(global-set-key (kbd "M-m") 'custom/mc/mark-next-like-this)
-(global-set-key (kbd "M-M") 'custom/mc/mark-prev-like-this)
+(global-set-key (kbd "C-<tab>") 'custom/mc/mark-next-like-this)
+(global-set-key (kbd "C-S-<iso-lefttab>") 'custom/mc/mark-prev-like-this)
 (define-key mc/keymap (kbd "<escape>") 'mc/keyboard-quit)
 
 ;; PROJECT MANAGEMENT BINDS
@@ -171,8 +180,8 @@
       (magit-blame nil
                    (buffer-file-name
                     (current-buffer))))))
-(global-set-key (kbd "C-<prior>") 'git-gutter:previous-hunk)
-(global-set-key (kbd "C-<next>") 'git-gutter:next-hunk)
+(global-set-key (kbd "C-<prior>") nil)
+(global-set-key (kbd "C-<next>") nil)
 
 ;; BUFFER LOCAL SEARCHING BINDS
 (define-key search-key-map (kbd "C-r") 'vr/query-replace)
@@ -191,29 +200,20 @@
 ;; ELISP BINDS
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
-            (local-set-key (kbd "C-l C-d C-k") 'describe-key)
-            (local-set-key (kbd "C-l C-d C-p" ) 'describe-package)
             (local-set-key (kbd "M-*") 'custom/elisp-slime/get-documentation)
-            (local-set-key (kbd "C-l C-e C-s") 'eval-last-sexp)
-            (local-set-key (kbd "C-l C-e C-f") 'eval-defun)
-            (local-set-key (kbd "C-l C-e C-r") 'eval-region)
-            (local-set-key (kbd "C-l C-e C-b") 'eval-buffer)
-            (local-set-key (kbd "C-l C-e C-e") 'eval-expression)
-            (local-set-key (kbd "C-l C-e C-p") 'eval-print-last-sexp)
-            (local-set-key (kbd "C-l C-m")
+            (local-set-key (kbd "M-e M-s") 'eval-last-sexp)
+            (local-set-key (kbd "M-e M-d") 'eval-defun)
+            (local-set-key (kbd "M-e M-r") 'eval-region)
+            (local-set-key (kbd "M-e M-b") 'eval-buffer)
+            (local-set-key (kbd "M-e M-e") 'eval-expression)
+            (local-set-key (kbd "M-e M-p") 'eval-print-last-sexp)
+            (local-set-key (kbd "M-m")
                            (lambda ()
                              (interactive)
                              (call-interactively 'custom/full-macroexpand)
                              (if (get-buffer "*Macroexpand Output*")
                                  (switch-to-buffer-other-window "*Macroexpand Output*")
                                (message "Failed to perform macroexpand"))))
-            (local-set-key (kbd "C-l C-f C-l") 'find-library)
-            (local-set-key (kbd "C-l C-i") 'ielm)
-            (local-set-key (kbd "C-l C-p C-r") 'profiler-start)
-            (local-set-key (kbd "C-l C-p C-p") 'profiler-report)
-            (local-set-key (kbd "C-l C-p C-s") 'profiler-stop)
-            (local-set-key (kbd "C-l C-l") 'custom/mark-whole-line)
-            (local-set-key (kbd "C-.") 'find-function-on-key)
             (local-set-key (kbd "M-<next>") 'senator-next-tag)
             (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
@@ -221,8 +221,10 @@
                            (lambda ()
                              (interactive)
                              (mark-defun)
-                             (setq transient-mark-mode (cons 'only transient-mark-mode))))
-            (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
+                             (setq transient-mark-mode
+                                   (cons 'only transient-mark-mode))))
+            (local-set-key (kbd "<tab>")
+                           'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-capf
                     company-dabbrev-code
@@ -348,10 +350,6 @@
 (add-to-ordered-list 'emulation-mode-map-alists
                      `((cua-mode . ,custom-ido-map))
                      0)
-
-(require 'company)
-(define-key company-active-map (kbd "<tab>") 'company-search-candidates)
-(global-set-key (kbd "C-SPC") 'company-complete-common)
 
 ;; Flycheck BINDS
 (global-set-key (kbd "M-l") 'custom/lint-this-buffer)

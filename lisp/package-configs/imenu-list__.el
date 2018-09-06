@@ -11,3 +11,9 @@
 
 (add-hook 'after-make-frame-functions
           #'custom/create-imenu-list)
+
+(advice-add #'imenu-list-update
+            :around
+            (lambda (oldfun &rest args)
+              (if (not (custom/pos-is-in-comment))
+                  (apply oldfun args))))

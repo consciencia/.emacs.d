@@ -3,9 +3,9 @@
 ;; format (better said, incompatible with new version) and semantic
 ;; simply silently fails instead of detecting incompatibility
 
+(require 'ede)
 (require 'cc-mode)
 (require 'semantic)
-(require 'ede)
 (require 'cedet-global)
 (require 'cedet-cscope)
 (require 'semantic/idle)
@@ -20,34 +20,53 @@
 (global-semanticdb-minor-mode t)
 (global-semantic-idle-scheduler-mode t)
 (global-semantic-mru-bookmark-mode t)
-(global-semantic-stickyfunc-mode -1)
 (global-semantic-highlight-edits-mode t)
-(global-semantic-show-unmatched-syntax-mode -1)
 (global-semantic-idle-summary-mode t)
 (global-semantic-highlight-func-mode t)
 (global-semantic-decoration-mode t)
 (global-semantic-idle-breadcrumbs-mode t)
+;; idle breadcrumbs are better, but are in conflict
+;; with stickyfunc, so its disabled.
+(global-semantic-stickyfunc-mode -1)
+;; Temporary enabled, will be disabled after correct
+;; linter function (maybe, this mode is usefull when
+;; determining state of semantic parser).
+(global-semantic-show-unmatched-syntax-mode t)
 
-(advice-add #'yes-or-no-p
-            :around
-            (lambda (oldfun &rest args)
-              ;; eat all messages
-              (setq eldoc-message-function
-                    (lambda (&rest args) nil))
-              (prog1
-                  (apply oldfun args)
-                (setq eldoc-message-function
+(setq-default semantic-idle-breadcrumbs-format-tag-function
+              'semantic-format-tag-summarize)
+(setq-default semantic-idle-work-parse-neighboring-files-flag nil)
+(setq-default semantic-idle-work-update-headers-flag nil)
+(setq-default semantic-complete-inline-analyzer-displayor-class
+              'semantic-displayor-tooltip)
+(setq-default semantic-edits-verbose-flag t)
+(setq-default senator-step-at-tag-classes nil)
+(setq-default senator-step-at-start-end-tag-classes
+              '(function))
+(setq-default speedbar-use-images nil)
+(setq-default speedbar-use-imenu-flag t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This hack is used to kill temporary all eldoc
+;; reporting when minibuffer is used for something
+;; different. Semantic uses eldoc as an interface to
+;; present things so this solves issues of eldoc
+;; and idle summary mode.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defvar-local *old-eldoc-messager* nil)
+(add-hook 'minibuffer-setup-hook
+          (lambda ()
+            ;; backup it
+            (setq *old-eldoc-messager*
+                  eldoc-message-function)
+            ;; eat all messages
+            (setq eldoc-message-function
+                  (lambda (&rest args) nil))))
+(add-hook 'minibuffer-exit-hook
+          (lambda ()
+            (setq eldoc-message-function
+                  (or *old-eldoc-messager*
                       #'eldoc-minibuffer-message))))
-
-(setq-default semantic-idle-breadcrumbs-format-tag-function 'semantic-format-tag-summarize
-              semantic-idle-work-parse-neighboring-files-flag nil
-              semantic-idle-work-update-headers-flag nil
-              semantic-complete-inline-analyzer-displayor-class 'semantic-displayor-tooltip
-              semantic-edits-verbose-flag t
-              speedbar-use-images nil
-              speedbar-use-imenu-flag t
-              senator-step-at-tag-classes nil
-              senator-step-at-start-end-tag-classes (list 'function))
 
 (setq cedet-global-command "global")
 (if (cedet-gnu-global-version-check t)
@@ -102,8 +121,8 @@
                             (custom/ede/create-update-index
                              (projectile-project-root)))))))))
 
-(semantic-mode 1)
 (global-ede-mode 1)
+(semantic-mode 1)
 
 
 
