@@ -54,6 +54,19 @@
 (load "ui.el")
 (load "keymap.el")
 
+;; add gited for browsing branches
+
+;; fix fucking problem with eldoc covering monibuffer
+;; hooks not works at all, need to use swarm of advices
+
+;; add Wilfred/helpfull
+
+;; add semantic refactor
+
+;; add auto-compile
+
+;; add company-mode/company-statistic
+
 ;; In semantic, create abstraction layer around config file
 ;; and then, use new indexing function as after save operation
 ;; cycles are slowing it down, so without it, it should be

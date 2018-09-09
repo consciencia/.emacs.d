@@ -39,8 +39,9 @@
 (define-key general-key-map (kbd "C-l C-a") 'list-abbrevs)
 (define-key general-key-map (kbd "C-l C-k") 'browse-kill-ring)
 (define-key general-key-map (kbd "C-d C-k") 'describe-key)
-(define-key general-key-map (kbd "C-d C-f") 'describe-function)
+(define-key general-key-map (kbd "C-d C-d") 'describe-function)
 (define-key general-key-map (kbd "C-d C-p" ) 'describe-package)
+(define-key general-key-map (kbd "C-d C-f" ) 'apropos)
 (define-key general-key-map (kbd "C-p C-s") 'profiler-start)
 (define-key general-key-map (kbd "C-p C-p")
   (lambda ()
@@ -100,6 +101,8 @@
 (global-set-key (kbd "C-s") 'save-buffer)
 (global-set-key (kbd "C-S-s") 'save-some-buffers)
 (global-set-key (kbd "C-w") 'custom/kill-buffer)
+(global-set-key (kbd "C-w") 'custom/kill-buffer)
+(define-key magit-status-mode-map (kbd "C-w") 'magit-mode-bury-buffer)
 
 ;; GENERIC TEXT MANIPULATION BINDS
 (global-set-key (kbd "C-a") 'custom/mark-whole-buffer)
@@ -169,7 +172,7 @@
 (define-key projectile-key-map (kbd "C-v C-s") 'magit-status)
 (define-key projectile-key-map (kbd "C-v C-l C-l") 'magit-log-popup)
 (define-key projectile-key-map (kbd "C-v C-l C-f") 'magit-log-buffer-file)
-(define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-and-checkout)
+(define-key projectile-key-map (kbd "C-v C-c") 'magit-branch-popup)
 (define-key projectile-key-map (kbd "C-v C-d") 'magit-diff-popup)
 ;; magit-blame-mode
 (define-key projectile-key-map (kbd "C-v C-b")

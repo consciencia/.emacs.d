@@ -41,3 +41,4 @@
 (load "web-mode__.el")
 (load "less-mode__.el")
 (load "highlight-indentation__.el")
+(load "nlinum__.el")

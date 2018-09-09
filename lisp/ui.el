@@ -8,15 +8,14 @@
 
 (load-theme 'spacemacs-dark t)
 
-(setq ring-bell-function 'ignore)
-(setq mouse-wheel-scroll-amount '(1 ((shift) . 1)))
-(setq mouse-wheel-progressive-speed nil)
-(setq mouse-wheel-follow-mouse 't)
-(setq scroll-step 2)
+(setq-default ring-bell-function 'ignore)
+(setq-default mouse-wheel-scroll-amount '(1 ((shift) . 1)))
+(setq-default mouse-wheel-progressive-speed nil)
+(setq-default mouse-wheel-follow-mouse 't)
+(setq-default scroll-step 2)
 
-(global-linum-mode 1)
 (show-paren-mode 1)
-(setq show-paren-delay 0)
+(setq-default show-paren-delay 0)
 
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)

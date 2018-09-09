@@ -26,13 +26,10 @@
                                  (setq custom/neotree/last-buffer buff-name)
                                  (let ((proj-root (custom/get-project-root)))
                                    (if (and (stringp proj-root)
-                                            (not (equal (expand-file-name (substitute-in-file-name proj-root))
+                                            (not (equal (expand-file-name
+                                                         (substitute-in-file-name proj-root))
                                                         neo-buffer--start-node)))
                                        (progn
                                          (push-mark nil t nil)
                                          (neotree-dir proj-root)
                                          (pop-global-mark))))))))))
-
-
-
-

@@ -292,13 +292,18 @@
     (call-interactively 'compilation-display-error))
    ((equal major-mode 'compilation-mode)
     (call-interactively 'compilation-display-error))
+   (smerge-mode
+    (call-interactively 'smerge-keep-current))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
   (interactive)
   (cond
    ((active-minibuffer-window)
-    (call-interactively 'ido-magic-forward-char))))
+    (call-interactively 'ido-magic-forward-char))
+   (smerge-mode
+    (call-interactively 'smerge-resolve))
+   (t (message "No bind in current context"))))
 
 (defun custom/enhance-isearch ()
   (define-key isearch-mode-map
@@ -569,5 +574,14 @@ POS is optional position in file where to search for comment."
      (cons (progn
              ,@body)
            (float-time (time-since time)))))
+
+(defun custom/try-to-use-smerge ()
+  (when (and buffer-file-name
+             (vc-backend buffer-file-name))
+    (when (save-excursion
+            (goto-char (point-min))
+            (re-search-forward "^<<<<<<< " nil t))
+      (if (not smerge-mode)
+          (smerge-start-session)))))
 
 (load "monkey.el")

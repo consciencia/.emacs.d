@@ -4,6 +4,7 @@
 (setq mc/cmds-to-run-for-all
       '(
         autopair-insert-opening
+        autopair-skip-close-maybe
         beginning-of-visual-line
         cua--prefix-override-handler
         cua-paste

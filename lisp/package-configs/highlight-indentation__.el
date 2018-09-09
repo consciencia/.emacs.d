@@ -6,6 +6,4 @@
             (interactive)
             (highlight-indentation-mode t)
             (set-face-background 'highlight-indentation-face
-                                 "#555555")
-            (set-face-background 'highlight-indentation-current-column-face
-                                 "#888888")))
+                                 "#333333")))
