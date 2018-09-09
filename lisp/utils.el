@@ -294,6 +294,8 @@
     (call-interactively 'compilation-display-error))
    (smerge-mode
     (call-interactively 'smerge-keep-current))
+   (with-editor-mode
+    (call-interactively 'with-editor-finish))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
@@ -303,6 +305,8 @@
     (call-interactively 'ido-magic-forward-char))
    (smerge-mode
     (call-interactively 'smerge-resolve))
+   (with-editor-mode
+    (call-interactively 'with-editor-cancel))
    (t (message "No bind in current context"))))
 
 (defun custom/enhance-isearch ()
