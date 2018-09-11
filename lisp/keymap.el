@@ -27,7 +27,7 @@
 ;; GENERAL BINDS
 (global-set-key (kbd "<f2>") 'neotree-toggle)
 (global-set-key (kbd "<f3>") 'neotree-find)
-(global-set-key (kbd "<f4>") 'dired-jump)
+(global-set-key (kbd "<f4>") 'dired-jump-other-window)
 (global-set-key (kbd "<f12>") 'customize-group)
 (global-set-key (kbd "<f11>") 'toggle-frame-fullscreen)
 (global-set-key (kbd "<f10>") 'customize-face)

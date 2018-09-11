@@ -292,6 +292,8 @@
     (call-interactively 'compilation-display-error))
    ((equal major-mode 'compilation-mode)
     (call-interactively 'compilation-display-error))
+   ((equal major-mode 'dired-mode)
+    (call-interactively 'dired-mark-files-regexp))
    (smerge-mode
     (call-interactively 'smerge-keep-current))
    (with-editor-mode
@@ -303,6 +305,8 @@
   (cond
    ((active-minibuffer-window)
     (call-interactively 'ido-magic-forward-char))
+   ((equal major-mode 'dired-mode)
+    (call-interactively dired-unmark-all-marks))
    (smerge-mode
     (call-interactively 'smerge-resolve))
    (with-editor-mode

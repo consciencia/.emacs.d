@@ -20,14 +20,17 @@
 (add-hook 'after-make-frame-functions
           #'custom/create-imenu-list)
 
+(defun custom|imenu-list-update (oldfun &rest args)
+  (let* ((old (current-buffer))
+         (oldwin (get-buffer-window old))
+         (im (get-buffer imenu-list-buffer-name))
+         (win (if im (get-buffer-window im))))
+    (when (and (not (active-minibuffer-window))
+               im win)
+      (switch-to-buffer-other-window im)
+      (select-window oldwin)
+      (switch-to-buffer old))
+    (apply oldfun args)))
+
 (advice-add #'imenu-list-update
-            :around
-            (lambda (oldfun &rest args)
-              (let ((old (current-buffer))
-                    (im (get-buffer imenu-list-buffer-name)))
-                (when (and (not (active-minibuffer-window))
-                           im)
-                  (switch-to-buffer-other-window im)
-                  (switch-to-buffer-other-window old)))
-              (when (not (custom/pos-is-in-comment))
-                (apply oldfun args))))
+            :around 'custom|imenu-list-update)

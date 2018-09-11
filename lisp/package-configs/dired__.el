@@ -21,6 +21,12 @@
 
 (define-key dired-mode-map (kbd "<C-kp-subtract>")
   'diredp-up-directory-reuse-dir-buffer)
+(define-key dired-mode-map (kbd "RET")
+  (lambda ()
+    (interactive)
+    (if (file-directory-p (dired-get-file-for-visit))
+        (diredp-find-file-reuse-dir-buffer)
+      (dired-find-file-other-window))))
 (define-key dired-mode-map (kbd "<C-kp-add>") 'custom/dired/create-dir-or-file)
 (define-key dired-mode-map (kbd "<kp-add>") 'custom/dired/create-dir)
 (define-key dired-mode-map (kbd "C-<up>") 'dired-prev-dirline)
@@ -28,9 +34,25 @@
 (define-key dired-mode-map (kbd "i") 'dired-subtree-insert)
 (define-key dired-mode-map (kbd "I") 'dired-subtree-remove)
 (define-key dired-mode-map (kbd "<tab>") 'dired-subtree-toggle)
+(define-key dired-mode-map (kbd "C")
+  (lambda ()
+    (interactive)
+    (call-interactively 'dired-do-copy)
+    (dired-revert)))
+(define-key dired-mode-map (kbd "D")
+  (lambda ()
+    (interactive)
+    (call-interactively 'dired-do-delete)
+    (dired-revert)))
+(define-key dired-mode-map (kbd "R")
+  (lambda ()
+    (interactive)
+    (call-interactively 'dired-do-rename)
+    (dired-revert)))
+;; call to (wdired-change-to-wdired-mode)
 (define-key dired-mode-map (kbd "C-SPC") 'dired-toggle-read-only)
-;;(define-key wdired-mode-map (kbd "C-SPC") 'wdired-finish-edit)
-;;(define-key wdired-mode-map (kbd "C-q") 'wdired-exit)
+(define-key wdired-mode-map (kbd "C-SPC") 'wdired-finish-edit)
+(define-key wdired-mode-map (kbd "C-q") 'wdired-exit)
 (define-key xref--button-map (kbd "C-<return>")
   'xref-show-location-at-point)
 
@@ -51,7 +73,7 @@
           (revert-buffer))
       (progn
         (f-touch fname)
-        (dired-add-file fname)
+        (revert-buffer)
         (dired-goto-file (expand-file-name fname))))))
 
 (defun custom/dired/get-marked-nodes ()
@@ -80,7 +102,7 @@
     new-name))
 
 (defun dired-create-files (file-creator operation fn-list name-constructor
-					&optional marker-char)
+                                        &optional marker-char)
   "Create one or more new files from a list of existing files FN-LIST.
 This function also handles querying the user, updating Dired
 buffers, and displaying a success or failure message.
@@ -104,15 +126,13 @@ If optional argument MARKER-CHAR is non-nil, mark each
 newly-created file's Dired entry with the character MARKER-CHAR,
 or with the current marker character if MARKER-CHAR is t."
   (let (dired-create-files-failures failures
-	skipped (success-count 0) (total (length fn-list)))
+                                    skipped (success-count 0) (total (length fn-list)))
     (let (to overwrite-query
-	     overwrite-backup-query)	; for dired-handle-overwrite
+             overwrite-backup-query)	; for dired-handle-overwrite
       (dolist (from fn-list)
         (setq to (funcall name-constructor from))
-        (push (cons from to) D-FILES)
         (if (equal to from)
-            (progn
-              (setq to (custom/find-free-file-name to))))
+            (setq to (custom/find-free-file-name to)))
         (if (not to)
             (setq skipped (cons (dired-make-relative from) skipped))
           (let* ((overwrite (file-exists-p to))
@@ -150,13 +170,13 @@ ESC or `q' to not overwrite any of the remaining files,
                          (file-directory-p to)
                          (eq file-creator 'dired-copy-file))
                 (setq to destname))
-	      ;; If DESTNAME is a subdirectory of FROM, not a symlink,
-	      ;; and the method in use is copying, signal an error.
-	      (and (eq t (car (file-attributes destname)))
-		   (eq file-creator 'dired-copy-file)
-		   (file-in-directory-p destname from)
-		   (error "Cannot copy `%s' into its subdirectory `%s'"
-			  from to)))
+              ;; If DESTNAME is a subdirectory of FROM, not a symlink,
+              ;; and the method in use is copying, signal an error.
+              (and (eq t (car (file-attributes destname)))
+                   (eq file-creator 'dired-copy-file)
+                   (file-in-directory-p destname from)
+                   (error "Cannot copy `%s' into its subdirectory `%s'"
+                          from to)))
             (condition-case err
                 (progn
                   (funcall file-creator from to dired-overwrite-confirmed)
@@ -179,23 +199,23 @@ ESC or `q' to not overwrite any of the remaining files,
       (setq failures (nconc failures dired-create-files-failures))
       (dired-log-summary
        (format "%s failed for %d file%s in %d requests"
-		operation (length failures)
-		(dired-plural-s (length failures))
-		total)
+               operation (length failures)
+               (dired-plural-s (length failures))
+               total)
        failures))
      (failures
       (dired-log-summary
        (format "%s failed for %d of %d file%s"
-		operation (length failures)
-		total (dired-plural-s total))
+               operation (length failures)
+               total (dired-plural-s total))
        failures))
      (skipped
       (dired-log-summary
        (format "%s: %d of %d file%s skipped"
-		operation (length skipped) total
-		(dired-plural-s total))
+               operation (length skipped) total
+               (dired-plural-s total))
        skipped))
      (t
       (message "%s: %s file%s"
-	       operation success-count (dired-plural-s success-count)))))
-  (dired-move-to-filename))
+               operation success-count (dired-plural-s success-count)))))
+  (revert-buffer))

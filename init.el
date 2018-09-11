@@ -54,10 +54,17 @@
 (load "ui.el")
 (load "keymap.el")
 
-;; add gited for browsing branches
-
 ;; fix fucking problem with eldoc covering monibuffer
 ;; hooks not works at all, need to use swarm of advices
+
+;; try experiment with GC
+;; create limit for 512MB and run it
+;; after 5 seconds of idling
+;; this way, even company with semantic
+;; as an backend will be fast when completing
+;; at ""
+
+;; add gited for browsing branches
 
 ;; add Wilfred/helpfull
 
