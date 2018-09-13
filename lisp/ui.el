@@ -68,10 +68,5 @@
 
 (setq hexl-bits 8)
 
-(setq font-lock-maximum-decoration t)
-(setq jit-lock-mode t)
-(setq jit-lock-stealth-nice 0.3)
-(setq jit-lock-stealth-time 0.3)
-
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)

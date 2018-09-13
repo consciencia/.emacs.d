@@ -28,10 +28,7 @@
 ;; idle breadcrumbs are better, but are in conflict
 ;; with stickyfunc, so its disabled.
 (global-semantic-stickyfunc-mode -1)
-;; Temporary enabled, will be disabled after correct
-;; linter function (maybe, this mode is usefull when
-;; determining state of semantic parser).
-(global-semantic-show-unmatched-syntax-mode t)
+(global-semantic-show-unmatched-syntax-mode -1)
 
 (setq-default semantic-idle-breadcrumbs-format-tag-function
               'semantic-format-tag-summarize)
@@ -45,28 +42,6 @@
               '(function))
 (setq-default speedbar-use-images nil)
 (setq-default speedbar-use-imenu-flag t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This hack is used to kill temporary all eldoc
-;; reporting when minibuffer is used for something
-;; different. Semantic uses eldoc as an interface to
-;; present things so this solves issues of eldoc
-;; and idle summary mode.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defvar-local *old-eldoc-messager* nil)
-(add-hook 'minibuffer-setup-hook
-          (lambda ()
-            ;; backup it
-            (setq *old-eldoc-messager*
-                  eldoc-message-function)
-            ;; eat all messages
-            (setq eldoc-message-function
-                  (lambda (&rest args) nil))))
-(add-hook 'minibuffer-exit-hook
-          (lambda ()
-            (setq eldoc-message-function
-                  (or *old-eldoc-messager*
-                      #'eldoc-minibuffer-message))))
 
 (setq cedet-global-command "global")
 (if (cedet-gnu-global-version-check t)

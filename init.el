@@ -54,15 +54,17 @@
 (load "ui.el")
 (load "keymap.el")
 
-;; fix fucking problem with eldoc covering monibuffer
-;; hooks not works at all, need to use swarm of advices
+;; old value was 800000 (< 1MB)
+;; new one is 512MB with GC cycle every
+;; 5 second of iddling
+(setq gc-cons-threshold 536870912)
+(run-with-idle-timer 5 t
+                     (lambda ()
+                       (garbage-collect)))
 
-;; try experiment with GC
-;; create limit for 512MB and run it
-;; after 5 seconds of idling
-;; this way, even company with semantic
-;; as an backend will be fast when completing
-;; at ""
+
+
+;; add company-mode/company-statistic
 
 ;; add gited for browsing branches
 
@@ -70,19 +72,20 @@
 
 ;; add semantic refactor
 
-;; add auto-compile
-
-;; add company-mode/company-statistic
-
-;; In semantic, create abstraction layer around config file
-;; and then, use new indexing function as after save operation
-;; cycles are slowing it down, so without it, it should be
-;; fast as hell.
-;; It may be clever to create idle timer, which will invoke reindexing
-;; and will be notified when file is saved or something like that
+;; store somewhere last emacs version
+;; when it chnages, remove all elc files from
+;; emacs config dir and purge semanticdb
+;; do this at the start of this init file
 
 ;; create python script for emacs package updates
 ;; and atomacs source code pull.
 ;; All with rollback.
+
+;; refactor install script too
+;; add install targets --target js --target cpp --target py
+;; add some printing options so user can inspect what are emacs
+;; dependencies
+;; when traget fails, print info for user how to do stuff
+;; manually
 
 ;; finalize sysdef and migrate rest of the system into it

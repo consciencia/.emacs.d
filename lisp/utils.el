@@ -306,7 +306,7 @@
    ((active-minibuffer-window)
     (call-interactively 'ido-magic-forward-char))
    ((equal major-mode 'dired-mode)
-    (call-interactively dired-unmark-all-marks))
+    (call-interactively 'dired-unmark-all-marks))
    (smerge-mode
     (call-interactively 'smerge-resolve))
    (with-editor-mode
@@ -591,5 +591,46 @@ POS is optional position in file where to search for comment."
             (re-search-forward "^<<<<<<< " nil t))
       (if (not smerge-mode)
           (smerge-start-session)))))
+
+(defmacro custom/silence-eldoc-for (func)
+  `(advice-add #',func
+               :around
+               (lambda (oldfun &rest args)
+                 (let ((backup eldoc-message-function))
+                   ;; eat all messages
+                   (setq eldoc-message-function
+                         (lambda (&rest args) nil))
+                   (prog1
+                       (apply oldfun args)
+                     (setq eldoc-message-function
+                           backup))))))
+
+(custom/silence-eldoc-for yes-or-no-p)
+(custom/silence-eldoc-for read-from-minibuffer)
+(custom/silence-eldoc-for read-string)
+(custom/silence-eldoc-for read-regexp)
+(custom/silence-eldoc-for save-some-buffers)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This hack is used to kill temporary all eldoc
+;; reporting when minibuffer is used for something
+;; different. Semantic uses eldoc as an interface to
+;; present things so this solves issues of eldoc
+;; and idle summary mode.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defvar-local *old-eldoc-messager* nil)
+(add-hook 'minibuffer-setup-hook
+          (lambda ()
+            ;; backup it
+            (setq *old-eldoc-messager*
+                  eldoc-message-function)
+            ;; eat all messages
+            (setq eldoc-message-function
+                  (lambda (&rest args) nil))))
+(add-hook 'minibuffer-exit-hook
+          (lambda ()
+            (setq eldoc-message-function
+                  (or *old-eldoc-messager*
+                      #'eldoc-minibuffer-message))))
 
 (load "monkey.el")
