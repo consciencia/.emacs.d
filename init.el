@@ -54,13 +54,16 @@
 (load "ui.el")
 (load "keymap.el")
 
-;; old value was 800000 (< 1MB)
-;; new one is 512MB with GC cycle every
-;; 5 second of iddling
-(setq gc-cons-threshold 536870912)
-(run-with-idle-timer 5 t
-                     (lambda ()
-                       (garbage-collect)))
+(setq *custom/enable-lazy-gc* nil)
+(if *custom/enable-lazy-gc*
+    (progn
+      ;; old value was 800000 (< 1MB)
+      ;; new one is 512MB with GC cycle every
+      ;; 5 second of iddling
+      (setq gc-cons-threshold 536870912)
+      (run-with-idle-timer 5 t
+                           (lambda ()
+                             (garbage-collect)))))
 
 
 
@@ -89,3 +92,5 @@
 ;; manually
 
 ;; finalize sysdef and migrate rest of the system into it
+
+;;
