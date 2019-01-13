@@ -6,8 +6,10 @@
         autopair-insert-opening
         autopair-skip-close-maybe
         beginning-of-visual-line
+        company-indent-or-complete-common
         cua--prefix-override-handler
         cua-paste
+        custom/forward-symbol
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit
@@ -23,6 +25,8 @@
         custom/mc/mark-prev-like-this
         custom/spawn-cursor-bottom
         describe-key
+        dired-unmark-backward
         find-function-on-key
         paredit-semicolon
+        wdired-finish-edit
         ))

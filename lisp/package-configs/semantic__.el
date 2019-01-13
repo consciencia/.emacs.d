@@ -101,26 +101,6 @@
 
 
 
-;; Monkey pathch in order to reduce memory consumption of
-;; semnaticdb strip find results.
-;; Basically, it killed company when searching outside of
-;; current context.
-(defun company-semantic-completions-raw (prefix)
-  (setq company-semantic--current-tags nil)
-  (dolist (tag (if (and (fboundp 'semanticdb-minor-mode-p)
-                        (semanticdb-minor-mode-p))
-                   ;; Search the database & concatenate all matches together.
-                   (semanticdb-fast-strip-find-results
-                    (semanticdb-find-tags-for-completion prefix))
-                 ;; Search just this file because there is no DB available.
-                 (semantic-find-tags-for-completion
-                  prefix (current-buffer))))
-    (unless (eq (semantic-tag-class tag) 'include)
-      (push tag company-semantic--current-tags)))
-  (delete "" (mapcar 'semantic-tag-name company-semantic--current-tags)))
-
-
-
 (defun custom/ede/load-config-file (proj-root)
   (let ((config-path (concat proj-root
                              "emacs-project-config.json"))

@@ -65,15 +65,18 @@
                            (lambda ()
                              (garbage-collect)))))
 
+(setq create-lockfiles nil)
 
-
-;; add company-mode/company-statistic
-
-;; add gited for browsing branches
 
 ;; add Wilfred/helpfull
 
 ;; add semantic refactor
+
+;; highlight-regex and unhiglight-regex
+;; must replace current idle highlight by something
+;; more persistent
+;; bind it on C-RET
+;; removal to M-RET
 
 ;; store somewhere last emacs version
 ;; when it chnages, remove all elc files from
@@ -91,6 +94,14 @@
 ;; when traget fails, print info for user how to do stuff
 ;; manually
 
-;; finalize sysdef and migrate rest of the system into it
+;; remove sysdef and just group things together in order to make
+;; things more modular
+;; another thing is to create custom key bind functions in order
+;; to collect automatically documentation and make key binds
+;; docs generation automatic
 
-;;
+;; theres a lot space for enhancements
+;; 1) custom dashboard
+;; 2) datatype trees
+;; 3) call trees
+;; 4) typed font lock

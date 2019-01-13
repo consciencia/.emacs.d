@@ -1,11 +1,14 @@
 (custom/install-package-when-needed 'company)
 (custom/install-package-when-needed 'company-c-headers)
 (custom/install-package-when-needed 'company-web)
+(custom/install-package-when-needed 'company-statistics)
 (require 'company)
 (require 'company-c-headers)
 (require 'company-web-html)
+(require 'company-statistics)
 
 (add-hook 'after-init-hook 'global-company-mode)
+(add-hook 'after-init-hook 'company-statistics-mode)
 
 (setq company-minimum-prefix-length 1
       company-idle-delay 2
@@ -37,35 +40,30 @@
                                         (ede-system-include-path ede-object))))
 (setq company-dabbrev-ignore-case nil)
 
-;; (run-with-idle-timer 0.1 t
-;;                      (lambda ()
-;;                        (if (custom/pos-is-in-comment)
-;;                            (if company-mode (company-mode -1))
-;;                          (if (not company-mode)
-;;                              (company-mode 1)))))
-(setq *custom/company-backends-backup* nil)
-(run-with-idle-timer 0.1 t
-                     (lambda ()
-                       (if (custom/pos-is-in-comment)
-                           (when (null *custom/company-backends-backup*)
-                             (message "Storing old company backends %s"
-                                      company-backends)
-                             (setq *custom/company-backends-backup*
-                                   company-backends)
-                             (setq company-backends
-                                   '(company-dabbrev)))
-                         (when *custom/company-backends-backup*
-                           (message "Restoring old company backends %s"
-                                      *custom/company-backends-backup*)
-                           (setq company-backends
-                                 *custom/company-backends-backup*)
-                           (setq *custom/company-backends-backup* nil)))))
-
-
-
 (define-key company-active-map (kbd "M-*") 'company-show-doc-buffer)
 (define-key company-active-map (kbd "<tab>") 'company-search-candidates)
 (define-key company-search-map (kbd "<prior>") 'company-search-repeat-backward)
 (define-key company-search-map (kbd "<next>") 'company-search-repeat-forward)
 (define-key company-search-map (kbd "<tab>") 'company-search-abort)
 (global-set-key (kbd "C-SPC") 'company-complete-common)
+
+
+
+(defun custom/company-semantic-completions-raw (prefix)
+  (setq company-semantic--current-tags nil)
+  (dolist (tag (if (and (fboundp 'semanticdb-minor-mode-p)
+                        (semanticdb-minor-mode-p))
+                   ;; Search the database & concatenate all matches together.
+                   (semanticdb-fast-strip-find-results
+                    (semanticdb-find-tags-for-completion prefix))
+                 ;; Search just this file because there is no DB available.
+                 (semantic-find-tags-for-completion
+                  prefix (current-buffer))))
+    (unless (eq (semantic-tag-class tag) 'include)
+      (push tag company-semantic--current-tags)))
+  (delete "" (mapcar 'semantic-tag-name company-semantic--current-tags)))
+
+(advice-add #'company-semantic-completions-raw
+            :around
+            (lambda (oldfn &reset args)
+              (apply #'custom/company-semantic-completions-raw args)))

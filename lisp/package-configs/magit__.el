@@ -1,5 +1,7 @@
 (custom/install-package-when-needed 'magit)
+(custom/install-package-when-needed 'gited)
 (require 'magit)
+(require 'gited)
 
 (setq magit-completing-read-function
       'magit-ido-completing-read)
