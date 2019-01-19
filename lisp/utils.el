@@ -619,14 +619,19 @@ POS is optional position in file where to search for comment."
 ;; and idle summary mode.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar-local *old-eldoc-messager* nil)
+
+(defun custom/eldoc-eater (&rest args)
+  nil)
+
 (add-hook 'minibuffer-setup-hook
           (lambda ()
             ;; backup it
-            (setq *old-eldoc-messager*
-                  eldoc-message-function)
+            (if (not (equal eldoc-message-function
+                            #'custom/eldoc-eater))
+                (setq *old-eldoc-messager*
+                      eldoc-message-function))
             ;; eat all messages
-            (setq eldoc-message-function
-                  (lambda (&rest args) nil))))
+            (setq eldoc-message-function #'custom/eldoc-eater)))
 (add-hook 'minibuffer-exit-hook
           (lambda ()
             (setq eldoc-message-function
@@ -634,3 +639,36 @@ POS is optional position in file where to search for comment."
                       #'eldoc-minibuffer-message))))
 
 (load "monkey.el")
+
+;; (defun custom/python/regex-parser (regex)
+;;   (let ((cur 1)
+;;         (temp nil)
+;;         (res nil))
+;;     (dolist (line (s-lines (buffer-substring-no-properties
+;;                             (point-min)
+;;                             (point-max))))
+;;       (setq temp (s-match
+;;                   (pcre-to-elisp/cached regex)
+;;                   line))
+;;       (if temp
+;;           (setq res (cons (list (cadr temp) cur) res)))
+;;       (setq cur (+ cur 1)))
+;;     res))
+
+;; (defun custom/python/parse-tags ()
+;;   (interactive)
+;;   (append (custom/python/regex-parser "^\\s*def\\s+(\\w+)")
+;;           (custom/python/regex-parser "^\\s*class\\s+(\\w+)")
+;;           (custom/python/regex-parser "^\\s*import\\s+([\\w\\.]+)")))
+
+
+;; (defun custom/python/go-to-tag ()
+;;   (interactive)
+;;   (let ((tags (custom/python/parse-tags))
+;;         (res nil))
+;;     (setq res (ido-completing-read "Symbol?"
+;;                                    (mapcar #'car tags)))
+;;     (xref-push-marker-stack)
+;;     (goto-line (cadar (seq-filter (lambda (x) (equal res (car x)))
+;;                                   tags)))
+;;     (pulse-momentary-highlight-one-line (point))))

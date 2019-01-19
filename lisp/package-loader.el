@@ -42,3 +42,4 @@
 (load "less-mode__.el")
 (load "highlight-indentation__.el")
 (load "nlinum__.el")
+(load "aggressive-indent__.el")

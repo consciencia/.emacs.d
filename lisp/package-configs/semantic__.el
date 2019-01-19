@@ -54,6 +54,12 @@
     (if (functionp 'semanticdb-enable-cscope-databases)
         (semanticdb-enable-cscope-databases)))
 
+(setq semantic-new-buffer-setup-functions
+      (loop for e in semantic-new-buffer-setup-functions
+            if (not (or (equal (car e) 'python-mode)
+                        (equal (car e) 'js-mode)))
+            collect e))
+
 (if (functionp 'semantic-default-elisp-setup)
     (progn
       (add-to-list 'semantic-new-buffer-setup-functions
@@ -62,13 +68,11 @@
                    (lambda ()
                      (not (or (equal major-mode 'c-mode)
                               (equal major-mode 'c++-mode)
-                              (equal major-mode 'python-mode)
                               (equal major-mode 'emacs-lisp-mode)))))
       (advice-add 'save-buffer :after
                   (lambda (&rest args)
                     (if (or (equal major-mode 'c-mode)
                             (equal major-mode 'c++-mode)
-                            (equal major-mode 'python-mode)
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
                           (save-mark-and-excursion
@@ -81,12 +85,10 @@
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
                    (not (or (equal major-mode 'c-mode)
-                            (equal major-mode 'python-mode)
                             (equal major-mode 'c++-mode)))))
     (advice-add 'save-buffer :after
                 (lambda (&rest args)
                   (if (or (equal major-mode 'c-mode)
-                          (equal major-mode 'python-mode)
                           (equal major-mode 'c++-mode))
                       (progn
                         (save-mark-and-excursion

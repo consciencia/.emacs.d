@@ -13,6 +13,7 @@
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit
+        markdown-cycle
         paredit-backward
         paredit-forward
         paredit-forward-down
