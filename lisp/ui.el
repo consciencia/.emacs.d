@@ -36,6 +36,8 @@
 (setq whitespace-style '(face lines-tail))
 (global-whitespace-mode t)
 
+(setq fill-column whitespace-line-column)
+
 (add-hook 'buffer-list-update-hook
           'custom/on-buffer-list-change)
 

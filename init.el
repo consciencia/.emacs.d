@@ -67,7 +67,6 @@
 
 (setq create-lockfiles nil)
 
-
 ;; add Wilfred/helpfull
 
 ;; add semantic refactor
@@ -105,3 +104,5 @@
 ;; 2) datatype trees
 ;; 3) call trees
 ;; 4) typed font lock
+;; 5) auto-fill-function is called everytime too long line is created
+;;    hook into it with custom logic to create smart c/c++ code breaks.

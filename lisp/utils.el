@@ -298,6 +298,16 @@
     (call-interactively 'smerge-keep-current))
    (with-editor-mode
     (call-interactively 'with-editor-finish))
+   ((equal major-mode 'emacs-lisp-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'c-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'c++-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'js-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'python-mode)
+    (call-interactively 'custom/higlight-this))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
@@ -311,6 +321,16 @@
     (call-interactively 'smerge-resolve))
    (with-editor-mode
     (call-interactively 'with-editor-cancel))
+   ((equal major-mode 'emacs-lisp-mode)
+    (call-interactively 'custom/unhiglight-this))
+   ((equal major-mode 'c-mode)
+    (call-interactively 'custom/unhiglight-this))
+   ((equal major-mode 'c++-mode)
+    (call-interactively 'custom/unhiglight-this))
+   ((equal major-mode 'js-mode)
+    (call-interactively 'custom/unhiglight-this))
+   ((equal major-mode 'python-mode)
+    (call-interactively 'custom/unhiglight-this))
    (t (message "No bind in current context"))))
 
 (defun custom/enhance-isearch ()
@@ -592,6 +612,21 @@ POS is optional position in file where to search for comment."
       (if (not smerge-mode)
           (smerge-start-session)))))
 
+(defun custom/higlight-this ()
+  (interactive)
+  (hi-lock-face-symbol-at-point))
+
+(defun custom/unhiglight-this ()
+  (interactive)
+  (let ((sym (thing-at-point 'symbol)))
+    (setq sym (s-replace "+" "\\+" sym))
+    (hi-lock-unface-buffer
+     (loop for y in (loop for x
+                          in hi-lock-interactive-patterns
+                          collect (car x))
+           if (s-contains-p sym y)
+           return y))))
+
 (defmacro custom/silence-eldoc-for (func)
   `(advice-add #',func
                :around
@@ -626,10 +661,12 @@ POS is optional position in file where to search for comment."
 (add-hook 'minibuffer-setup-hook
           (lambda ()
             ;; backup it
-            (if (not (equal eldoc-message-function
-                            #'custom/eldoc-eater))
-                (setq *old-eldoc-messager*
-                      eldoc-message-function))
+            ;; (if (not (equal eldoc-message-function
+            ;;                 #'custom/eldoc-eater))
+            ;;     (setq *old-eldoc-messager*
+            ;;           eldoc-message-function))
+            (setq *old-eldoc-messager*
+                  eldoc-message-function)
             ;; eat all messages
             (setq eldoc-message-function #'custom/eldoc-eater)))
 (add-hook 'minibuffer-exit-hook

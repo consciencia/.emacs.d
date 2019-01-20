@@ -255,7 +255,12 @@
             (set (make-local-variable 'company-backends)
                  '((company-capf
                     company-dabbrev-code
-                    company-files)))))
+                    company-files)))
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -296,7 +301,12 @@
             (set (make-local-variable 'company-backends)
                  '((company-semantic
                     company-c-headers)))
-            (c-toggle-auto-newline -1)))
+            (c-toggle-auto-newline -1)
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -334,7 +344,12 @@
             (set (make-local-variable 'company-backends)
                  '((company-semantic
                     company-c-headers)))
-            (c-toggle-auto-newline -1)))
+            (c-toggle-auto-newline -1)
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook
