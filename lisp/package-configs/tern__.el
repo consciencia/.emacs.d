@@ -12,7 +12,13 @@
             (set (make-local-variable 'company-backends)
                  '(company-tern
                    company-files))
-            (tern-mode t)))
+            (tern-mode t)
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))
+            (flyspell-prog-mode)))
 
 (advice-add #'tern-go-to-position
             :after (lambda (&rest args)

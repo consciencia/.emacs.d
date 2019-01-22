@@ -260,7 +260,8 @@
             (set (make-local-variable 'fill-nobreak-predicate)
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
-                            'font-lock-comment-face))))))
+                            'font-lock-comment-face))))
+            (flyspell-prog-mode)))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -306,7 +307,8 @@
             (set (make-local-variable 'fill-nobreak-predicate)
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
-                            'font-lock-comment-face))))))
+                            'font-lock-comment-face))))
+            (flyspell-prog-mode)))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -349,7 +351,8 @@
             (set (make-local-variable 'fill-nobreak-predicate)
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
-                            'font-lock-comment-face))))))
+                            'font-lock-comment-face))))
+            (flyspell-prog-mode)))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook

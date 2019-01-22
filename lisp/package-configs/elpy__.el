@@ -12,7 +12,13 @@
 (add-hook 'python-mode-hook
           (lambda ()
             (set (make-local-variable 'company-backends)
-                 '(elpy-company-backend))))
+                 '(elpy-company-backend))
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))
+            (flyspell-prog-mode)))
 
 (elpy-enable)
 

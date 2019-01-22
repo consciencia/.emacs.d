@@ -308,6 +308,8 @@
     (call-interactively 'custom/higlight-this))
    ((equal major-mode 'python-mode)
     (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'markdown-mode)
+    (call-interactively 'custom/higlight-this))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
@@ -330,6 +332,8 @@
    ((equal major-mode 'js-mode)
     (call-interactively 'custom/unhiglight-this))
    ((equal major-mode 'python-mode)
+    (call-interactively 'custom/unhiglight-this))
+   ((equal major-mode 'markdown-mode)
     (call-interactively 'custom/unhiglight-this))
    (t (message "No bind in current context"))))
 
@@ -612,20 +616,33 @@ POS is optional position in file where to search for comment."
       (if (not smerge-mode)
           (smerge-start-session)))))
 
+(defun custom/flyspell-at-point ()
+  (interactive)
+  (loop for o in (overlays-at (point))
+        if (flyspell-overlay-p o)
+        return t))
+
+(defvar-local *custom/flyspell-last-pos* nil)
 (defun custom/higlight-this ()
   (interactive)
-  (hi-lock-face-symbol-at-point))
+  (if (or (equal *custom/flyspell-last-pos* (point))
+          (custom/flyspell-at-point))
+      (progn (flyspell-auto-correct-word)
+             (setq *custom/flyspell-last-pos* (point)))
+    (progn (hi-lock-face-symbol-at-point)
+           (setq *custom/flyspell-last-pos* nil))))
 
 (defun custom/unhiglight-this ()
   (interactive)
   (let ((sym (thing-at-point 'symbol)))
     (setq sym (s-replace "+" "\\+" sym))
-    (hi-lock-unface-buffer
-     (loop for y in (loop for x
-                          in hi-lock-interactive-patterns
-                          collect (car x))
-           if (s-contains-p sym y)
-           return y))))
+    (dolist (r (loop for y
+                     in (loop for x
+                              in hi-lock-interactive-patterns
+                              collect (car x))
+                     if (s-contains-p sym y)
+                     collect y))
+      (hi-lock-unface-buffer r))))
 
 (defmacro custom/silence-eldoc-for (func)
   `(advice-add #',func
