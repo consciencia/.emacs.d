@@ -99,7 +99,7 @@
 ;; to collect automatically documentation and make key binds
 ;; docs generation automatic
 
-;; theres a lot space for enhancements
+;; there's a lot space for enhancements
 ;; 1) custom dashboard
 ;; 2) datatype trees
 ;; 3) call trees

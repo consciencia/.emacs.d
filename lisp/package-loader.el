@@ -43,3 +43,4 @@
 (load "highlight-indentation__.el")
 (load "nlinum__.el")
 (load "aggressive-indent__.el")
+(load "flyspell__.el")
