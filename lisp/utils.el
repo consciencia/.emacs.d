@@ -143,6 +143,40 @@
   (goto-char (point-max))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
+(defun custom/mark-comment ()
+  (interactive)
+  (ignore-errors (er/mark-comment))
+  (setq transient-mark-mode (cons 'only transient-mark-mode)))
+
+(defun custom/mark-string ()
+  (interactive)
+  (ignore-errors
+    (when (eq (get-text-property (point) 'face)
+              'font-lock-string-face)
+      (let ((p (point)))
+        (while (eq (get-text-property (point) 'face)
+                   'font-lock-string-face)
+          (forward-char 1))
+        (skip-chars-backward " \n\t\r")
+        (set-mark (point))
+        (goto-char p)
+        (while (eq (get-text-property (point) 'face)
+                   'font-lock-string-face)
+          (forward-char -1))
+        (skip-chars-forward " \n\t\r"))))
+  (setq transient-mark-mode (cons 'only transient-mark-mode)))
+
+(defun custom/mark-defun ()
+  (interactive)
+  (if (eq (get-text-property (point) 'face)
+          'font-lock-comment-face)
+      (ignore-errors (er/mark-comment))
+    (if (eq (get-text-property (point) 'face)
+            'font-lock-string-face)
+        (custom/mark-string)
+      (er/mark-defun)))
+  (setq transient-mark-mode (cons 'only transient-mark-mode)))
+
 (defun ido-goto-symbol (&optional symbol-list)
   "Refresh imenu and jump to a place in the buffer using Ido."
   (interactive)
@@ -615,6 +649,20 @@ POS is optional position in file where to search for comment."
             (re-search-forward "^<<<<<<< " nil t))
       (if (not smerge-mode)
           (smerge-start-session)))))
+
+(defun custom/get-comment-content (&optional pos)
+  (interactive (list (point)))
+  (let ((result nil))
+    (save-mark-and-excursion
+     (goto-char pos)
+     (ignore-errors
+       (er/mark-comment))
+     (if (use-region-p)
+         (setq result
+               (buffer-substring-no-properties
+                (region-beginning)
+                (region-end)))))
+    result))
 
 (defun custom/flyspell-at-point ()
   (interactive)
