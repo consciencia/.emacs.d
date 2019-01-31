@@ -163,6 +163,7 @@
         (while (eq (get-text-property (point) 'face)
                    'font-lock-string-face)
           (forward-char -1))
+        (forward-char 1)
         (skip-chars-forward " \n\t\r"))))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
@@ -174,7 +175,23 @@
     (if (eq (get-text-property (point) 'face)
             'font-lock-string-face)
         (custom/mark-string)
-      (er/mark-defun)))
+      (let ((old-pos (point))
+            (b-pos nil)
+            (e-pos nil))
+        ;; TODO
+        ;; when semantic works, use overlay data from
+        ;; semantic-current-tag to determine if point
+        ;; is inside defun, otherwise just use
+        ;; that solution below
+        (save-excursion
+          (end-of-defun)
+          (setq e-pos (point))
+          (beginning-of-defun)
+          (setq b-pos (point)))
+        (if (and b-pos e-pos
+                 (>= old-pos b-pos)
+                 (<= old-pos e-pos))
+            (er/mark-defun)))))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
 (defun ido-goto-symbol (&optional symbol-list)

@@ -19,4 +19,5 @@ network-security.data
 srecode-map.el
 thumbs
 company-statistics-cache.el
+undo/
 *.pyc
