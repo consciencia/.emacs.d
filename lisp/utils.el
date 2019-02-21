@@ -121,6 +121,8 @@
                  (goto-char (cdr wbounds))
                  (point)))
     (activate-mark))
+  (if (use-region-p)
+      (call-interactively 'cua-copy-region))
   ;; Secret sauce for standard selection behavior
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
@@ -169,29 +171,31 @@
 
 (defun custom/mark-defun ()
   (interactive)
-  (if (eq (get-text-property (point) 'face)
-          'font-lock-comment-face)
+  (if (or (eq (get-text-property (point) 'face)
+              'font-lock-comment-face)
+          (eq (get-text-property (point) 'face)
+              'font-lock-comment-delimiter-face))
       (ignore-errors (er/mark-comment))
     (if (eq (get-text-property (point) 'face)
             'font-lock-string-face)
         (custom/mark-string)
-      (let ((old-pos (point))
-            (b-pos nil)
-            (e-pos nil))
-        ;; TODO
-        ;; when semantic works, use overlay data from
-        ;; semantic-current-tag to determine if point
-        ;; is inside defun, otherwise just use
-        ;; that solution below
-        (save-excursion
-          (end-of-defun)
-          (setq e-pos (point))
-          (beginning-of-defun)
-          (setq b-pos (point)))
-        (if (and b-pos e-pos
-                 (>= old-pos b-pos)
-                 (<= old-pos e-pos))
-            (er/mark-defun)))))
+      (if semantic-mode
+          (if (semantic-current-tag)
+              (er/mark-defun))
+        (let ((old-pos (point))
+              (b-pos nil)
+              (e-pos nil))
+          (save-excursion
+            (end-of-defun)
+            (setq e-pos (point))
+            (beginning-of-defun)
+            (setq b-pos (point)))
+          (if (and b-pos e-pos
+                   (>= old-pos b-pos)
+                   (<= old-pos e-pos))
+              (er/mark-defun))))))
+  (if (use-region-p)
+      (call-interactively 'cua-copy-region))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
 (defun ido-goto-symbol (&optional symbol-list)
