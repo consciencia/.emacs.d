@@ -20,8 +20,8 @@
       company-dabbrev-downcase nil
       company-backends '((company-capf
                           company-files)
-                         (company-semantic
-                          company-c-headers)
+                         (company-c-headers
+                          company-semantic)
                          (elpy-company-backend
                           company-files)
                          (company-etags
@@ -34,11 +34,18 @@
                          company-xcode
                          company-bbdb
                          company-oddmuse
-                         company-dabbrev)
-      company-c-headers-path-system (lambda ()
-                                      (when ede-object
-                                        (ede-system-include-path ede-object))))
+                         company-dabbrev))
+(setq company-c-headers-path-system
+      (lambda ()
+        (when ede-object
+          (append (ede-system-include-path ede-object)
+                  (loop for inc in (ede-include-path ede-object)
+                        collect (s-replace "//" "/"
+                                           (s-concat (projectile-project-root)
+                                                     inc)))))))
 (setq company-dabbrev-ignore-case nil)
+
+
 
 (define-key company-active-map (kbd "M-*") 'company-show-doc-buffer)
 (define-key company-active-map (kbd "<tab>") 'company-search-candidates)
@@ -65,5 +72,5 @@
 
 (advice-add #'company-semantic-completions-raw
             :around
-            (lambda (oldfn &reset args)
+            (lambda (oldfn &rest args)
               (apply #'custom/company-semantic-completions-raw args)))

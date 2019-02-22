@@ -4,6 +4,7 @@
 ;; simply silently fails instead of detecting incompatibility
 
 (require 'ede)
+(require 'ede/cpp-root)
 (require 'cc-mode)
 (require 'semantic)
 (require 'cedet-global)
@@ -102,6 +103,14 @@
 (semantic-mode 1)
 
 
+
+(cl-defmethod ede-include-path ((this ede-cpp-root-project))
+  "Get the system include path used by project THIS."
+  (oref this include-path))
+
+(cl-defmethod ede-include-path ((this ede-cpp-root-target))
+  "Get the system include path used by target THIS."
+  (ede-include-path (ede-target-parent this)))
 
 (defun custom/ede/load-config-file (proj-root)
   (let ((config-path (concat proj-root

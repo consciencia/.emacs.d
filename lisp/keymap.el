@@ -291,8 +291,8 @@
             (local-set-key (kbd "M-d") 'custom/mark-defun)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
-                 '((company-semantic
-                    company-c-headers)))
+                 '((company-c-headers
+                    company-semantic)))
             (c-toggle-auto-newline -1)
             (auto-fill-mode 1)
             (set (make-local-variable 'fill-nobreak-predicate)
@@ -331,8 +331,8 @@
             (local-set-key (kbd "M-d") 'custom/mark-defun)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
-                 '((company-semantic
-                    company-c-headers)))
+                 '((company-c-headers
+                    company-semantic)))
             (c-toggle-auto-newline -1)
             (auto-fill-mode 1)
             (set (make-local-variable 'fill-nobreak-predicate)
