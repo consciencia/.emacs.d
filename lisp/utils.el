@@ -181,7 +181,8 @@
         (progn (custom/mark-string)
                (if (use-region-p)
                    (call-interactively 'cua-copy-region)))
-      (if semantic-mode
+      (if (and semantic-mode
+               (not (equal major-mode 'python-mode)))
           (if (semantic-current-tag)
               (let* ((bounds (semantic-tag-bounds
                               (semantic-current-tag)))
