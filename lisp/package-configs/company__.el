@@ -6,6 +6,7 @@
 (require 'company-c-headers)
 (require 'company-web-html)
 (require 'company-statistics)
+(require 'semantic/dep)
 
 (add-hook 'after-init-hook 'global-company-mode)
 (add-hook 'after-init-hook 'company-statistics-mode)
@@ -39,6 +40,7 @@
       (lambda ()
         (when ede-object
           (append (ede-system-include-path ede-object)
+                  semantic-dependency-system-include-path
                   (loop for inc in (ede-include-path ede-object)
                         collect (s-replace "//" "/"
                                            (s-concat (projectile-project-root)
