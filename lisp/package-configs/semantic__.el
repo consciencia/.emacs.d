@@ -11,6 +11,7 @@
 (require 'cedet-cscope)
 (require 'semantic/idle)
 (require 'semantic/db-ebrowse)
+(require 'semantic/symref)
 (require 'srecode)
 (require 'json)
 (require 'seq)
@@ -103,6 +104,12 @@
 (semantic-mode 1)
 
 
+
+(defun semantic-symref-cleanup-recent-buffers-fcn ()
+  ;; This function needs to be stubbed in order to prevent deletion
+  ;; of lots of files loaded during symref searching. Whole load
+  ;; process is very long, so its good idea to just cache files.
+  )
 
 (cl-defmethod ede-include-path ((this ede-cpp-root-project))
   "Get the system include path used by project THIS."
