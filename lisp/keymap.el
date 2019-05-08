@@ -57,6 +57,7 @@
 (define-key general-key-map (kbd "C-f C-k") 'find-function-on-key)
 (define-key general-key-map (kbd "C-f C-l") 'find-library)
 (define-key general-key-map (kbd "C-i") 'ielm)
+(define-key general-key-map (kbd "C-u") 'custom/toggle-uis)
 (define-key browse-kill-ring-mode-map (kbd "C-<down>") 'browse-kill-ring-forward)
 (define-key browse-kill-ring-mode-map (kbd "C-<up>") 'browse-kill-ring-previous)
 (define-key browse-kill-ring-mode-map (kbd "<down>") 'browse-kill-ring-forward)

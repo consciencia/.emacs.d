@@ -720,6 +720,17 @@ POS is optional position in file where to search for comment."
                      collect y))
       (hi-lock-unface-buffer r))))
 
+(defun custom/open-kekel ()
+  (interactive)
+  (find-file "~/Documents/Private/jinyKekel"))
+
+(defun custom/toggle-uis ()
+  (interactive)
+  (let ((buff (current-buffer)))
+    (imenu-list-smart-toggle)
+    (neotree-toggle)
+    (switch-to-buffer buff)))
+
 (defmacro custom/silence-eldoc-for (func)
   `(advice-add #',func
                :around
