@@ -372,6 +372,8 @@
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<C-return>") 'custom/special-c-return-handler)
     (define-key map (kbd "<M-return>") 'custom/special-m-return-handler)
+    ;; Critical fix, it is responsible for consistent catching of C-c.
+    (define-key map (kbd "C-c") 'cua-copy-region)
     map))
 (with-eval-after-load 'ido
   (define-key ido-common-completion-map

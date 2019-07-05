@@ -20,9 +20,12 @@
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
 (defvaralias 'c-basic-offset 'tab-width)
+;; (c-show-syntactic-information)
 (c-set-offset 'substatement-open 0)
 (c-set-offset 'case-label tab-width nil)
 (c-set-offset 'inextern-lang 0)
+(c-set-offset 'brace-list-open 0)
+(c-set-offset 'brace-list-intro 4)
 (setq-default tab-stop-list
               (number-sequence tab-width
                                120

@@ -415,7 +415,12 @@
   (define-key isearch-mode-map (kbd "<next>") 'custom/scroll-up)
   (define-key isearch-mode-map (kbd "<prior>") 'custom/scroll-down)
   (define-key isearch-mode-map (kbd "C-v") 'isearch-yank-kill)
-  (define-key isearch-mode-map (kbd "C-o") 'isearch-occur)
+  (define-key isearch-mode-map (kbd "C-o")
+    (lambda ()
+      (interactive)
+      (call-interactively 'isearch-occur)
+      (switch-to-buffer-other-window "*Occur*")
+      (shrink-window-if-larger-than-buffer)))
   (define-key isearch-mode-map (kbd "<backspace>") 'isearch-del-char))
 
 (defun custom/generate-dir-locals (path &optional forms guarded-forms)

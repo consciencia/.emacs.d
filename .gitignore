@@ -20,4 +20,6 @@ srecode-map.el
 thumbs
 company-statistics-cache.el
 undo/
+transient/
+version.cache
 *.pyc

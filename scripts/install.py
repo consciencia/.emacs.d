@@ -55,7 +55,7 @@ def getInstallCommand():
 
 def getEmacsVersion():
     raw = os.popen("emacs --version").read()
-    full = re.search(".*?(\d+\.\d+\.\d+).*", raw).group(1)
+    full = re.search(".*?(\\d+\\.\\d+(?:\\.\\d+)?).*", raw).group(1)
     return ".".join(full.split(".")[:2])
 
 
@@ -85,6 +85,7 @@ def donwloadEmacsSrc():
     srcArch = getEmacsConfSourceDir() + os.path.sep +\
               getEmacsVersion() + ".tar.gz"
     targetPath = ".".join(srcArch.split(".")[:-2]) + "_"
+    print("GET " + getEmacsSrcURL() + ".")
     urllib.urlretrieve(getEmacsSrcURL(),
                        srcArch)
     tarfile.open(srcArch).extractall(targetPath)
@@ -211,7 +212,7 @@ def main():
         osPackages = True
 
     print("Hello.")
-    print("Emacs version is " + getEmacsVersion() + ".")
+    print("Emacs version is '" + getEmacsVersion() + "'.")
     print("Emacs home is " + getEmacsRootConfDir() + ".")
     if info:
         exit(0)
@@ -234,7 +235,7 @@ def main():
     if packages:
         actionInstallPackages()
 
-    print("EMACS is ready to be used!")
+    print("Emacs is ready to be used!")
     print("Good flight.")
 
 
