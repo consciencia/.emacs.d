@@ -14,3 +14,12 @@
 (if (boundp 'transient-base-map)
     (progn
       (define-key transient-base-map (kbd "q") 'transient-quit-one)))
+
+;; Needed because CUA override in emulation-mode-map-alists failed.
+;; What the fuck omg.
+(loop for m in (list magit-diff-mode-map
+                     magit-file-section-map
+                     magit-hunk-section-map
+                     magit-unstaged-section-map
+                     magit-staged-section-map)
+      do (define-key m (kbd "C-c") 'cua-copy-region))

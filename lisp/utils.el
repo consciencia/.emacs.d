@@ -641,7 +641,8 @@ POS is optional position in file where to search for comment."
          (read-only-mode t))
        (switch-to-buffer-other-window ,name)
        (shrink-window-if-larger-than-buffer)
-       (goto-char (point-min)))))
+       (goto-char (point-min))
+       (local-set-key "q" 'custom/universal-quit))))
 
 (defun custom/list-overlays-at (&optional pos)
   (interactive)

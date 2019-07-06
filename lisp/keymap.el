@@ -43,6 +43,14 @@
 (define-key general-key-map (kbd "C-l C-r") 'list-registers)
 (define-key general-key-map (kbd "C-l C-a") 'list-abbrevs)
 (define-key general-key-map (kbd "C-l C-k") 'browse-kill-ring)
+(define-key general-key-map (kbd "C-l C-s")
+  (lambda ()
+    (interactive)
+    ;; Native alternative is `describe-bindings'.
+    (custom/with-simple-pop-up "*TOP LEVEL KEYS*"
+      (insert (car (which-key--process-page
+                    (which-key--list-to-pages
+                     (which-key--get-bindings) 150 240)))))))
 (define-key general-key-map (kbd "C-d C-k") 'describe-key)
 (define-key general-key-map (kbd "C-d C-d") 'describe-function)
 (define-key general-key-map (kbd "C-d C-p" ) 'describe-package)

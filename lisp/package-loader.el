@@ -45,3 +45,5 @@
 (load "aggressive-indent__.el")
 (load "flyspell__.el")
 (load "expand-region__.el")
+(load "which-key__.el")
+(load "too-long-lines-mode__.el")

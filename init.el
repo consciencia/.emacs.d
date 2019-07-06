@@ -67,6 +67,10 @@
 ;; long run.
 (setq create-lockfiles nil)
 
+;; For speedup.
+(setq inhibit-compacting-font-caches t)
+(setq-default bidi-display-reordering nil)
+
 (load (concat
        (expand-file-name user-emacs-directory)
        "sysdef.el"))
