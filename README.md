@@ -1,2 +1,2 @@
 # .emacs.d
-EMACS config
+Emacs config
