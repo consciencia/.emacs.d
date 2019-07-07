@@ -38,13 +38,13 @@
     (setq custom/fs-separator "\\")
   (setq custom/fs-separator "/"))
 
-;; set up EMACS custom settings file (used by UI settings manager)
+;; set up Emacs custom settings file (used by UI settings manager)
 (setq custom-file
       (concat (expand-file-name user-emacs-directory)
               "emacs-custom.el"))
 (load custom-file)
 
-;; set up EMACS C code tracking
+;; set up Emacs C code tracking
 (setq find-function-C-source-directory
       (concat (expand-file-name user-emacs-directory)
               "emacs-src"
@@ -82,6 +82,8 @@
 (load "ui.el")
 (load "keymap.el")
 
+;; When enabled, its faster but it eats a lot more memory.
+;; Its up to you.
 (setq *custom/enable-lazy-gc* nil)
 (if *custom/enable-lazy-gc*
     (progn
@@ -99,20 +101,18 @@
 
 ;; add semantic refactor
 
-;; store somewhere last emacs version
-;; when it chnages, remove all elc files from
-;; emacs config dir and purge semanticdb
-;; do this at the start of this init file
-
-;; create python script for emacs package updates
-;; and atomacs source code pull.
-;; All with rollback.
+;; fix problem with aggressive indent module when find and replace
+;; operations is in progress.
+;; Issue is, aggressive indent is async, that means, it can interfere
+;; with other operations.
+;; Make it sync or at least add support for operation in synced manner
+;; is some circumstances.
 
 ;; refactor install script too
 ;; add install targets --target js --target cpp --target py
 ;; add some printing options so user can inspect what are emacs
 ;; dependencies
-;; when traget fails, print info for user how to do stuff
+;; when target fails, print info for user how to do stuff
 ;; manually
 
 ;; remove sysdef and just group things together in order to make
@@ -122,9 +122,18 @@
 ;; docs generation automatic
 
 ;; there's a lot space for enhancements
-;; 1) custom dashboard
-;; 2) datatype trees
-;; 3) call trees
-;; 4) typed font lock
-;; 5) auto-fill-function is called everytime too long line is created
-;;    hook into it with custom logic to create smart c/c++ code breaks.
+;; 1) doxygen generator from function prototype
+;; 2) python doc generator from function prototype
+;; 3) custom dashboard
+;; 4) semantic font lock
+;;    Basically, all required info can be scrapped from imenu index
+;;    symbols from imported sources can be acquired again via imenu
+;;    indexer but there will be needed some help from other packages in
+;;    order to follow imports/includes.
+;;
+;;    Lv0: after 1s -> local args and vars are highligted
+;;    Lv1: after 3s -> symbols from current file are highlighted
+;;    Lv2: after 5s -> symbols from 1 layer of dependecies are highlighted
+;;    Lv3: after 1m -> symbols from all direct and indirect dependecies are highlighted
+;;
+;; Lv0 and Lv1 can be done relatively easy, so lets start with that.

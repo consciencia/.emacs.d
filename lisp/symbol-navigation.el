@@ -15,20 +15,21 @@
 
 (defun custom/forward-symbol ()
   (interactive "^")
-  (block custom/forward-symbol
-    (let* ((saved-pos (point))
-           (my-pos (re-search-forward custom/separators-regexp))
-           (my-pos2 (custom/find-blank-space t saved-pos)))
-      (if (> my-pos2 my-pos)
-          (progn
-            (goto-char (- my-pos2 1))
-            (return-from custom/forward-symbol)))
-      (if (eq my-pos 1)
-          (progn
-            (goto-char (+ my-pos 1))
-            (setf my-pos (re-search-forward custom/separators-regexp))
-            (custom/position-normalize-forward saved-pos my-pos))
-        (custom/position-normalize-forward saved-pos my-pos)))))
+  (ignore-errors
+    (block custom/forward-symbol
+      (let* ((saved-pos (point))
+             (my-pos (re-search-forward custom/separators-regexp))
+             (my-pos2 (custom/find-blank-space t saved-pos)))
+        (if (> my-pos2 my-pos)
+            (progn
+              (goto-char (- my-pos2 1))
+              (return-from custom/forward-symbol)))
+        (if (eq my-pos 1)
+            (progn
+              (goto-char (+ my-pos 1))
+              (setf my-pos (re-search-forward custom/separators-regexp))
+              (custom/position-normalize-forward saved-pos my-pos))
+          (custom/position-normalize-forward saved-pos my-pos))))))
 
 
 (defun custom/position-normalize-backward (saved-pos my-pos)
@@ -43,20 +44,21 @@
 
 (defun custom/backward-symbol ()
   (interactive "^")
-  (block custom/backward-symbol
-    (let* ((saved-pos (point))
-           (my-pos (re-search-backward custom/separators-regexp))
-           (my-pos2 (custom/find-blank-space nil saved-pos)))
-      (if (< my-pos2 my-pos)
-          (progn
-            (goto-char (+ my-pos2 1))
-            (return-from custom/backward-symbol)))
-      (if (eq my-pos (point-max))
-          (progn
-            (goto-char (- my-pos 1))
-            (setf my-pos (re-search-backward custom/separators-regexp))
-            (custom/position-normalize-backward saved-pos my-pos))
-        (custom/position-normalize-backward saved-pos my-pos)))))
+  (ignore-errors
+    (block custom/backward-symbol
+      (let* ((saved-pos (point))
+             (my-pos (re-search-backward custom/separators-regexp))
+             (my-pos2 (custom/find-blank-space nil saved-pos)))
+        (if (< my-pos2 my-pos)
+            (progn
+              (goto-char (+ my-pos2 1))
+              (return-from custom/backward-symbol)))
+        (if (eq my-pos (point-max))
+            (progn
+              (goto-char (- my-pos 1))
+              (setf my-pos (re-search-backward custom/separators-regexp))
+              (custom/position-normalize-backward saved-pos my-pos))
+          (custom/position-normalize-backward saved-pos my-pos))))))
 
 (defun custom/find-blank-space (go-forward starting-pos)
   (let ((starting-char (string (char-after starting-pos)))
