@@ -80,3 +80,6 @@
                       (if (> (mc/num-cursors) 1)
                           (custom/copy-across-cursors)
                         (apply oldfn args))))
+
+
+(define-key mc/keymap (kbd "<ESC>") 'mc/keyboard-quit)
