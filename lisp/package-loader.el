@@ -47,3 +47,4 @@
 (load "expand-region__.el")
 (load "which-key__.el")
 (load "too-long-lines-mode__.el")
+(load "multi-term__.el")

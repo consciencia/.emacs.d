@@ -4,6 +4,7 @@
 (setq mc/cmds-to-run-for-all
       '(
         autopair-insert-opening
+        autopair-insert-or-skip-quote
         autopair-skip-close-maybe
         beginning-of-visual-line
         company-indent-or-complete-common
@@ -21,7 +22,9 @@
 
 (setq mc/cmds-to-run-once
       '(
+        cua-copy-region
         cua-exchange-point-and-mark
+        custom/copy-across-cursors
         custom/mc/mark-next-like-this
         custom/mc/mark-prev-like-this
         custom/spawn-cursor-bottom

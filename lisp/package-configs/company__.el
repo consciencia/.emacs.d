@@ -54,7 +54,6 @@
 (define-key company-search-map (kbd "<prior>") 'company-search-repeat-backward)
 (define-key company-search-map (kbd "<next>") 'company-search-repeat-forward)
 (define-key company-search-map (kbd "<tab>") 'company-search-abort)
-(global-set-key (kbd "C-SPC") 'company-complete-common)
 
 
 

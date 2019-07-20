@@ -133,7 +133,7 @@
 ;;
 ;;    Lv0: after 1s -> local args and vars are highligted
 ;;    Lv1: after 3s -> symbols from current file are highlighted
-;;    Lv2: after 5s -> symbols from 1 layer of dependecies are highlighted
-;;    Lv3: after 1m -> symbols from all direct and indirect dependecies are highlighted
+;;    Lv2: after 30s -> symbols from 1 layer of dependecies are highlighted
+;;    Lv3: after 60s -> symbols from all direct and indirect dependecies are highlighted
 ;;
 ;; Lv0 and Lv1 can be done relatively easy, so lets start with that.

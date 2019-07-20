@@ -32,3 +32,10 @@ on local directory elisp code. TODO, solve this somehow!"
          (funcall buffer-quit-function))
         ((string-match "^ \\*" (buffer-name (current-buffer)))
          (bury-buffer))))
+
+(advice-add #'elisp-last-sexp-toggle-display
+            :around
+            (lambda (oldfn &rest args)
+              (if (thing-at-point 'symbol)
+                  (apply oldfn args)
+                (insert "\n"))))
