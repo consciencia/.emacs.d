@@ -25,6 +25,7 @@
 (global-set-key (kbd "C-f") 'search-key-map)
 
 ;; GENERAL BINDS
+(global-set-key (kbd "<insert>") nil)
 (global-set-key (kbd "<f2>") 'neotree-toggle)
 (global-set-key (kbd "<f3>") 'neotree-find)
 (global-set-key (kbd "<f4>")
@@ -153,6 +154,7 @@
 (global-set-key (kbd "C-SPC") 'custom/ace-jump-word-mode)
 (define-key c++-mode-map (kbd "C-SPC") 'custom/ace-jump-word-mode)
 (define-key c-mode-map (kbd "C-SPC") 'custom/ace-jump-word-mode)
+(define-key elpy-mode-map (kbd "C-SPC") 'custom/ace-jump-word-mode)
 
 (global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
@@ -232,10 +234,14 @@
 (add-hook 'isearch-mode-hook 'custom/enhance-isearch)
 (define-key query-replace-map (kbd "<return>") 'act)
 
+;; MISC
+(global-set-key (kbd "M-u") 'custom/toggle-camelcase-snakecase)
+
 ;; ELISP BINDS
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
             (local-set-key (kbd "M-*") 'custom/elisp-slime/get-documentation)
+            (local-set-key (kbd "M--") 'xref-find-references)
             (local-set-key (kbd "M-e M-s") 'eval-last-sexp)
             (local-set-key (kbd "M-e M-d") 'eval-defun)
             (local-set-key (kbd "M-e M-r") 'eval-region)
@@ -268,13 +274,15 @@
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
+(define-key elisp-slime-nav-mode-map (kbd "M-,") 'custom/universal-pop-mark)
+
 
 ;; C BINDS
 (add-hook 'c-mode-hook
           (lambda ()
             (local-set-key (kbd "C-d") 'custom/mark-whole-word)
             (local-set-key (kbd "M-.") 'custom/semantic-goto-definition)
-            (local-set-key (kbd "M-,") 'custom/semantic-pop-tag-mark)
+            (local-set-key (kbd "M-,") 'custom/universal-pop-mark)
             (local-set-key (kbd "M--")
                            (lambda ()
                              (interactive)
@@ -314,7 +322,7 @@
           (lambda ()
             (local-set-key (kbd "C-d") 'custom/mark-whole-word)
             (local-set-key (kbd "M-.") 'custom/semantic-goto-definition)
-            (local-set-key (kbd "M-,") 'custom/semantic-pop-tag-mark)
+            (local-set-key (kbd "M-,") 'custom/universal-pop-mark)
             (local-set-key (kbd "M--")
                            (lambda ()
                              (interactive)

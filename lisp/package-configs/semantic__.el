@@ -12,6 +12,7 @@
 (require 'semantic/idle)
 (require 'semantic/db-ebrowse)
 (require 'semantic/symref)
+(require 'semantic/symref/list)
 (require 'srecode)
 (require 'json)
 (require 'seq)
@@ -111,6 +112,7 @@
   ;; process is very long, so its good idea to just cache files.
   )
 
+;; Hack used for company complete c headers.
 (cl-defmethod ede-include-path ((this ede-cpp-root-project))
   "Get the system include path used by project THIS."
   (oref this include-path))
@@ -213,14 +215,20 @@
       (cedet-gnu-global-create/update-database dep))
     (setenv "GTAGSLIBPATH" (string-join dependecies ":"))
     (cedet-gnu-global-create/update-database root)
-    (semantic-symref-detect-symref-tool))
+    ;; Global is kinda buggy when you switch branches often and large
+    ;; chunks of code goes out and in.
+    ;; (semantic-symref-detect-symref-tool)
+    (setq semantic-symref-tool 'grep))
    ((and (cedet-cscope-version-check t)
          (functionp 'semanticdb-enable-cscope-databases))
     (custom/make-link-farm (concat (file-name-as-directory root)
                                    "emacs-project-src-roots")
                            dependecies)
     (cedet-cscope-create/update-database root)
-    (semantic-symref-detect-symref-tool))
+    ;; Global is kinda buggy when you switch branches often and large
+    ;; chunks of code goes out and in.
+    ;; (semantic-symref-detect-symref-tool)
+    (setq semantic-symref-tool 'grep))
    (t
     (if (equal *should-semantic-parse-all* nil)
         (setq *should-semantic-parse-all*
@@ -314,10 +322,27 @@ save the pointer marker if tag is found"
   (let ((tags (custom/semantic/query-all-tags-in-proj sym)))
     (if tags
         (progn
-          (let* ((tag-summary-f (lambda (tag)
-                                  (format "%s IN FILE %s"
-                                          (semantic-format-tag-prototype tag nil t)
-                                          (buffer-file-name (semantic-tag-buffer tag)))))
+          (let* ((tag-summary-f
+                  (lambda (tag)
+                    (format "%s = %s"
+                            (let* ((str
+                                    (semantic-format-tag-prototype tag nil t))
+                                   (real-len (length str))
+                                   (limit-len 87))
+                              (if (> real-len limit-len)
+                                  (concat (substring str 0 limit-len)
+                                          "...")
+                                str))
+                            (let* ((str (buffer-file-name
+                                         (semantic-tag-buffer tag)))
+                                   (real-len (length str))
+                                   (limit-len 57))
+                              (if (> real-len limit-len)
+                                  (concat "..."
+                                          (substring str (- real-len
+                                                            limit-len)
+                                                     real-len))
+                                str)))))
                  (get-tag-by-summary-f (lambda (summary summaries)
                                          (loop for (summary2 tag) in summaries
                                                if (equal summary2 summary)
@@ -353,13 +378,6 @@ save the pointer marker if tag is found"
                                                     (semantic-tag-end chosen-tag)))
               (message "Error, failed to pair tags and summaries -> REPORT BUG"))))
       (message "No tags found for %s" sym))))
-
-(defun custom/semantic-pop-tag-mark ()
-  "popup the tag save by semantic-goto-definition"
-  (interactive)
-  (xref-pop-marker-stack)
-  (recenter)
-  (pulse-momentary-highlight-one-line (point)))
 
 (defvar-local *is-prefix-pointer-state*
   (cons nil 'allow))
@@ -439,7 +457,7 @@ save the pointer marker if tag is found"
 ;; from curent location including local variables
 ;;
 ;;
-;; Control tag sources wen quering DB
+;; Control tag sources when quering DB
 ;;   (semanticdb-find-default-throttle)
 ;; Add preprocesor value for all projects
 ;;   (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
@@ -454,6 +472,7 @@ save the pointer marker if tag is found"
 ;;;; TAGS ACCESS AND VARIOUS INDEX QUERIES
 ;; CODE:
 
+;; with help of custom/eieo-inspect
 (defun custom/semantic/get-local-all-tags (&optional path brutish live-tags)
   (interactive)
   (let ((tags (loop for tag in (loop for table
@@ -582,6 +601,19 @@ save the pointer marker if tag is found"
         (semantic-tag-name tag)
       nil)))
 
+;; By default, which function will trigger reparsing of current file
+;; by semantic, that is very slow so we will use shortcut.
+(advice-add #'which-function
+            :around
+            (lambda (oldfn &rest args)
+              (if (or (equal major-mode 'c-mode)
+                      (equal major-mode 'c++-mode))
+                  (let ((fun-name (custom/semantic/get-current-function-name)))
+                    (if fun-name
+                        (concat fun-name "()")
+                      nil))
+                (apply oldfn args))))
+
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
 
@@ -611,3 +643,70 @@ save the pointer marker if tag is found"
   (custom/semantic/index-from-root-raw root
                                        selection-regex)
   (semanticdb-save-all-db))
+
+;;;; WILD
+;; CODE:
+
+(defun semantic-symref-produce-list-on-results (res str)
+  "Produce a symref list mode buffer on the results RES."
+  (when (not res) (error "No references found"))
+  (semantic-symref-result-get-tags res t)
+  (message "Gathering References...done")
+  ;; Build a references buffer.
+  (let ((buff (get-buffer-create (format "*Symref %s" str))))
+    (custom/universal-push-mark)
+    (switch-to-buffer buff)
+    (set-buffer buff)
+    (semantic-symref-results-mode)
+    (set (make-local-variable 'semantic-symref-current-results) res)
+    (semantic-symref-results-dump res)
+    (goto-char (point-min))))
+
+(defun semantic-symref-rb-goto-file (&optional button)
+  (interactive)
+  (let* ((tag (button-get button 'tag))
+         (buff (semantic-tag-buffer tag)))
+    (custom/universal-push-mark)
+    (switch-to-buffer buff)
+    (pulse-momentary-highlight-one-line (point))))
+
+(defun semantic-symref-rb-goto-tag (&optional button)
+  (interactive)
+  (let* ((tag (button-get button 'tag))
+         (buff (semantic-tag-buffer tag)))
+    (custom/universal-push-mark)
+    (switch-to-buffer buff)
+    (semantic-go-to-tag tag)
+    (pulse-momentary-highlight-one-line (point))))
+
+(defun semantic-symref-rb-goto-match (&optional button)
+  "Go to the file specified in the symref results buffer.
+BUTTON is the button that was clicked."
+  (interactive)
+  (let* ((tag (button-get button 'tag))
+         (line (button-get button 'line))
+         (buff (semantic-tag-buffer tag)))
+    (custom/universal-push-mark)
+    (switch-to-buffer buff)
+    (goto-char (point-min))
+    (forward-line (1- line))
+    (pulse-momentary-highlight-one-line (point))))
+
+(define-key semantic-symref-results-mode-map
+  (kbd "<C-right>") 'forward-button)
+(define-key semantic-symref-results-mode-map
+  (kbd "<C-left>") 'backward-button)
+(define-key semantic-symref-results-mode-map
+  (kbd "SPC") 'push-button)
+(define-key semantic-symref-results-mode-map
+  (kbd "RET") 'push-button)
+(define-key semantic-symref-results-mode-map
+  (kbd "C-+") 'semantic-symref-list-expand-all)
+(define-key semantic-symref-results-mode-map
+  (kbd "C--") 'semantic-symref-list-contract-all)
+(define-key semantic-symref-results-mode-map
+  (kbd "C-r") 'semantic-symref-list-rename-open-hits)
+(define-key semantic-symref-results-mode-map
+  (kbd "R") nil)
+(define-key semantic-symref-results-mode-map
+  (kbd "q") 'custom/universal-quit)

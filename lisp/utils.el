@@ -557,20 +557,24 @@ POS is optional position in file where to search for comment."
           (equal major-mode 'lisp-interaction-mode)
           (equal major-mode 'c-mode)
           (equal major-mode 'c++-mode))
-      (xref-push-marker-stack))
-  (if (equal major-mode 'js2-mode)
-      (push (cons (buffer-file-name) (point))
-            tern-find-definition-stack)))
+      (xref-push-marker-stack)
+    (if (equal major-mode 'js2-mode)
+        (push (cons (buffer-file-name) (point))
+              tern-find-definition-stack)
+      (xref-push-marker-stack))))
 
 (defun custom/universal-pop-mark ()
+  (interactive)
+  (deactivate-mark t)
   (if (or (equal major-mode 'python-mode)
           (equal major-mode 'emacs-lisp-mode)
           (equal major-mode 'lisp-interaction-mode)
           (equal major-mode 'c-mode)
           (equal major-mode 'c++-mode))
-      (xref-pop-marker-stack))
-  (if (equal major-mode 'js2-mode)
-      (tern-pop-find-definition))
+      (xref-pop-marker-stack)
+    (if (equal major-mode 'js2-mode)
+        (tern-pop-find-definition)
+      (xref-pop-marker-stack)))
   (recenter)
   (pulse-momentary-highlight-one-line (point)))
 
@@ -759,49 +763,19 @@ POS is optional position in file where to search for comment."
   `(advice-add #',func
                :around
                (lambda (oldfun &rest args)
-                 (let ((backup eldoc-message-function))
-                   ;; eat all messages
-                   (setq eldoc-message-function
-                         (lambda (&rest args) nil))
-                   (prog1
-                       (apply oldfun args)
-                     (setq eldoc-message-function
-                           backup))))))
+                 (let ((eldoc-message-function
+                        #'(lambda (&rest args) nil)))
+                   (apply oldfun args)))))
 
-(custom/silence-eldoc-for yes-or-no-p)
-(custom/silence-eldoc-for read-from-minibuffer)
-(custom/silence-eldoc-for read-string)
-(custom/silence-eldoc-for read-regexp)
-(custom/silence-eldoc-for save-some-buffers)
+(defmacro custom/silence-eldoc-for-funcs (&rest funcs)
+  (cons 'progn
+        (loop for func in funcs
+              collect `(custom/silence-eldoc-for ,func))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This hack is used to kill temporary all eldoc
-;; reporting when minibuffer is used for something
-;; different. Semantic uses eldoc as an interface to
-;; present things so this solves issues of eldoc
-;; and idle summary mode.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defvar-local *old-eldoc-messager* nil)
-
-(defun custom/eldoc-eater (&rest args)
-  nil)
-
-(add-hook 'minibuffer-setup-hook
-          (lambda ()
-            ;; backup it
-            ;; (if (not (equal eldoc-message-function
-            ;;                 #'custom/eldoc-eater))
-            ;;     (setq *old-eldoc-messager*
-            ;;           eldoc-message-function))
-            (setq *old-eldoc-messager*
-                  eldoc-message-function)
-            ;; eat all messages
-            (setq eldoc-message-function #'custom/eldoc-eater)))
-(add-hook 'minibuffer-exit-hook
-          (lambda ()
-            (setq eldoc-message-function
-                  (or *old-eldoc-messager*
-                      #'eldoc-minibuffer-message))))
+(custom/silence-eldoc-for-funcs yes-or-no-p
+                                read-from-minibuffer
+                                read-string
+                                read-regexp save-some-buffers)
 
 (load "monkey.el")
 
@@ -892,3 +866,28 @@ POS is optional position in file where to search for comment."
             "Text-property keymap: %s\n"
             "Text-property local-map: %s")
            map-list)))
+
+(defun custom/toggle-camelcase-snakecase ()
+  (interactive)
+  (save-excursion
+    (let* ((first-lower-p t)
+           (bounds (bounds-of-thing-at-point 'symbol))
+           (start (car bounds))
+           (end (cdr bounds)))
+      (goto-char start)
+      (while (equal (char-after (point))
+                    (aref "_" 0))
+        (right-char))
+      (let ((currently-using-underscores-p
+             (re-search-forward "_" end t)))
+        (if currently-using-underscores-p
+            (progn
+              (replace-string "_" " " nil start end)
+              (upcase-initials-region start end)
+              (replace-string " " "" nil start end)
+              (when first-lower-p
+                (downcase-region start (1+ start))))
+          (replace-regexp "\\([A-Z]\\)" "_\\1" nil (1+ start) end)
+          (downcase-region
+           start
+           (cdr (bounds-of-thing-at-point 'symbol))))))))

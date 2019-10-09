@@ -97,6 +97,8 @@
 
 (setq create-lockfiles nil)
 
+(global-auto-revert-mode)
+
 ;; add Wilfred/helpfull
 
 ;; add semantic refactor
