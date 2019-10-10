@@ -12,6 +12,7 @@
 (require 'semantic/idle)
 (require 'semantic/db-ebrowse)
 (require 'semantic/symref)
+(require 'semantic/symref/grep)
 (require 'semantic/symref/list)
 (require 'srecode)
 (require 'json)
@@ -56,6 +57,12 @@
 (if (cedet-cscope-version-check t)
     (if (functionp 'semanticdb-enable-cscope-databases)
         (semanticdb-enable-cscope-databases)))
+
+;; Use (semantic-symref-detect-symref-tool) for autodetecting symref
+;; tool. Currently, we dont want to use that. Grep is by far the best
+;; option If you have modern CPU.
+;; Anyway, global is kinda buggy and cscope is not very used.
+(setq-default semantic-symref-tool 'grep)
 
 (setq semantic-new-buffer-setup-functions
       (loop for e in semantic-new-buffer-setup-functions
@@ -214,21 +221,13 @@
     (dolist (dep dependecies)
       (cedet-gnu-global-create/update-database dep))
     (setenv "GTAGSLIBPATH" (string-join dependecies ":"))
-    (cedet-gnu-global-create/update-database root)
-    ;; Global is kinda buggy when you switch branches often and large
-    ;; chunks of code goes out and in.
-    ;; (semantic-symref-detect-symref-tool)
-    (setq semantic-symref-tool 'grep))
+    (cedet-gnu-global-create/update-database root))
    ((and (cedet-cscope-version-check t)
          (functionp 'semanticdb-enable-cscope-databases))
     (custom/make-link-farm (concat (file-name-as-directory root)
                                    "emacs-project-src-roots")
                            dependecies)
-    (cedet-cscope-create/update-database root)
-    ;; Global is kinda buggy when you switch branches often and large
-    ;; chunks of code goes out and in.
-    ;; (semantic-symref-detect-symref-tool)
-    (setq semantic-symref-tool 'grep))
+    (cedet-cscope-create/update-database root))
    (t
     (if (equal *should-semantic-parse-all* nil)
         (setq *should-semantic-parse-all*
@@ -644,7 +643,7 @@ save the pointer marker if tag is found"
                                        selection-regex)
   (semanticdb-save-all-db))
 
-;;;; WILD
+;;;; SYMREF HACKS
 ;; CODE:
 
 (defun semantic-symref-produce-list-on-results (res str)
@@ -692,21 +691,37 @@ BUTTON is the button that was clicked."
     (forward-line (1- line))
     (pulse-momentary-highlight-one-line (point))))
 
-(define-key semantic-symref-results-mode-map
-  (kbd "<C-right>") 'forward-button)
-(define-key semantic-symref-results-mode-map
-  (kbd "<C-left>") 'backward-button)
-(define-key semantic-symref-results-mode-map
-  (kbd "SPC") 'push-button)
-(define-key semantic-symref-results-mode-map
-  (kbd "RET") 'push-button)
-(define-key semantic-symref-results-mode-map
-  (kbd "C-+") 'semantic-symref-list-expand-all)
-(define-key semantic-symref-results-mode-map
-  (kbd "C--") 'semantic-symref-list-contract-all)
-(define-key semantic-symref-results-mode-map
-  (kbd "C-r") 'semantic-symref-list-rename-open-hits)
-(define-key semantic-symref-results-mode-map
-  (kbd "R") nil)
-(define-key semantic-symref-results-mode-map
-  (kbd "q") 'custom/universal-quit)
+(let ((map semantic-symref-results-mode-map))
+  (define-key map (kbd "<C-right>") 'forward-button)
+  (define-key map (kbd "<C-left>") 'backward-button)
+  (define-key map (kbd "SPC") 'push-button)
+  (define-key map (kbd "RET") 'push-button)
+  (define-key map "+" 'semantic-symref-list-toggle-showing)
+  (define-key map "-" 'semantic-symref-list-toggle-showing)
+  (define-key map "=" nil)
+  (define-key map (kbd "C-+") 'semantic-symref-list-expand-all)
+  (define-key map (kbd "C--") 'semantic-symref-list-contract-all)
+  (define-key map (kbd "C-r") 'semantic-symref-list-rename-open-hits)
+  (define-key map (kbd "R") 'semantic-symref-list-rename-open-hits)
+  (define-key map (kbd "q") 'custom/universal-pop-mark)
+  (define-key map (kbd "C-q") 'custom/universal-pop-mark))
+
+;; Adds support for multi repository symref searches. Will affect grep
+;; presearch backend too.
+(defun custom/semantic-symref-grep-use-template-around (oldfn
+                                                        rootdir
+                                                        filepattern
+                                                        flags
+                                                        pattern)
+  (let* ((root (projectile-project-root))
+         (proj-config (if root (custom/ede/load-config-file root)))
+         (source-roots (if proj-config
+                           (custom/map/get "source-roots"
+                                           proj-config))))
+    (setq rootdir (s-join " " (cons rootdir source-roots))))
+  (let ((res (funcall oldfn rootdir filepattern flags pattern)))
+    ;; (message "Generated grep command: %s" res)
+    res))
+
+(advice-add #'semantic-symref-grep-use-template
+            :around #'custom/semantic-symref-grep-use-template-around)

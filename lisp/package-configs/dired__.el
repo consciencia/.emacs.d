@@ -56,6 +56,7 @@
 (define-key xref--button-map (kbd "C-<return>")
   'xref-show-location-at-point)
 
+(add-hook 'dired-mode-hook 'auto-revert-mode)
 
 
 (defun custom/dired/create-dir ()
