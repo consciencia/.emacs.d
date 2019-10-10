@@ -17,9 +17,7 @@
 (require 'srecode)
 (require 'json)
 (require 'seq)
-(if (not (featurep 'semantic/db-cscope))
-    (load "external-semantic-db-cscope.el")
-  (require 'semantic/db-cscope))
+(load "custom-semantic-db-grep.el")
 
 (global-semanticdb-minor-mode t)
 (global-semantic-idle-scheduler-mode t)
@@ -46,23 +44,13 @@
               '(function))
 (setq-default speedbar-use-images nil)
 (setq-default speedbar-use-imenu-flag t)
-
-(setq cedet-global-command "global")
-(if (cedet-gnu-global-version-check t)
-   (progn
-     (semanticdb-enable-gnu-global-databases 'c-mode)
-     (semanticdb-enable-gnu-global-databases 'c++-mode)))
-
-(setq cedet-cscope-command "cscope")
-(if (cedet-cscope-version-check t)
-    (if (functionp 'semanticdb-enable-cscope-databases)
-        (semanticdb-enable-cscope-databases)))
-
 ;; Use (semantic-symref-detect-symref-tool) for autodetecting symref
 ;; tool. Currently, we dont want to use that. Grep is by far the best
 ;; option If you have modern CPU.
 ;; Anyway, global is kinda buggy and cscope is not very used.
 (setq-default semantic-symref-tool 'grep)
+
+(semanticdb-enable-grep-databases)
 
 (setq semantic-new-buffer-setup-functions
       (loop for e in semantic-new-buffer-setup-functions
@@ -86,11 +74,7 @@
                             (equal major-mode 'emacs-lisp-mode))
                         (progn
                           (save-mark-and-excursion
-                           (semantic-force-refresh))
-                          (if (or (equal major-mode 'c-mode)
-                                  (equal major-mode 'c++-mode))
-                              (custom/ede/create-update-index
-                               (projectile-project-root))))))))
+                            (semantic-force-refresh)))))))
   (progn
     (add-to-list 'semantic-inhibit-functions
                  (lambda ()
@@ -102,11 +86,7 @@
                           (equal major-mode 'c++-mode))
                       (progn
                         (save-mark-and-excursion
-                         (semantic-force-refresh))
-                        (if (or (equal major-mode 'c-mode)
-                                (equal major-mode 'c++-mode))
-                            (custom/ede/create-update-index
-                             (projectile-project-root)))))))))
+                          (semantic-force-refresh))))))))
 
 (global-ede-mode 1)
 (semantic-mode 1)
@@ -204,44 +184,7 @@
                                                    config))
                           :spp-files (delete-dups (custom/map/get
                                                    "macro-files"
-                                                   config)))
-    (custom/ede/create-update-index proj-root
-                                    (custom/map/get "source-roots" config))))
-
-(defvar *should-semantic-parse-all* nil)
-(defun custom/ede/create-update-index (root &optional dependecies)
-  (interactive (projectile-project-root))
-  (if (equal dependecies nil)
-      (setq dependecies
-            (custom/map/get "source-roots"
-                            (custom/ede/load-config-file root))))
-  (cond
-   ((cedet-gnu-global-version-check t)
-    (setq dependecies (mapcar #'file-truename dependecies))
-    (dolist (dep dependecies)
-      (cedet-gnu-global-create/update-database dep))
-    (setenv "GTAGSLIBPATH" (string-join dependecies ":"))
-    (cedet-gnu-global-create/update-database root))
-   ((and (cedet-cscope-version-check t)
-         (functionp 'semanticdb-enable-cscope-databases))
-    (custom/make-link-farm (concat (file-name-as-directory root)
-                                   "emacs-project-src-roots")
-                           dependecies)
-    (cedet-cscope-create/update-database root))
-   (t
-    (if (equal *should-semantic-parse-all* nil)
-        (setq *should-semantic-parse-all*
-              (if (yes-or-no-p
-                   (concat "No GNU Global nor CScope found, do you want to "
-                           "prefetch all symbols from all source roots "
-                           "in this project? (may be time and memory "
-                           "consuming for big project [only for first time])"))
-                  "yes"
-                "no")))
-
-    (if (equal *should-semantic-parse-all* "yes")
-        (dolist (r (cons root (delete-dups dependecies)))
-          (custom/semantic/index-from-root r))))))
+                                                   config)))))
 
 (defun custom/ede/generate-config-file (proj-root)
   (if (yes-or-no-p
@@ -258,16 +201,6 @@
                     (concat proj-root
                             "emacs-project-config.json"))))
 
-(defun custom/ede/refresh-global-deps (root)
-  (let* ((config (custom/ede/load-config-file root))
-         (deps (if config
-                   (custom/map/get "source-roots" config)
-                 nil)))
-    (if deps
-        (progn
-          (setq deps (mapcar #'file-truename deps))
-          (setenv "GTAGSLIBPATH" (string-join deps ":"))))))
-
 (defun custom/ede/generate-generic-loader (proj-root)
   (let ((proj-name (read-string "Project name: "
                                 (let ((fragments (s-split custom/fs-separator
@@ -276,10 +209,6 @@
                                        fragments)))))
     `((custom/ede/load-project ,proj-name
                                ,(file-name-as-directory proj-root)))))
-
-(defun custom/ede/generate-generic-refresher (proj-root)
-  `((custom/ede/refresh-global-deps
-     ,(file-name-as-directory proj-root))))
 
 ;;;; CODE NAVIGATION ROUTINES
 ;; CODE:
@@ -725,3 +654,76 @@ BUTTON is the button that was clicked."
 
 (advice-add #'semantic-symref-grep-use-template
             :around #'custom/semantic-symref-grep-use-template-around)
+
+;;;; GREP VIRTUAL DATABASE HACKS
+;; CODE:
+
+(defun custom/is-tagname-hit (path line)
+  (let ((buff (find-file-noselect path)))
+    (with-current-buffer buff
+      (goto-line line)
+      (let* ((tag (semantic-current-tag))
+             (tag-start (if tag (semantic-tag-start tag)))
+             (tag-start-line (if tag-start (line-number-at-pos tag-start))))
+        (equal tag-start-line line)))))
+
+(cl-defmethod semantic-symref-perform-search ((tool semantic-symref-tool-grep))
+  "Perform a search with Grep."
+  (message "TYPE %s FOR %s"
+           (oref tool searchtype)
+           (oref tool searchfor))
+  ;; TODO:
+  ;;   tagcompletions
+  ;;     treat that as type regexp and at post processing, treat it as tagname
+
+  ;; Grep doesn't support some types of searches.
+  (let ((st (oref tool searchtype)))
+    (when (not (memq st '(symbol regexp tagname)))
+      (error "Symref impl GREP does not support searchtype of %s"
+             st)))
+  ;; Find the root of the project, and do a find-grep...
+  (let* (;; Find the file patterns to use.
+         (rootdir (semantic-symref-calculate-rootdir))
+         (filepatterns (semantic-symref-derive-find-filepatterns))
+         (filepattern (mapconcat #'shell-quote-argument filepatterns " "))
+         ;; Grep based flags.
+         (grepflags (cond ((eq (oref tool resulttype) 'file)
+                           "-l ")
+                          ((eq (oref tool searchtype) 'regexp)
+                           "-nE ")
+                          (t "-n ")))
+         (greppat (cond ((eq (oref tool searchtype) 'regexp)
+                         (oref tool searchfor))
+                        (t
+                         ;; Can't use the word boundaries: Grep
+                         ;; doesn't always agree with the language
+                         ;; syntax on those.
+                         (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
+                                 (oref tool searchfor)))))
+         ;; Misc
+         (b (get-buffer-create "*Semantic SymRef*"))
+         (ans nil))
+    (with-current-buffer b
+      (erase-buffer)
+      (setq default-directory rootdir)
+      (if (not (fboundp 'grep-compute-defaults))
+          ;; find . -type f -print0 | xargs -0 -e grep -nH -e
+          ;; Note : I removed -e as it is not posix, nor necessary it seems.
+          (let ((cmd (concat "find " default-directory " -type f " filepattern " -print0 "
+                             "| xargs -0 grep -H " grepflags "-e " greppat)))
+            ;;(message "Old command: %s" cmd)
+            (call-process semantic-symref-grep-shell nil b nil
+                          shell-command-switch cmd))
+        (let ((cmd (semantic-symref-grep-use-template rootdir filepattern grepflags greppat)))
+          (call-process semantic-symref-grep-shell nil b nil
+                        shell-command-switch cmd))))
+    (setq ans (semantic-symref-parse-tool-output tool b))
+    ;; Special handling for search type tagname
+    ;; Semantic expect only positions of tags will be provided so we
+    ;; must filter raw output from grep using semantic parsing
+    ;; infrastructure.
+    (if (equal (oref tool searchtype) 'tagname)
+        (loop for (line . path) in ans
+              if (custom/is-tagname-hit path line)
+              collect (cons line path))
+      ans)))

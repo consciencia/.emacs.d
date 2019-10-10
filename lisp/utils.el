@@ -332,10 +332,7 @@
                          ((equal proj-type "Javascript")
                           (custom/tern/generare-generic-loader proj-root))
                          (t nil)))
-        (refresher-content (cond
-                            ((equal proj-type "C/C++ (generic)")
-                             (custom/ede/generate-generic-refresher proj-root))
-                            (t nil))))
+        (refresher-content nil))
     (if (or loader-content refresher-content)
         (custom/generate-dir-locals proj-root
                                     refresher-content
