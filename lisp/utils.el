@@ -468,6 +468,7 @@
 
 (defun custom/full-macroexpand (expression)
   (interactive (list (thing-at-point 'list t)))
+  ;; TODO: Modify pp-display-expression to use (custom/with-simple-pop-up)
   (pp-display-expression (macroexpand-all (read expression))
                          "*Macroexpand Output*"))
 
@@ -506,7 +507,7 @@
   "Returns t when position is in comment. This function
 can detect comment via `syntax-ppss' or using test for font
 face placed there by font-lock. This function is reasonable
-fast for so dont be shy.
+fast so dont be shy.
 POS is optional position in file where to search for comment."
   (interactive)
   (if (not pos)

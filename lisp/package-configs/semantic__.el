@@ -1,20 +1,15 @@
-;; WARNING after emacs update (together with CEDET)
-;; you must delete whole semnatic cache becuase it is in invalid
-;; format (better said, incompatible with new version) and semantic
-;; simply silently fails instead of detecting incompatibility
-
+(require 'cc-mode)
 (require 'ede)
 (require 'ede/cpp-root)
-(require 'cc-mode)
 (require 'semantic)
-(require 'cedet-global)
-(require 'cedet-cscope)
 (require 'semantic/idle)
-(require 'semantic/db-ebrowse)
 (require 'semantic/symref)
 (require 'semantic/symref/grep)
 (require 'semantic/symref/list)
+(require 'semantic/symref/filter)
+(require 'semantic/chart)
 (require 'srecode)
+(require 'srecode/fields)
 (require 'json)
 (require 'seq)
 (load "custom-semantic-db-grep.el")
@@ -605,6 +600,7 @@ save the pointer marker if tag is found"
     (custom/universal-push-mark)
     (switch-to-buffer buff)
     (semantic-go-to-tag tag)
+    (recenter)
     (pulse-momentary-highlight-one-line (point))))
 
 (defun semantic-symref-rb-goto-match (&optional button)
@@ -618,22 +614,27 @@ BUTTON is the button that was clicked."
     (switch-to-buffer buff)
     (goto-char (point-min))
     (forward-line (1- line))
+    (recenter)
     (pulse-momentary-highlight-one-line (point))))
 
 (let ((map semantic-symref-results-mode-map))
   (define-key map (kbd "<C-right>") 'forward-button)
   (define-key map (kbd "<C-left>") 'backward-button)
-  (define-key map (kbd "SPC") 'push-button)
   (define-key map (kbd "RET") 'push-button)
-  (define-key map "+" 'semantic-symref-list-toggle-showing)
-  (define-key map "-" 'semantic-symref-list-toggle-showing)
-  (define-key map "=" nil)
+  (define-key map (kbd "+")  'semantic-symref-list-toggle-showing)
+  (define-key map (kbd "-")  'semantic-symref-list-toggle-showing)
+  (define-key map (kbd "=")  'semantic-symref-list-toggle-showing)
+  (define-key map (kbd "SPC") 'semantic-symref-list-toggle-showing)
   (define-key map (kbd "C-+") 'semantic-symref-list-expand-all)
   (define-key map (kbd "C--") 'semantic-symref-list-contract-all)
   (define-key map (kbd "C-r") 'semantic-symref-list-rename-open-hits)
   (define-key map (kbd "R") 'semantic-symref-list-rename-open-hits)
   (define-key map (kbd "q") 'custom/universal-pop-mark)
   (define-key map (kbd "C-q") 'custom/universal-pop-mark))
+
+;; Machinery for renaming local variables is part of symref facility so
+;; it ended here.
+(define-key srecode-field-keymap (kbd "<C-return>") 'srecode-field-exit-ask)
 
 ;; Adds support for multi repository symref searches. Will affect grep
 ;; presearch backend too.
@@ -658,72 +659,121 @@ BUTTON is the button that was clicked."
 ;;;; GREP VIRTUAL DATABASE HACKS
 ;; CODE:
 
-(defun custom/is-tagname-hit (path line)
+(defun custom/is-tagname-hit (path line search-for)
   (let ((buff (find-file-noselect path)))
     (with-current-buffer buff
       (goto-line line)
       (let* ((tag (semantic-current-tag))
+             (tag-name (if tag (semantic-tag-name tag)))
              (tag-start (if tag (semantic-tag-start tag)))
-             (tag-start-line (if tag-start (line-number-at-pos tag-start))))
-        (equal tag-start-line line)))))
+             (tag-start-line (if tag-start (line-number-at-pos tag-start)))
+             (lines-match (equal tag-start-line line))
+             (names-match (if (and tag-name search-for)
+                              (s-index-of search-for tag-name t))))
+        ;; Check for name equality is kind of overkill because line
+        ;; check is enough but I just want to be sure.
+        (and lines-match names-match)))))
 
 (cl-defmethod semantic-symref-perform-search ((tool semantic-symref-tool-grep))
   "Perform a search with Grep."
-  (message "TYPE %s FOR %s"
-           (oref tool searchtype)
-           (oref tool searchfor))
-  ;; TODO:
-  ;;   tagcompletions
-  ;;     treat that as type regexp and at post processing, treat it as tagname
-
   ;; Grep doesn't support some types of searches.
   (let ((st (oref tool searchtype)))
-    (when (not (memq st '(symbol regexp tagname)))
-      (error "Symref impl GREP does not support searchtype of %s"
-             st)))
-  ;; Find the root of the project, and do a find-grep...
-  (let* (;; Find the file patterns to use.
-         (rootdir (semantic-symref-calculate-rootdir))
-         (filepatterns (semantic-symref-derive-find-filepatterns))
-         (filepattern (mapconcat #'shell-quote-argument filepatterns " "))
-         ;; Grep based flags.
-         (grepflags (cond ((eq (oref tool resulttype) 'file)
-                           "-l ")
-                          ((eq (oref tool searchtype) 'regexp)
-                           "-nE ")
-                          (t "-n ")))
-         (greppat (cond ((eq (oref tool searchtype) 'regexp)
-                         (oref tool searchfor))
-                        (t
-                         ;; Can't use the word boundaries: Grep
-                         ;; doesn't always agree with the language
-                         ;; syntax on those.
-                         (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
-                                 (oref tool searchfor)))))
-         ;; Misc
-         (b (get-buffer-create "*Semantic SymRef*"))
-         (ans nil))
-    (with-current-buffer b
-      (erase-buffer)
-      (setq default-directory rootdir)
-      (if (not (fboundp 'grep-compute-defaults))
-          ;; find . -type f -print0 | xargs -0 -e grep -nH -e
-          ;; Note : I removed -e as it is not posix, nor necessary it seems.
-          (let ((cmd (concat "find " default-directory " -type f " filepattern " -print0 "
-                             "| xargs -0 grep -H " grepflags "-e " greppat)))
-            ;;(message "Old command: %s" cmd)
-            (call-process semantic-symref-grep-shell nil b nil
-                          shell-command-switch cmd))
-        (let ((cmd (semantic-symref-grep-use-template rootdir filepattern grepflags greppat)))
-          (call-process semantic-symref-grep-shell nil b nil
-                        shell-command-switch cmd))))
-    (setq ans (semantic-symref-parse-tool-output tool b))
-    ;; Special handling for search type tagname
-    ;; Semantic expect only positions of tags will be provided so we
-    ;; must filter raw output from grep using semantic parsing
-    ;; infrastructure.
-    (if (equal (oref tool searchtype) 'tagname)
-        (loop for (line . path) in ans
-              if (custom/is-tagname-hit path line)
-              collect (cons line path))
-      ans)))
+    (when (not (memq st '(symbol regexp tagname tagcompletions)))
+      (error "Symref impl GREP does not support searchtype of %s for %s"
+             st
+             (oref tool searchfor))))
+  ;; This is how we implement support for tagcompletions.
+  ;; We just return nil. Semantic doesn't need grep in order to give
+  ;; good autocompletion hints because is able to traverse whole
+  ;; include hierarchy and collect all potential hits from
+  ;; there. In order to do that, grep virtual database must not fail
+  ;; because if fails, all queries to other databases are
+  ;; halted.
+  ;;
+  ;; Sometimes, doing nothing is best thing what you can do.
+  (if (not (equal (oref tool searchtype) 'tagcompletions))
+      ;; Find the root of the project, and do a find-grep...
+      (let* (;; Find the file patterns to use.
+             (rootdir (semantic-symref-calculate-rootdir))
+             (filepatterns (semantic-symref-derive-find-filepatterns))
+             (filepattern (mapconcat #'shell-quote-argument filepatterns " "))
+             ;; Grep based flags.
+             (grepflags (cond ((eq (oref tool resulttype) 'file)
+                               "-l ")
+                              ((eq (oref tool searchtype) 'regexp)
+                               "-nE ")
+                              (t "-n ")))
+             (greppat (cond ((eq (oref tool searchtype) 'regexp)
+                             (oref tool searchfor))
+                            (t
+                             ;; Can't use the word boundaries: Grep
+                             ;; doesn't always agree with the language
+                             ;; syntax on those.
+                             (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
+                                     (oref tool searchfor)))))
+             ;; Misc
+             (b (get-buffer-create "*Semantic SymRef*"))
+             (ans nil))
+        (with-current-buffer b
+          (erase-buffer)
+          (setq default-directory rootdir)
+          (if (not (fboundp 'grep-compute-defaults))
+              ;; find . -type f -print0 | xargs -0 -e grep -nH -e
+              ;; Note : I removed -e as it is not posix, nor necessary it seems.
+              (let ((cmd (concat "find "
+                                 default-directory
+                                 " -type f "
+                                 filepattern
+                                 " -print0 "
+                                 "| xargs -0 grep -H "
+                                 grepflags "-e "
+                                 greppat)))
+                ;;(message "Old command: %s" cmd)
+                (call-process semantic-symref-grep-shell nil b nil
+                              shell-command-switch cmd))
+            (let ((cmd (semantic-symref-grep-use-template rootdir
+                                                          filepattern
+                                                          grepflags
+                                                          greppat)))
+              (call-process semantic-symref-grep-shell nil b nil
+                            shell-command-switch cmd))))
+        (setq ans (semantic-symref-parse-tool-output tool b))
+        ;; Special handling for search type tagname.
+        ;; Semantic expect only positions of tags will be provided so we
+        ;; must filter raw output from grep using semantic parsing
+        ;; infrastructure.
+        ;; Slow on large grep results (first pass).
+        ;; TODO: Optimize filtering by grouping grep hits per file.
+        ;; TODO: Detect large greps and fallback to some stupid yet
+        ;; working solution. Something like open buffer without
+        ;; activating any modes, enable cc-mode and try to decide if
+        ;; hit is really hit by begin-defun end-defun calls.
+        ;;
+        ;; (begin-defun)
+        ;; (end-defun)
+        ;; Test if current line is same as grep hit, If yes, we have
+        ;; function hit.
+        ;;
+        ;; But types and members will not be covered by this.
+        ;; Maybe regexes?
+        (if (equal (oref tool searchtype) 'tagname)
+            (loop for (line . path) in ans
+                  if (custom/is-tagname-hit path
+                                            line
+                                            (oref tool searchfor))
+                  collect (cons line path))
+          ans))))
+
+
+
+;; TODO: Try to bind following cool functions to something
+;; (semantic-chart-analyzer)
+;; (semantic-chart-database-size)
+;; (semantic-chart-tag-complexity)
+;; (semantic-chart-tags-by-class)
+
+;; TODO: Try to download and compile newest parser definition from
+;; https://sourceforge.net/p/cedet/git/ci/master/tree/lisp/cedet/semantic/bovine/c.by
+;; It might fix some things and provide speedup.
+
+;; TODO: Finally add that support for acquiring documentation.
