@@ -182,7 +182,8 @@
                (if (use-region-p)
                    (call-interactively 'cua-copy-region)))
       (if (and semantic-mode
-               (not (equal major-mode 'python-mode)))
+               (not (equal major-mode 'python-mode))
+               (not (equal major-mode 'lisp-interaction-mode)))
           (if (semantic-current-tag)
               (let* ((bounds (semantic-tag-bounds
                               (semantic-current-tag)))
@@ -530,6 +531,36 @@ POS is optional position in file where to search for comment."
     (if (called-interactively-p 'any)
         (message "Comment state: %s" result)
       result)))
+
+(defun custom/extract-comments-from-region (start stop)
+  (when font-lock-mode
+    ;; There is possibility that target region is in buffer with font lock
+    ;; enabled but with no font locking done yet. In such case, we must
+    ;; explicitly fontify that region where we search for comments.
+    ;; Of course there is backup for buffers without font locking, but
+    ;; this backup is enabled only when font lock mode is disabled so
+    ;; its not usable in this situation.
+    (font-lock-fontify-region start stop))
+  (let ((result "")
+        (len (- stop start))
+        (finger start)
+        (was-in nil)
+        (is-in nil))
+    (dotimes (finger len result)
+      (setq is-in (custom/pos-is-in-comment (+ start finger)))
+      (if is-in
+          (setq result (concat result
+                               (string
+                                (char-after (+ start
+                                               finger))))))
+      (if (and was-in (not is-in))
+          (setq result (concat result
+                               (if (equal (string
+                                           (aref result
+                                                 (1- (length result)))) "\n")
+                                   "\n"
+                                 "\n\n"))))
+      (setq was-in is-in))))
 
 (defun custom/goto-line ()
   (interactive)
@@ -889,3 +920,21 @@ POS is optional position in file where to search for comment."
           (downcase-region
            start
            (cdr (bounds-of-thing-at-point 'symbol))))))))
+
+(defun custom/chain-forms-helper (&rest forms)
+  (if forms
+      (append (car forms)
+              (if (cdr forms)
+                  (list (apply #'custom/chain-forms-helper
+                               (cdr forms)))))))
+
+(defmacro custom/chain-forms (&rest forms)
+  (apply #'custom/chain-forms-helper forms))
+
+(defun @init (list &optional safe)
+  (if safe
+      (nreverse (nthcdr 1 (reverse list)))
+    (nreverse (nthcdr 1 (nreverse list)))))
+
+(defun @push-back (val list)
+  (append list (list val)))

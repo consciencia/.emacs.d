@@ -7,6 +7,8 @@
 (require 'semantic/symref/grep)
 (require 'semantic/symref/list)
 (require 'semantic/symref/filter)
+(require 'semantic/doc)
+(require 'semantic/ia)
 (require 'semantic/chart)
 (require 'srecode)
 (require 'srecode/fields)
@@ -53,55 +55,77 @@
                         (equal (car e) 'js-mode)))
             collect e))
 
-(if (functionp 'semantic-default-elisp-setup)
-    (progn
-      (add-to-list 'semantic-new-buffer-setup-functions
-                   '(emacs-lisp-mode . semantic-default-elisp-setup))
-      (add-to-list 'semantic-inhibit-functions
-                   (lambda ()
-                     (not (or (equal major-mode 'c-mode)
-                              (equal major-mode 'c++-mode)
-                              (equal major-mode 'emacs-lisp-mode)))))
-      (advice-add 'save-buffer :after
-                  (lambda (&rest args)
-                    (if (or (equal major-mode 'c-mode)
-                            (equal major-mode 'c++-mode)
-                            (equal major-mode 'emacs-lisp-mode))
-                        (progn
-                          (save-mark-and-excursion
-                            (semantic-force-refresh)))))))
-  (progn
-    (add-to-list 'semantic-inhibit-functions
-                 (lambda ()
-                   (not (or (equal major-mode 'c-mode)
-                            (equal major-mode 'c++-mode)))))
-    (advice-add 'save-buffer :after
-                (lambda (&rest args)
-                  (if (or (equal major-mode 'c-mode)
-                          (equal major-mode 'c++-mode))
-                      (progn
-                        (save-mark-and-excursion
-                          (semantic-force-refresh))))))))
+(add-to-list 'semantic-new-buffer-setup-functions
+             '(emacs-lisp-mode . semantic-default-elisp-setup))
+(add-to-list 'semantic-inhibit-functions
+             (lambda ()
+               (not (or (equal major-mode 'c-mode)
+                        (equal major-mode 'c++-mode)
+                        (equal major-mode 'emacs-lisp-mode)))))
+
+(advice-add 'save-buffer :after
+            (lambda (&rest args)
+              (if (or (equal major-mode 'c-mode)
+                      (equal major-mode 'c++-mode)
+                      (equal major-mode 'emacs-lisp-mode))
+                  (save-mark-and-excursion
+                    (semantic-force-refresh)))))
 
 (global-ede-mode 1)
 (semantic-mode 1)
 
 
 
-(defun semantic-symref-cleanup-recent-buffers-fcn ()
-  ;; This function needs to be stubbed in order to prevent deletion
-  ;; of lots of files loaded during symref searching. Whole load
-  ;; process is very long, so its good idea to just cache files.
-  )
+;; This function needs to be stubbed in order to prevent deletion
+;; of lots of files loaded during symref searching. Whole load
+;; process is very slow, so its good idea to just cache files.
+(defun semantic-symref-cleanup-recent-buffers-fcn ())
 
-;; Hack used for company complete c headers.
+;; Hack used for company complete c headers. EDE is not able to return
+;; system headers without this.
 (cl-defmethod ede-include-path ((this ede-cpp-root-project))
   "Get the system include path used by project THIS."
   (oref this include-path))
 
+;; Hack used for company complete c headers. EDE is not able to return
+;; system headers without this.
 (cl-defmethod ede-include-path ((this ede-cpp-root-target))
   "Get the system include path used by target THIS."
   (ede-include-path (ede-target-parent this)))
+
+
+
+;; By default, which function will trigger reparsing of current file
+;; by semantic, that is very slow so we will use shortcut.
+(advice-add #'which-function
+            :around
+            (lambda (oldfn &rest args)
+              (if (or (equal major-mode 'c-mode)
+                      (equal major-mode 'c++-mode))
+                  (let ((fun-name (custom/semantic/get-current-function-name)))
+                    (if fun-name
+                        (concat fun-name "()")
+                      nil))
+                (apply oldfn args))))
+
+
+
+(defun custom/semantic/diagnostic-visualizations ()
+  (interactive)
+  (let ((decision (ido-completing-read "Select thing to visualize: "
+                                       '("Scope analyzer overhead"
+                                         "Database size"
+                                         "Tag complexity"
+                                         "Tags by class"))))
+    (cond
+     ((equal decision "Scope analyzer overhead")
+      (semantic-chart-analyzer))
+     ((equal decision "Database size")
+      (semantic-chart-database-size))
+     ((equal decision "Tag complexity")
+      (semantic-chart-tag-complexity))
+     ((equal decision "Tags by class")
+      (semantic-chart-tags-by-class)))))
 
 (defun custom/ede/load-config-file (proj-root)
   (let ((config-path (concat proj-root
@@ -327,7 +351,7 @@ save the pointer marker if tag is found"
          (run-time (cdr ctx-with-time))
          (prefix (if ctx (oref ctx prefix) nil))
          (last-pref (car (last prefix))))
-    (when (> run-time 1)
+    (when (> run-time 2)
       (setq *is-prefix-pointer-state*
             (cons curr-fun-name 'no-ctx-fetch))
       (when (yes-or-no-p (format
@@ -385,7 +409,7 @@ save the pointer marker if tag is found"
 ;; Add preprocesor value for all projects
 ;;   (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
 ;;
-;; Symstem includes are not project includes, these apply for
+;; System includes are not project includes, these apply for
 ;; every project (and are not saved)
 ;;   (semantic-add-system-include include-root-dir symbol-for-mode)
 ;;   (semantic-remove-system-include include-root-dir symbol-for-mode)
@@ -523,19 +547,6 @@ save the pointer marker if tag is found"
     (if tag
         (semantic-tag-name tag)
       nil)))
-
-;; By default, which function will trigger reparsing of current file
-;; by semantic, that is very slow so we will use shortcut.
-(advice-add #'which-function
-            :around
-            (lambda (oldfn &rest args)
-              (if (or (equal major-mode 'c-mode)
-                      (equal major-mode 'c++-mode))
-                  (let ((fun-name (custom/semantic/get-current-function-name)))
-                    (if fun-name
-                        (concat fun-name "()")
-                      nil))
-                (apply oldfn args))))
 
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
@@ -764,16 +775,139 @@ BUTTON is the button that was clicked."
                   collect (cons line path))
           ans))))
 
+;;;; CODE DOC ACQUISITION
+;; CODE:
+
+(defun semantic-ia-show-doc (point)
+  "Display the code-level documentation for the symbol at POINT."
+  (interactive "d")
+  (let* ((ctxt (semantic-analyze-current-context point))
+         (pf (reverse (oref ctxt prefix)))
+         (tag (car pf)))
+    ;; If PF, the prefix is non-nil, then the last element is either
+    ;; a string (incomplete type), or a semantic TAG.  If it is a TAG
+    ;; then we should be able to find DOC for it.
+    (cond
+     ((stringp tag)
+      (message "Incomplete symbol name."))
+     ((semantic-tag-p tag)
+      ;; The `semantic-documentation-for-tag' fcn is language
+      ;; specific.  If it doesn't return what you expect, you may
+      ;; need to implement something for your language.
+      ;;
+      ;; The default tries to find a comment in front of the tag
+      ;; and then strings off comment prefixes.
+      ;;
+      ;; Here we are calling semantic-analyze-tag-references in order
+      ;; to find either prototype or definition of current tag because
+      ;; in some project, main documentation reside above prototype
+      ;; and in other above implementation so we need to acquire
+      ;; documentation for both and use the one which is more
+      ;; complete. Currently indication of completeness is string
+      ;; length which is probably not optimal but good enough for now.
+      (let* ((sar (semantic-analyze-tag-references tag))
+             (other-tag (if (semantic-tag-prototype-p tag)
+                            (car (semantic-analyze-refs-impl sar t))
+                          (car (semantic-analyze-refs-proto sar t))))
+             (doc (or (semantic-documentation-for-tag tag) ""))
+             (other-doc (or (if other-tag
+                                (semantic-documentation-for-tag other-tag))
+                            ""))
+             ;; We will replace any mentioned argument name in documentation
+             ;; with (argType argName).
+             ;;
+             ;; TODO: Implement button system so user will be able to
+             ;; hit enter above (argType argName) and emacs will jump
+             ;; to type definition.
+             (args-list (loop for arg in (semantic-tag-function-arguments tag)
+                              collect (let ((formatted-arg
+                                             (semantic-format-tag-prototype arg
+                                                                            nil
+                                                                            t)))
+                                        (cons (semantic-tag-name arg)
+                                              (concat "("
+                                                      formatted-arg
+                                                      ")"))))))
+        (if (and (string= doc "") (string= other-doc ""))
+            (message "Doc unavailable!")
+          (custom/with-simple-pop-up "*TAG DOCUMENTATION*"
+            (insert (semantic-format-tag-prototype tag nil t))
+            (insert "\n")
+            (insert "\n")
+            (insert (if (> (length doc) (length other-doc))
+                        (s-replace-all args-list doc)
+                      (s-replace-all args-list other-doc)))))))
+     (t
+      (message "Unknown tag.")))))
+
+(define-overloadable-function semantic-documentation-for-tag (&optional tag nosnarf)
+  "Find documentation from TAG and return it as a clean string.
+TAG might have DOCUMENTATION set in it already.  If not, there may be
+some documentation in a comment preceding TAG's definition which we
+can look for.  When appropriate, this can be overridden by a language specific
+enhancement.
+Optional argument NOSNARF means to only return the lexical analyzer token for it.
+If NOSNARF is `lex', then only return the lex token."
+  (if (not tag)
+      (setq tag (semantic-current-tag)))
+  (when (semantic-tag-buffer tag)
+    (with-current-buffer (semantic-tag-buffer tag)
+      (:override
+       ;; No override.  Try something simple to find documentation nearby
+       (save-excursion
+         (semantic-go-to-tag tag)
+         (let ((doctmp (semantic-tag-docstring tag (current-buffer))))
+           (or doctmp
+               (when (semantic-tag-with-position-p tag)
+                 (semantic-documentation-comment-preceding-tag tag nosnarf))
+               nil)))))))
+
+(defun semantic-documentation-comment-preceding-tag (&optional tag nosnarf)
+  (if (not tag)
+      (setq tag (semantic-current-tag)))
+  (save-excursion
+    (semantic-go-to-tag tag)
+    (let* ((tag-start (semantic-tag-start tag))
+           (starttag (semantic-find-tag-by-overlay-prev tag-start))
+           (start (if starttag
+                      (semantic-tag-end starttag)
+                    (point-min)))
+           (stop (semantic-tag-start tag))
+           (raw-comment (custom/extract-comments-from-region start stop)))
+      ;; Comment cleanup. Removes comment symbols and preprocess doxygen.
+      (custom/chain-forms
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@param\\[([^\\]]*)\\][ \t]*(\\w+)[ \t]*")
+                         "Parameter[\\1] \\2 = ")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@retval[ \t]*(\\w+)[ \t]*")
+                         "Option \\1 = ")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@return[ \t]*")
+                         "=== return ===\n")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@brief[ \t]*")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "[ \t]*\\*/")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "/\\*[ \t]*")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "^[ \t]*")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "\\A\\s*|\\s*\\Z")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "(?:///+[ \\t]*|//-+[ \\t]*)")
+                         ""
+                         raw-comment)))))
 
 
-;; TODO: Try to bind following cool functions to something
-;; (semantic-chart-analyzer)
-;; (semantic-chart-database-size)
-;; (semantic-chart-tag-complexity)
-;; (semantic-chart-tags-by-class)
+;; TODO: Implement simple semantic aware font locking.
 
 ;; TODO: Try to download and compile newest parser definition from
 ;; https://sourceforge.net/p/cedet/git/ci/master/tree/lisp/cedet/semantic/bovine/c.by
 ;; It might fix some things and provide speedup.
-
-;; TODO: Finally add that support for acquiring documentation.
