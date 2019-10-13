@@ -835,8 +835,12 @@ BUTTON is the button that was clicked."
             (insert "\n")
             (insert "\n")
             (insert (if (> (length doc) (length other-doc))
-                        (s-replace-all args-list doc)
-                      (s-replace-all args-list other-doc)))))))
+                        (if args-list
+                            (s-replace-all args-list doc)
+                          doc)
+                      (if args-list
+                          (s-replace-all args-list other-doc)
+                        other-doc)))))))
      (t
       (message "Unknown tag.")))))
 
