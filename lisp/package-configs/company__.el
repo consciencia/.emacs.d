@@ -54,24 +54,3 @@
 (define-key company-search-map (kbd "<prior>") 'company-search-repeat-backward)
 (define-key company-search-map (kbd "<next>") 'company-search-repeat-forward)
 (define-key company-search-map (kbd "<tab>") 'company-search-abort)
-
-
-
-(defun custom/company-semantic-completions-raw (prefix)
-  (setq company-semantic--current-tags nil)
-  (dolist (tag (if (and (fboundp 'semanticdb-minor-mode-p)
-                        (semanticdb-minor-mode-p))
-                   ;; Search the database & concatenate all matches together.
-                   (semanticdb-fast-strip-find-results
-                    (semanticdb-find-tags-for-completion prefix))
-                 ;; Search just this file because there is no DB available.
-                 (semantic-find-tags-for-completion
-                  prefix (current-buffer))))
-    (unless (eq (semantic-tag-class tag) 'include)
-      (push tag company-semantic--current-tags)))
-  (delete "" (mapcar 'semantic-tag-name company-semantic--current-tags)))
-
-(advice-add #'company-semantic-completions-raw
-            :around
-            (lambda (oldfn &rest args)
-              (apply #'custom/company-semantic-completions-raw args)))

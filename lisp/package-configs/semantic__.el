@@ -14,6 +14,7 @@
 (require 'srecode/fields)
 (require 'json)
 (require 'seq)
+(require 'company-semantic)
 (load "custom-semantic-db-grep.el")
 
 (global-semanticdb-minor-mode t)
@@ -107,6 +108,37 @@
                         (concat fun-name "()")
                       nil))
                 (apply oldfn args))))
+
+;; Speed hack, semanticdb-fast-strip-find-results is a lot faster than
+;; semanticdb-strip-find-results which caused company to lag.
+(defun custom/company-semantic-completions-raw (prefix)
+  (setq company-semantic--current-tags nil)
+  (dolist (tag (if (and (fboundp 'semanticdb-minor-mode-p)
+                        (semanticdb-minor-mode-p))
+                   ;; Search the database & concatenate all matches together.
+                   (semanticdb-fast-strip-find-results
+                    (semanticdb-find-tags-for-completion prefix))
+                 ;; Search just this file because there is no DB available.
+                 (semantic-find-tags-for-completion
+                  prefix (current-buffer))))
+    (unless (eq (semantic-tag-class tag) 'include)
+      (push tag company-semantic--current-tags)))
+  (delete "" (mapcar 'semantic-tag-name company-semantic--current-tags)))
+(advice-add #'company-semantic-completions-raw
+            :around
+            (lambda (oldfn &rest args)
+              (apply #'custom/company-semantic-completions-raw args)))
+
+;; Hack done in order to be able to complete enums. By default, no deep
+;; search was done in contextless searches so I introduced partial deep
+;; search only for enums.
+(cl-defmethod semanticdb-find-tags-for-completion-method ((table semanticdb-abstract-table) prefix &optional tags)
+  "In TABLE, find all occurrences of tags matching PREFIX.
+Optional argument TAGS is a list of tags to search.
+Returns a table of all matching tags."
+  (semantic-find-tags-for-completion prefix
+                                     (custom/semantic/flatten-enum-tags-table
+                                      (or tags (semanticdb-get-tags table)))))
 
 
 
@@ -317,12 +349,13 @@ save the pointer marker if tag is found"
                   (push-mark)
                   (xref-push-marker-stack)
                   (find-file (buffer-file-name (semantic-tag-buffer chosen-tag)))
-                  (goto-char (semantic-tag-start chosen-tag))
+                  (semantic-go-to-tag chosen-tag)
                   (if (not semantic-idle-scheduler-mode)
                       (semantic-idle-scheduler-mode))
                   (recenter)
-                  (pulse-momentary-highlight-region (semantic-tag-start chosen-tag)
-                                                    (semantic-tag-end chosen-tag)))
+                  (pulse-momentary-highlight-region
+                   (semantic-tag-start chosen-tag)
+                   (semantic-tag-end chosen-tag)))
               (message "Error, failed to pair tags and summaries -> REPORT BUG"))))
       (message "No tags found for %s" sym))))
 
@@ -531,6 +564,47 @@ save the pointer marker if tag is found"
                                   "\n"))))))
       tags)))
 
+(defun custom/semantic/flatten-enum-tags-table (&optional table)
+  (let* ((table (semantic-something-to-tag-table table))
+         (lists (list table)))
+    (mapc (lambda (tag)
+            (let ((components (semantic-tag-components tag)))
+              (if (and components
+                       ;; unpositioned tags can be hazardous to
+                       ;; completion.  Do we need any type of tag
+                       ;; here?  - EL
+                       (equal (semantic-tag-type tag) "enum")
+                       (semantic-tag-with-position-p (car components)))
+                  (setq lists (cons
+                               (semantic-flatten-tags-table components)
+                               lists)))))
+          table)
+    (apply 'append (nreverse lists))))
+
+(defun custom/semantic/flatten-tags-table (&optional table)
+  (let* ((lists (list table)))
+    (mapc (lambda (tag)
+            (let ((components (semantic-tag-components tag)))
+              (if (and components
+                       ;; unpositioned tags can be hazardous to
+                       ;; completion.  Do we need any type of tag
+                       ;; here?  - EL
+                       (semantic-tag-with-position-p (car components)))
+                  (setq lists (cons
+                               (semantic-flatten-tags-table components)
+                               lists)))))
+          table)
+    (apply 'append (nreverse lists))))
+
+(defun custom/semantic/deep-find-tags-in-file (file symbol)
+  (with-current-buffer (find-file-noselect file)
+    (save-excursion
+      (let ((tags (custom/semantic/flatten-tags-table
+                   (semantic-fetch-tags))))
+        (loop for tag in tags
+              if (equal symbol (semantic-tag-name tag))
+              collect tag)))))
+
 (defun custom/semantic/get-current-tag ()
   (semantic-current-tag))
 
@@ -670,21 +744,32 @@ BUTTON is the button that was clicked."
 ;;;; GREP VIRTUAL DATABASE HACKS
 ;; CODE:
 
-(defun custom/is-tagname-hit (path line search-for)
-  (let ((buff (find-file-noselect path)))
-    (with-current-buffer buff
-      (goto-line line)
-      (let* ((tag (semantic-current-tag))
-             (tag-name (if tag (semantic-tag-name tag)))
-             (tag-start (if tag (semantic-tag-start tag)))
-             (tag-start-line (if tag-start (line-number-at-pos tag-start)))
-             (lines-match (equal tag-start-line line))
-             (names-match (if (and tag-name search-for)
-                              (s-index-of search-for tag-name t))))
-        ;; Check for name equality is kind of overkill because line
-        ;; check is enough but I just want to be sure.
-        (and lines-match names-match)))))
+(defun custom/filter-raw-grep-output (hits searchfor)
+  ;; (message "HITS %s" hits)
+  (let ((deep-search #'custom/semantic/deep-find-tags-in-file)
+        (files (@dict-new))
+        (result nil))
+    (loop for (line . path) in hits
+          do (@dict-set path t files))
+    (@map (lambda (filename dummy)
+            (setq result
+                  (append result
+                          (loop for tag
+                                in (funcall deep-search
+                                            filename
+                                            searchfor)
+                                collect (cons tag filename)))))
+          files)
+    (setq result
+          (loop for (tag . file) in result
+                collect (cons (with-current-buffer (find-file-noselect file)
+                                (line-number-at-pos
+                                 (semantic-tag-start tag)))
+                              file)))
+    ;; (message "RESULT %s" result)
+    result))
 
+(setq *custom/semantic/grep-db-enabled* t)
 (cl-defmethod semantic-symref-perform-search ((tool semantic-symref-tool-grep))
   "Perform a search with Grep."
   ;; Grep doesn't support some types of searches.
@@ -702,7 +787,8 @@ BUTTON is the button that was clicked."
   ;; halted.
   ;;
   ;; Sometimes, doing nothing is best thing what you can do.
-  (if (not (equal (oref tool searchtype) 'tagcompletions))
+  (if (and (not (equal (oref tool searchtype) 'tagcompletions))
+           *custom/semantic/grep-db-enabled*)
       ;; Find the root of the project, and do a find-grep...
       (let* (;; Find the file patterns to use.
              (rootdir (semantic-symref-calculate-rootdir))
@@ -713,6 +799,18 @@ BUTTON is the button that was clicked."
                                "-l ")
                               ((eq (oref tool searchtype) 'regexp)
                                "-nE ")
+                              ((eq (oref tool searchtype) 'symbol)
+                               (if (> emacs-major-version 25)
+                                   ;; Evil hack for workarounding strange
+                                   ;; grep issue in older emacs.
+                                   "-n "
+                                 "-nw "))
+                              ((eq (oref tool searchtype) 'tagname)
+                               ;; Evil hack for workarounding strange
+                               ;; grep issue in older emacs.
+                               (if (> emacs-major-version 25)
+                                   "-n "
+                                 "-nw "))
                               (t "-n ")))
              (greppat (cond ((eq (oref tool searchtype) 'regexp)
                              (oref tool searchfor))
@@ -720,28 +818,35 @@ BUTTON is the button that was clicked."
                              ;; Can't use the word boundaries: Grep
                              ;; doesn't always agree with the language
                              ;; syntax on those.
-                             (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
-                                     (oref tool searchfor)))))
+                             ;;
+                             ;; Some error in grep command
+                             ;; preprocessing somewhere.
+                             (if (> emacs-major-version 25)
+                                 (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
+                                         (oref tool searchfor))
+                               (oref tool searchfor)))))
              ;; Misc
              (b (get-buffer-create "*Semantic SymRef*"))
              (ans nil))
         (with-current-buffer b
           (erase-buffer)
           (setq default-directory rootdir)
+          ;; Detect legacy Emacs.
           (if (not (fboundp 'grep-compute-defaults))
               ;; find . -type f -print0 | xargs -0 -e grep -nH -e
               ;; Note : I removed -e as it is not posix, nor necessary it seems.
-              (let ((cmd (concat "find "
-                                 default-directory
-                                 " -type f "
-                                 filepattern
-                                 " -print0 "
-                                 "| xargs -0 grep -H "
-                                 grepflags "-e "
-                                 greppat)))
-                ;;(message "Old command: %s" cmd)
-                (call-process semantic-symref-grep-shell nil b nil
-                              shell-command-switch cmd))
+              ;; (let ((cmd (concat "find "
+              ;;                    default-directory
+              ;;                    " -type f "
+              ;;                    filepattern
+              ;;                    " -print0 "
+              ;;                    "| xargs -0 grep -H "
+              ;;                    grepflags "-e "
+              ;;                    greppat)))
+              ;;   (call-process semantic-symref-grep-shell nil b nil
+              ;;                 shell-command-switch cmd))
+              (error (concat "Not found grep-compute-defaults, update"
+                             " your Emacs to newer version!"))
             (let ((cmd (semantic-symref-grep-use-template rootdir
                                                           filepattern
                                                           grepflags
@@ -768,12 +873,16 @@ BUTTON is the button that was clicked."
         ;; But types and members will not be covered by this.
         ;; Maybe regexes?
         (if (equal (oref tool searchtype) 'tagname)
-            (loop for (line . path) in ans
-                  if (custom/is-tagname-hit path
-                                            line
-                                            (oref tool searchfor))
-                  collect (cons line path))
+            (custom/filter-raw-grep-output ans
+                                           (oref tool searchfor))
           ans))))
+
+;; Disable grepping in idle summary mode. We need just prototype here,
+;; no need to scan whole project by grep.
+(advice-add 'semantic-idle-summary-idle-function :around
+            (lambda (oldfn)
+              (let ((*custom/semantic/grep-db-enabled* nil))
+                (funcall oldfn))))
 
 ;;;; CODE DOC ACQUISITION
 ;; CODE:
@@ -835,12 +944,8 @@ BUTTON is the button that was clicked."
             (insert "\n")
             (insert "\n")
             (insert (if (> (length doc) (length other-doc))
-                        (if args-list
-                            (s-replace-all args-list doc)
-                          doc)
-                      (if args-list
-                          (s-replace-all args-list other-doc)
-                        other-doc)))))))
+                        (custom/replace-all args-list doc)
+                      (custom/replace-all args-list other-doc)))))))
      (t
       (message "Unknown tag.")))))
 
@@ -912,6 +1017,28 @@ If NOSNARF is `lex', then only return the lex token."
 
 ;; TODO: Implement simple semantic aware font locking.
 
+;; Extend semantic-default-c-setup to also check if buffer is in
+;; projectile project. If yes, try to load config file and register
+;; project into EDE according to data inside it.
+;;
+;; Another thing is that I can populate macro definition list here
+;; with some constants used by std lib and potentially QT. It causes
+;; parse errors without it.
+;;
+;; ede-cpp-root-project-list is a list of all registered projects
+;; oref and with-slots for object inspection
+;;
+;; Use this for detection if project was registered and for dynamic
+;; update of project info from config file.
+;; Update project if save operation occurred in something what looks
+;; like project config file.
+;; Also advice revert-buffer and perform this on all reverted files
+;; which looks like project config files.
+
 ;; TODO: Try to download and compile newest parser definition from
 ;; https://sourceforge.net/p/cedet/git/ci/master/tree/lisp/cedet/semantic/bovine/c.by
 ;; It might fix some things and provide speedup.
+
+;; NOTE: Interesting functions where include resolve process occurs
+;;   semantic-dependency-tag-file
+;;   semantic-dependency-find-file-on-path

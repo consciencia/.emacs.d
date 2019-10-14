@@ -30,6 +30,85 @@
         acc)
     nil))
 
+
+
+(defun @init (list &optional unsafe)
+  (if unsafe
+      (nreverse (nthcdr 1 (nreverse list)))
+    (nreverse (nthcdr 1 (reverse list)))))
+
+(defalias '@tail 'rest)
+
+(defalias '@head 'car)
+
+(defun @end (list)
+  (if list
+      (nth (1- (length list)) list)))
+
+(defun @push-back (list val)
+  (append list (list val)))
+
+(defalias '@pop-back '@init)
+
+(defalias '@push-front 'cons)
+
+(defalias '@pop-front 'cdr)
+
+(defun @len (list)
+  (cond
+   ((listp list) (length list))
+   ((hash-table-p list) (hash-table-count list))
+   (t (error "Bad input to @len"))))
+
+(defun @at (list idx)
+  (cond
+   ((listp list) (nth idx list))
+   ((hash-table-p list) (gethash idx list))
+   (t (error "Bad input to @at"))))
+
+(defun @in (list val)
+  (cond
+   ((listp list) (member val list))
+   ((hash-table-p list) (gethash val list))
+   (t (error "Bad input to @in"))))
+
+(defun @map (fun list)
+  (cond
+   ((listp list)
+    (loop for x in list collect (funcall fun x)))
+   ((hash-table-p list)
+    (loop for key being the hash-keys of list using (hash-values val)
+          collect (funcall fun key val)))
+   (t (error "Bad input to @map"))))
+
+(defalias '@dict-new 'custom/map/create)
+
+(defalias '@dict-set 'custom/map/set)
+
+(defalias '@dict-clear 'custom/map/clear)
+
+(defalias '@dict-val-to-vector 'custom/map/vectorize)
+
+(defalias '@dict-val-to-alist 'custom/map/to-alist)
+
+(defun @dict-& (dict1 dict2))
+
+(defun @dict-| (dict1 dict2))
+
+(defun @dict-^ (dict1 dict2))
+
+(defun @dict-/ (dict1 dict2))
+
+
+
+;; Function s-replace-all not works correctly for all inputs in all
+;; versions of emacs. This is workaround for that.
+;; This function also handle correctly empty replacement list.
+(defun custom/replace-all (replacements str)
+  (loop for (from . to) in replacements
+        do (setq str (s-replace-regexp from to str)))
+  str)
+
 (defun custom/get-buffer (name)
   (loop for buff in (buffer-list)
         for buffname = (buffer-name buff)
@@ -930,11 +1009,3 @@ POS is optional position in file where to search for comment."
 
 (defmacro custom/chain-forms (&rest forms)
   (apply #'custom/chain-forms-helper forms))
-
-(defun @init (list &optional safe)
-  (if safe
-      (nreverse (nthcdr 1 (reverse list)))
-    (nreverse (nthcdr 1 (nreverse list)))))
-
-(defun @push-back (val list)
-  (append list (list val)))
