@@ -129,10 +129,24 @@
             (lambda (oldfn &rest args)
               (apply #'custom/company-semantic-completions-raw args)))
 
+;; Disable grep db for all company queries. We need just prototypes for it.
+(advice-add #'company-semantic
+            :around
+            (lambda (oldfn &rest args)
+              (let ((*custom/semantic/grep-db-enabled* nil))
+                (apply oldfn args))))
+(advice-add #'company-complete-common
+            :around
+            (lambda (oldfn &rest args)
+              (let ((*custom/semantic/grep-db-enabled* nil))
+                (apply oldfn args))))
+
 ;; Hack done in order to be able to complete enums. By default, no deep
 ;; search was done in contextless searches so I introduced partial deep
 ;; search only for enums.
-(cl-defmethod semanticdb-find-tags-for-completion-method ((table semanticdb-abstract-table) prefix &optional tags)
+(cl-defmethod semanticdb-find-tags-for-completion-method
+  ((table semanticdb-abstract-table)
+   prefix &optional tags)
   "In TABLE, find all occurrences of tags matching PREFIX.
 Optional argument TAGS is a list of tags to search.
 Returns a table of all matching tags."
@@ -294,69 +308,47 @@ save the pointer marker if tag is found"
      (xref-pop-marker-stack)
      (signal (car err) (cdr err)))))
 
+(cl-defmethod semantic-symref-result-get-tags-as-is ((result semantic-symref-result)
+                                                     &optional open-buffers)
+  "Get the list of tags from the symref result RESULT.
+Optional OPEN-BUFFERS indicates that the buffers that the hits are
+in should remain open after scanning.
+Note: This can be quite slow if most of the hits are not in buffers
+already."
+  (if (and (slot-boundp result 'hit-tags) (oref result hit-tags))
+      (oref result hit-tags)
+    ;; Calculate the tags.
+    (let ((lines (oref result hit-lines))
+          (txt (oref (oref result created-by) searchfor))
+          (searchtype (oref (oref result created-by) searchtype))
+          (ans nil)
+          (out nil))
+      (save-excursion
+        (setq ans (mapcar
+                   (lambda (hit)
+                     (semantic-symref-hit-to-tag-via-buffer
+                      hit txt searchtype open-buffers))
+                   lines)))
+      ;; Kill off dead buffers, unless we were requested to leave them open.
+      (if (not open-buffers)
+          (add-hook 'post-command-hook 'semantic-symref-cleanup-recent-buffers-fcn)
+        ;; Else, just clear the saved buffers so they aren't deleted later.
+        (setq semantic-symref-recently-opened-buffers nil)
+        )
+      ans)))
+
 (defun custom/semantic/complete-jump (sym)
-  (interactive (list
-                (read-string "Look for symbol: "
-                             (thing-at-point 'symbol))))
-  (let ((tags (custom/semantic/query-all-tags-in-proj sym)))
+  (interactive (list (read-string "Look for symbol: "
+                                  (thing-at-point 'symbol))))
+  ;; Use modified symref module for getting all tags with target name in
+  ;; current project and all its dependencies.
+  ;; Bypasses bug when brute deep searching all tables in project
+  ;; using standard semantic find routines.
+  (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
+                (semantic-symref-result-get-tags-as-is res))))
     (if tags
-        (progn
-          (let* ((tag-summary-f
-                  (lambda (tag)
-                    (format "%s = %s"
-                            (let* ((str
-                                    (semantic-format-tag-prototype tag nil t))
-                                   (real-len (length str))
-                                   (limit-len 87))
-                              (if (> real-len limit-len)
-                                  (concat (substring str 0 limit-len)
-                                          "...")
-                                str))
-                            (let* ((str (buffer-file-name
-                                         (semantic-tag-buffer tag)))
-                                   (real-len (length str))
-                                   (limit-len 57))
-                              (if (> real-len limit-len)
-                                  (concat "..."
-                                          (substring str (- real-len
-                                                            limit-len)
-                                                     real-len))
-                                str)))))
-                 (get-tag-by-summary-f (lambda (summary summaries)
-                                         (loop for (summary2 tag) in summaries
-                                               if (equal summary2 summary)
-                                               return tag)))
-                 (seen-summaries (custom/map/create))
-                 (summaries (loop for (tag name class filename filepath buff)
-                                  in tags
-                                  for summary = (funcall tag-summary-f tag)
-                                  if (equal name sym)
-                                  unless (prog1
-                                             (custom/map/get summary seen-summaries)
-                                           (custom/map/set summary t seen-summaries))
-                                  collect (list summary tag)))
-                 (chosen-summary
-                  (if (equal (length summaries) 1)
-                      (caar summaries)
-                    (ido-completing-read "Choose tag: "
-                                         (loop for summary in summaries
-                                               collect (car summary)))))
-                 (chosen-tag (funcall get-tag-by-summary-f
-                                      chosen-summary
-                                      summaries)))
-            (if chosen-tag
-                (progn
-                  (push-mark)
-                  (xref-push-marker-stack)
-                  (find-file (buffer-file-name (semantic-tag-buffer chosen-tag)))
-                  (semantic-go-to-tag chosen-tag)
-                  (if (not semantic-idle-scheduler-mode)
-                      (semantic-idle-scheduler-mode))
-                  (recenter)
-                  (pulse-momentary-highlight-region
-                   (semantic-tag-start chosen-tag)
-                   (semantic-tag-end chosen-tag)))
-              (message "Error, failed to pair tags and summaries -> REPORT BUG"))))
+        (let* ((chosen-tag (custom/semantic/choose-tag tags)))
+          (custom/semantic/goto-tag chosen-tag))
       (message "No tags found for %s" sym))))
 
 (defvar-local *is-prefix-pointer-state*
@@ -365,47 +357,48 @@ save the pointer marker if tag is found"
   (interactive "d")
   (if (not point)
       (setq point (point)))
-  (let* ((guess-if-pointer
-          (lambda (sym)
-            (if sym
-                (let ((case-fold-search nil))
-                  (s-match (pcre-to-elisp/cached "^p[A-Z].*") sym)))))
-         (ctx-sym (cadr (semantic-ctxt-current-symbol-and-bounds point)))
-         (curr-fun-name (custom/semantic/get-current-function-name))
-         (decision (not (and (equal curr-fun-name
-                                    (car *is-prefix-pointer-state*))
-                             (not (equal (cdr *is-prefix-pointer-state*)
-                                         'allow)))))
-         (ctx-with-time
-          (custom/with-measure-time
-              (if decision
-                  (ignore-errors (semantic-analyze-current-context point)))))
-         (ctx (car ctx-with-time))
-         (run-time (cdr ctx-with-time))
-         (prefix (if ctx (oref ctx prefix) nil))
-         (last-pref (car (last prefix))))
-    (when (> run-time 2)
-      (setq *is-prefix-pointer-state*
-            (cons curr-fun-name 'no-ctx-fetch))
-      (when (yes-or-no-p (format
-                          (concat "Context fetch was too slow (%s) so it was "
-                                  "disabled temporary for this function (%s). Do "
-                                  "you want to enable type guessing (pSomething "
-                                  "is considered as a pointer)?")
-                          run-time
-                          curr-fun-name))
+  (when (not (custom/pos-is-in-comment point))
+    (let* ((guess-if-pointer
+            (lambda (sym)
+              (if sym
+                  (let ((case-fold-search nil))
+                    (s-match (pcre-to-elisp/cached "^p[A-Z].*") sym)))))
+           (ctx-sym (cadr (semantic-ctxt-current-symbol-and-bounds point)))
+           (curr-fun-name (custom/semantic/get-current-function-name))
+           (decision (not (and (equal curr-fun-name
+                                      (car *is-prefix-pointer-state*))
+                               (not (equal (cdr *is-prefix-pointer-state*)
+                                           'allow)))))
+           (ctx-with-time
+            (custom/with-measure-time
+                (if decision
+                    (ignore-errors (semantic-analyze-current-context point)))))
+           (ctx (car ctx-with-time))
+           (run-time (cdr ctx-with-time))
+           (prefix (if ctx (oref ctx prefix) nil))
+           (last-pref (car (last prefix))))
+      (when (> run-time 2)
         (setq *is-prefix-pointer-state*
-              (cons curr-fun-name 'guess))))
-    (if last-pref
-        (if (semantic-tag-p last-pref)
-            (semantic-tag-get-attribute last-pref
-                                        :pointer)
-          (if (equal (cdr *is-prefix-pointer-state*)
-                     'guess)
-              (funcall guess-if-pointer ctx-sym)))
-      (if (equal (cdr *is-prefix-pointer-state*)
-                 'guess)
-          (funcall guess-if-pointer ctx-sym)))))
+              (cons curr-fun-name 'no-ctx-fetch))
+        (when (yes-or-no-p (format
+                            (concat "Context fetch was too slow (%s) so it was "
+                                    "disabled temporary for this function (%s). Do "
+                                    "you want to enable type guessing (pSomething "
+                                    "is considered as a pointer)?")
+                            run-time
+                            curr-fun-name))
+          (setq *is-prefix-pointer-state*
+                (cons curr-fun-name 'guess))))
+      (if last-pref
+          (if (semantic-tag-p last-pref)
+              (semantic-tag-get-attribute last-pref
+                                          :pointer)
+            (if (equal (cdr *is-prefix-pointer-state*)
+                       'guess)
+                (funcall guess-if-pointer ctx-sym)))
+        (if (equal (cdr *is-prefix-pointer-state*)
+                   'guess)
+            (funcall guess-if-pointer ctx-sym))))))
 
 ;; SOME NOTES ABOUT SEMANTIC RESEARCH
 ;;
@@ -453,7 +446,7 @@ save the pointer marker if tag is found"
 ;; CODE:
 
 ;; with help of custom/eieo-inspect
-(defun custom/semantic/get-local-all-tags (&optional path brutish live-tags)
+(defun custom/semantic/get-local-tags (&optional path brutish live-tags)
   (interactive)
   (let ((tags (loop for tag in (loop for table
                                      in (semanticdb-find-translate-path path
@@ -490,7 +483,7 @@ save the pointer marker if tag is found"
                                   "\n"))))))
       tags)))
 
-(defun custom/semantic/get-function-var-tags (&optional point)
+(defun custom/semantic/get-scope-tags (&optional point)
   (interactive "d")
   (let ((tags (loop for tag in (semantic-get-all-local-variables)
                     collect (list tag
@@ -516,11 +509,11 @@ save the pointer marker if tag is found"
           (message "Failed to find local variables."))
       tags)))
 
-(defun custom/semantic/query-all-tags-in-proj (sym &optional live-tags)
+(defun custom/semantic/get-global-tags (sym &optional live-tags)
   (interactive (list (read-string "Enter tag name: ")))
   (let ((tags (loop for tag
                     in (semanticdb-strip-find-results
-                        (semanticdb-brute-deep-find-tags-by-name sym nil nil)
+                        (semanticdb-brute-deep-find-tags-by-name sym nil t)
                         t)
                     for tagbuff = (semantic-tag-buffer tag)
                     if tagbuff
@@ -568,35 +561,41 @@ save the pointer marker if tag is found"
   (let* ((table (semantic-something-to-tag-table table))
          (lists (list table)))
     (mapc (lambda (tag)
-            (let ((components (semantic-tag-components tag)))
-              (if (and components
-                       ;; unpositioned tags can be hazardous to
-                       ;; completion.  Do we need any type of tag
-                       ;; here?  - EL
-                       (equal (semantic-tag-type tag) "enum")
-                       (semantic-tag-with-position-p (car components)))
-                  (setq lists (cons
-                               (semantic-flatten-tags-table components)
-                               lists)))))
+            ;; Unroll all unnamed enums in typedefs.
+            (when (and (equal (semantic-tag-class tag) 'type)
+                       (equal (semantic-tag-type tag) "typedef"))
+              (setq tag (semantic-tag-get-attribute tag :typedef)))
+            (when (and (equal (semantic-tag-class tag) 'type)
+                       (equal (semantic-tag-type tag) "enum"))
+              (let ((components (semantic-tag-components tag)))
+                (if (and components
+                         ;; unpositioned tags can be hazardous to
+                         ;; completion.  Do we need any type of tag
+                         ;; here?  - EL
+                         (semantic-tag-with-position-p (car components)))
+                    (push (custom/semantic/flatten-enum-tags-table components)
+                          lists)))))
           table)
     (apply 'append (nreverse lists))))
 
 (defun custom/semantic/flatten-tags-table (&optional table)
   (let* ((lists (list table)))
     (mapc (lambda (tag)
-            (let ((components (semantic-tag-components tag)))
-              (if (and components
-                       ;; unpositioned tags can be hazardous to
-                       ;; completion.  Do we need any type of tag
-                       ;; here?  - EL
-                       (semantic-tag-with-position-p (car components)))
-                  (setq lists (cons
-                               (semantic-flatten-tags-table components)
-                               lists)))))
+            ;; Optimize out function args. We are not interested in
+            ;; them when processing grep hits.
+            (when (not (equal (semantic-tag-class tag) 'function))
+              (let ((components (semantic-tag-components tag)))
+                (if (and components
+                         ;; unpositioned tags can be hazardous to
+                         ;; completion.  Do we need any type of tag
+                         ;; here?  - EL
+                         (semantic-tag-with-position-p (car components)))
+                    (push (custom/semantic/flatten-tags-table components)
+                          lists)))))
           table)
     (apply 'append (nreverse lists))))
 
-(defun custom/semantic/deep-find-tags-in-file (file symbol)
+(defun custom/semantic/get-local-tags-no-includes (file symbol)
   (with-current-buffer (find-file-noselect file)
     (save-excursion
       (let ((tags (custom/semantic/flatten-tags-table
@@ -622,35 +621,94 @@ save the pointer marker if tag is found"
         (semantic-tag-name tag)
       nil)))
 
+(defun custom/semantic/choose-tag (tags &optional no-error)
+  (when (and (not no-error)
+             (equal (length tags) 0))
+    (error "No tags provided for selection!"))
+  (setq tags (loop for tag in tags
+                   collect (semantic-tag-copy tag nil t)))
+  (when (not (equal (length tags) 0))
+    (let* ((tag-summary-f
+            (lambda (tag)
+              (format "%s = %s"
+                      (let* ((str
+                              (semantic-format-tag-prototype tag nil t))
+                             (real-len (length str))
+                             (limit-len 87))
+                        (if (> real-len limit-len)
+                            (concat (substring str 0 limit-len)
+                                    "...")
+                          str))
+                      (let* ((str (buffer-file-name
+                                   (semantic-tag-buffer tag)))
+                             (real-len (length str))
+                             (limit-len 57))
+                        (if (> real-len limit-len)
+                            (concat "..."
+                                    (substring str (- real-len
+                                                      limit-len)
+                                               real-len))
+                          str)))))
+           (get-tag-by-summary-f (lambda (summary summaries)
+                                   (loop for (summary2 tag) in summaries
+                                         if (equal summary2 summary)
+                                         return tag)))
+           (seen-summaries (custom/map/create))
+           (summaries (loop for tag in tags
+                            for name = (semantic-tag-name tag)
+                            for summary = (funcall tag-summary-f tag)
+                            unless (prog1
+                                       (custom/map/get summary seen-summaries)
+                                     (custom/map/set summary t seen-summaries))
+                            collect (list summary tag)))
+           (chosen-summary
+            (if (equal (length summaries) 1)
+                (caar summaries)
+              (ido-completing-read "Choose tag: "
+                                   (loop for summary in summaries
+                                         collect (car summary)))))
+           (chosen-tag (funcall get-tag-by-summary-f
+                                chosen-summary
+                                summaries)))
+      chosen-tag)))
+
+(defun custom/semantic/goto-tag (tag)
+  (xref-push-marker-stack)
+  (find-file (buffer-file-name (semantic-tag-buffer tag)))
+  (semantic-go-to-tag tag)
+  (if (not semantic-idle-scheduler-mode)
+      (semantic-idle-scheduler-mode))
+  (recenter) (pulse-momentary-highlight-region
+              (semantic-tag-start tag)
+              (semantic-tag-end tag)))
+
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
 
-(defun custom/semantic/index-from-root-raw (root &optional selection-regex)
+(defun custom/semantic/index-directory (root &optional selection-regex)
+  (interactive (list (ido-read-directory-name "Select directory: ")))
   (let ((root (file-name-as-directory (file-truename root)))
         (files (directory-files root t)))
     (setq files (delete (format "%s." root) files))
     (setq files (delete (format "%s.." root) files))
     (setq files (delete (format "%s.git" root) files))
     (setq files (delete (format "%s.hg" root) files))
+    (semanticdb-save-all-db)
     (while files
       (setq file (pop files))
       (if (not (file-accessible-directory-p file))
           (progn
-            (when (string-match-p (if selection-regex
-                                      selection-regex
-                                    ".*\\.\\(c\\|cpp\\)$")
-                                  file)
+            (when (string-match-p
+                   (if selection-regex
+                       selection-regex
+                     (pcre-to-elisp/cached
+                      ".*\\.(?:c|cpp|h|hpp|cxx|hxx)$"))
+                   file)
               (ignore-errors
                 (semanticdb-file-table-object file))))
         (progn
           (semanticdb-save-all-db)
-          (custom/semantic/index-from-root-raw file))))))
-
-(defun custom/semantic/index-from-root (root &optional selection-regex)
-  (interactive (list (ido-read-directory-name "Write index root: ")))
-  (custom/semantic/index-from-root-raw root
-                                       selection-regex)
-  (semanticdb-save-all-db))
+          (custom/semantic/index-directory file))))))
 
 ;;;; SYMREF HACKS
 ;; CODE:
@@ -746,7 +804,7 @@ BUTTON is the button that was clicked."
 
 (defun custom/filter-raw-grep-output (hits searchfor)
   ;; (message "HITS %s" hits)
-  (let ((deep-search #'custom/semantic/deep-find-tags-in-file)
+  (let ((deep-search #'custom/semantic/get-local-tags-no-includes)
         (files (@dict-new))
         (result nil))
     (loop for (line . path) in hits
@@ -772,110 +830,70 @@ BUTTON is the button that was clicked."
 (setq *custom/semantic/grep-db-enabled* t)
 (cl-defmethod semantic-symref-perform-search ((tool semantic-symref-tool-grep))
   "Perform a search with Grep."
-  ;; Grep doesn't support some types of searches.
-  (let ((st (oref tool searchtype)))
-    (when (not (memq st '(symbol regexp tagname tagcompletions)))
-      (error "Symref impl GREP does not support searchtype of %s for %s"
-             st
-             (oref tool searchfor))))
-  ;; This is how we implement support for tagcompletions.
-  ;; We just return nil. Semantic doesn't need grep in order to give
-  ;; good autocompletion hints because is able to traverse whole
-  ;; include hierarchy and collect all potential hits from
-  ;; there. In order to do that, grep virtual database must not fail
-  ;; because if fails, all queries to other databases are
-  ;; halted.
-  ;;
-  ;; Sometimes, doing nothing is best thing what you can do.
-  (if (and (not (equal (oref tool searchtype) 'tagcompletions))
-           *custom/semantic/grep-db-enabled*)
-      ;; Find the root of the project, and do a find-grep...
-      (let* (;; Find the file patterns to use.
-             (rootdir (semantic-symref-calculate-rootdir))
-             (filepatterns (semantic-symref-derive-find-filepatterns))
-             (filepattern (mapconcat #'shell-quote-argument filepatterns " "))
-             ;; Grep based flags.
-             (grepflags (cond ((eq (oref tool resulttype) 'file)
-                               "-l ")
-                              ((eq (oref tool searchtype) 'regexp)
-                               "-nE ")
-                              ((eq (oref tool searchtype) 'symbol)
-                               (if (> emacs-major-version 25)
-                                   ;; Evil hack for workarounding strange
-                                   ;; grep issue in older emacs.
-                                   "-n "
-                                 "-nw "))
-                              ((eq (oref tool searchtype) 'tagname)
-                               ;; Evil hack for workarounding strange
-                               ;; grep issue in older emacs.
-                               (if (> emacs-major-version 25)
-                                   "-n "
-                                 "-nw "))
-                              (t "-n ")))
-             (greppat (cond ((eq (oref tool searchtype) 'regexp)
-                             (oref tool searchfor))
-                            (t
-                             ;; Can't use the word boundaries: Grep
-                             ;; doesn't always agree with the language
-                             ;; syntax on those.
-                             ;;
-                             ;; Some error in grep command
-                             ;; preprocessing somewhere.
+  (when *custom/semantic/grep-db-enabled*
+    ;; Grep doesn't support some types of searches.
+    (let ((st (oref tool searchtype)))
+      (when (not (memq st '(symbol regexp tagname)))
+        (error "Symref impl GREP does not support searchtype of '%s' for '%s'!"
+               st
+               (oref tool searchfor))))
+    ;; Find the root of the project, and do a find-grep...
+    (let* (;; Find the file patterns to use.
+           (rootdir (semantic-symref-calculate-rootdir))
+           (filepatterns (semantic-symref-derive-find-filepatterns))
+           (filepattern (mapconcat #'shell-quote-argument filepatterns " "))
+           ;; Grep based flags.
+           (grepflags (cond ((eq (oref tool resulttype) 'file)
+                             "-l ")
+                            ((eq (oref tool searchtype) 'regexp)
+                             "-nE ")
+                            ((eq (oref tool searchtype) 'symbol)
                              (if (> emacs-major-version 25)
-                                 (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
+                                 ;; Evil hack for workarounding strange
+                                 ;; grep issue in older emacs.
+                                 "-n "
+                               "-nw "))
+                            ((eq (oref tool searchtype) 'tagname)
+                             ;; Evil hack for workarounding strange
+                             ;; grep issue in older emacs.
+                             (if (> emacs-major-version 25)
+                                 "-n "
+                               "-nw "))
+                            (t "-n ")))
+           (greppat (cond ((eq (oref tool searchtype) 'regexp)
+                           (oref tool searchfor))
+                          (t
+                           ;; Can't use the word boundaries: Grep
+                           ;; doesn't always agree with the language
+                           ;; syntax on those.
+                           ;;
+                           ;; Some error in grep command
+                           ;; preprocessing somewhere.
+                           (if (> emacs-major-version 25)
+                               (format "\\(^\\|\\W\\)%s\\(\\W\\|$\\)"
+                                       (oref tool searchfor))
+                             (oref tool searchfor)))))
+           ;; Misc
+           (b (get-buffer-create "*Semantic SymRef*"))
+           (ans nil))
+      (with-current-buffer b
+        (erase-buffer)
+        (setq default-directory rootdir)
+        (let ((cmd (semantic-symref-grep-use-template rootdir
+                                                      filepattern
+                                                      grepflags
+                                                      greppat)))
+          (call-process semantic-symref-grep-shell nil b nil
+                        shell-command-switch cmd)))
+      (setq ans (semantic-symref-parse-tool-output tool b))
+      ;; Special handling for search type tagname.
+      ;; Semantic expect only positions of tags will be provided so we
+      ;; must filter raw output from grep using semantic parsing
+      ;; infrastructure.
+      (if (equal (oref tool searchtype) 'tagname)
+          (custom/filter-raw-grep-output ans
                                          (oref tool searchfor))
-                               (oref tool searchfor)))))
-             ;; Misc
-             (b (get-buffer-create "*Semantic SymRef*"))
-             (ans nil))
-        (with-current-buffer b
-          (erase-buffer)
-          (setq default-directory rootdir)
-          ;; Detect legacy Emacs.
-          (if (not (fboundp 'grep-compute-defaults))
-              ;; find . -type f -print0 | xargs -0 -e grep -nH -e
-              ;; Note : I removed -e as it is not posix, nor necessary it seems.
-              ;; (let ((cmd (concat "find "
-              ;;                    default-directory
-              ;;                    " -type f "
-              ;;                    filepattern
-              ;;                    " -print0 "
-              ;;                    "| xargs -0 grep -H "
-              ;;                    grepflags "-e "
-              ;;                    greppat)))
-              ;;   (call-process semantic-symref-grep-shell nil b nil
-              ;;                 shell-command-switch cmd))
-              (error (concat "Not found grep-compute-defaults, update"
-                             " your Emacs to newer version!"))
-            (let ((cmd (semantic-symref-grep-use-template rootdir
-                                                          filepattern
-                                                          grepflags
-                                                          greppat)))
-              (call-process semantic-symref-grep-shell nil b nil
-                            shell-command-switch cmd))))
-        (setq ans (semantic-symref-parse-tool-output tool b))
-        ;; Special handling for search type tagname.
-        ;; Semantic expect only positions of tags will be provided so we
-        ;; must filter raw output from grep using semantic parsing
-        ;; infrastructure.
-        ;; Slow on large grep results (first pass).
-        ;; TODO: Optimize filtering by grouping grep hits per file.
-        ;; TODO: Detect large greps and fallback to some stupid yet
-        ;; working solution. Something like open buffer without
-        ;; activating any modes, enable cc-mode and try to decide if
-        ;; hit is really hit by begin-defun end-defun calls.
-        ;;
-        ;; (begin-defun)
-        ;; (end-defun)
-        ;; Test if current line is same as grep hit, If yes, we have
-        ;; function hit.
-        ;;
-        ;; But types and members will not be covered by this.
-        ;; Maybe regexes?
-        (if (equal (oref tool searchtype) 'tagname)
-            (custom/filter-raw-grep-output ans
-                                           (oref tool searchfor))
-          ans))))
+        ans))))
 
 ;; Disable grepping in idle summary mode. We need just prototype here,
 ;; no need to scan whole project by grep.
@@ -890,7 +908,8 @@ BUTTON is the button that was clicked."
 (defun semantic-ia-show-doc (point)
   "Display the code-level documentation for the symbol at POINT."
   (interactive "d")
-  (let* ((ctxt (semantic-analyze-current-context point))
+  (let* ((actual-buffer (current-buffer))
+         (ctxt (semantic-analyze-current-context point))
          (pf (reverse (oref ctxt prefix)))
          (tag (car pf)))
     ;; If PF, the prefix is non-nil, then the last element is either
@@ -900,17 +919,10 @@ BUTTON is the button that was clicked."
      ((stringp tag)
       (message "Incomplete symbol name."))
      ((semantic-tag-p tag)
-      ;; The `semantic-documentation-for-tag' fcn is language
-      ;; specific.  If it doesn't return what you expect, you may
-      ;; need to implement something for your language.
-      ;;
-      ;; The default tries to find a comment in front of the tag
-      ;; and then strings off comment prefixes.
-      ;;
       ;; Here we are calling semantic-analyze-tag-references in order
       ;; to find either prototype or definition of current tag because
-      ;; in some project, main documentation reside above prototype
-      ;; and in other above implementation so we need to acquire
+      ;; in some projects, main documentation reside above prototype
+      ;; and in other, above implementation so we need to acquire
       ;; documentation for both and use the one which is more
       ;; complete. Currently indication of completeness is string
       ;; length which is probably not optimal but good enough for now.
@@ -922,32 +934,78 @@ BUTTON is the button that was clicked."
              (other-doc (or (if other-tag
                                 (semantic-documentation-for-tag other-tag))
                             ""))
-             ;; We will replace any mentioned argument name in documentation
-             ;; with (argType argName).
-             ;;
-             ;; TODO: Implement button system so user will be able to
-             ;; hit enter above (argType argName) and emacs will jump
-             ;; to type definition.
-             (args-list (loop for arg in (semantic-tag-function-arguments tag)
-                              collect (let ((formatted-arg
-                                             (semantic-format-tag-prototype arg
-                                                                            nil
-                                                                            t)))
-                                        (cons (semantic-tag-name arg)
-                                              (concat "("
-                                                      formatted-arg
-                                                      ")"))))))
+             (args-list-fat
+              (loop for arg in (semantic-tag-function-arguments tag)
+                    if (not (equal (semantic-tag-name arg) ""))
+                    collect (let ((formatted-arg
+                                   (semantic-format-tag-prototype arg
+                                                                  nil
+                                                                  t)))
+                              (list (pcre-to-elisp/cached
+                                     (concat "(\\W)"
+                                             (semantic-tag-name arg)
+                                             "(\\W)"))
+                                    (concat "\\1("
+                                            formatted-arg
+                                            ")\\2")
+                                    (custom/semantic/find-type-tags-of-var
+                                     arg
+                                     actual-buffer)))))
+             (args-list (loop for entry in args-list-fat
+                              collect (cons (@at entry 0)
+                                            (@at entry 1)))))
         (if (and (string= doc "") (string= other-doc ""))
             (message "Doc unavailable!")
           (custom/with-simple-pop-up "*TAG DOCUMENTATION*"
+            (setq kill-on-quit t)
             (insert (semantic-format-tag-prototype tag nil t))
             (insert "\n")
             (insert "\n")
             (insert (if (> (length doc) (length other-doc))
                         (custom/replace-all args-list doc)
-                      (custom/replace-all args-list other-doc)))))))
+                      (custom/replace-all args-list other-doc)))
+            (loop for entry in args-list-fat
+                  do (custom/attach-buttons-to-label-occurences
+                      (substring (@at entry 1) 2 -2)
+                      (@at entry 2)))))))
      (t
       (message "Unknown tag.")))))
+
+(defun custom/semantic/find-type-tags-of-var (tag &optional buffer)
+  (if (not buffer)
+      (setq buffer (current-buffer)))
+  (let ((*custom/semantic/grep-db-enabled* nil))
+    (semanticdb-strip-find-results
+     (semanticdb-deep-find-tags-by-name
+      (if (equal (semantic-tag-class tag) 'variable)
+          (let ((tag-type (semantic-tag-type tag)))
+            (if (stringp tag-type)
+                tag-type
+              (semantic-tag-name tag-type)))
+        (error "Found invalid tag '%s' with name '%s'!"
+               (semantic-tag-class tag)
+               (semantic-tag-name tag)))
+      buffer t)
+     t)))
+
+(defun custom/attach-buttons-to-label-occurences (string tags)
+  (loop for (beg . end) in (custom/find-string-occurences string)
+        do (progn (make-button beg end
+                               'mouse-face 'custom-button-pressed-face
+                               'face nil
+                               'action 'custom/doc-button-handler
+                               'tags tags)
+                  (add-face-text-property beg end 'underline)
+                  (add-face-text-property beg end 'bold))))
+
+(defun custom/doc-button-handler (&optional button)
+  (interactive)
+  (let* ((tags (button-get button 'tags))
+         (selected-tag
+          (if (equal (length tags) 1)
+              (car tags)
+            (custom/semantic/choose-tag tags))))
+    (custom/semantic/goto-tag selected-tag)))
 
 (define-overloadable-function semantic-documentation-for-tag (&optional tag nosnarf)
   "Find documentation from TAG and return it as a clean string.
@@ -986,33 +1044,41 @@ If NOSNARF is `lex', then only return the lex token."
       ;; Comment cleanup. Removes comment symbols and preprocess doxygen.
       (custom/chain-forms
        (s-replace-regexp (pcre-to-elisp/cached
-                          "@param\\[([^\\]]*)\\][ \t]*(\\w+)[ \t]*")
-                         "Parameter[\\1] \\2 = ")
+                          "(?:///+[ \\t]*|//-+[ \\t]*)")
+                         "" raw-comment)
        (s-replace-regexp (pcre-to-elisp/cached
-                          "@retval[ \t]*(\\w+)[ \t]*")
-                         "Option \\1 = ")
-       (s-replace-regexp (pcre-to-elisp/cached
-                          "@return[ \t]*")
-                         "=== return ===\n")
-       (s-replace-regexp (pcre-to-elisp/cached
-                          "@brief[ \t]*")
-                         "")
-       (s-replace-regexp (pcre-to-elisp/cached
-                          "[ \t]*\\*/")
-                         "")
-       (s-replace-regexp (pcre-to-elisp/cached
-                          "/\\*[ \t]*")
+                          "\\A\\s*|\\s*\\Z")
                          "")
        (s-replace-regexp (pcre-to-elisp/cached
                           "^[ \t]*")
                          "")
        (s-replace-regexp (pcre-to-elisp/cached
-                          "\\A\\s*|\\s*\\Z")
+                          "/\\*[ \t]*")
                          "")
        (s-replace-regexp (pcre-to-elisp/cached
-                          "(?:///+[ \\t]*|//-+[ \\t]*)")
-                         ""
-                         raw-comment)))))
+                          "[ \t]*\\*/")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@brief[ \t]*")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@return[ \t]*")
+                         "=== return ===\n")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@retval[ \t]*(\\w+)[ \t]*")
+                         "Option \\1 = ")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "@param\\[([^\\]]*)\\][ \t]*(\\w+)[ \t]*")
+                         "Parameter[\\1] \\2 = ")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "^//\\s*")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "^\\*+$")
+                         "")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "^\\*\\s*(.+)\\s*\\*$")
+                         "\\1")))))
 
 
 ;; TODO: Implement simple semantic aware font locking.
@@ -1020,6 +1086,8 @@ If NOSNARF is `lex', then only return the lex token."
 ;; Extend semantic-default-c-setup to also check if buffer is in
 ;; projectile project. If yes, try to load config file and register
 ;; project into EDE according to data inside it.
+;; Or create my own EDE project class which will be using directly
+;; JSON config.
 ;;
 ;; Another thing is that I can populate macro definition list here
 ;; with some constants used by std lib and potentially QT. It causes
@@ -1042,3 +1110,6 @@ If NOSNARF is `lex', then only return the lex token."
 ;; NOTE: Interesting functions where include resolve process occurs
 ;;   semantic-dependency-tag-file
 ;;   semantic-dependency-find-file-on-path
+
+;; NOTE semanticdb-find-translate-path-brutish-default
+;; Dont return tables of project dependencies.

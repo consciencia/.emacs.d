@@ -75,3 +75,5 @@
 
 (add-hook 'before-save-hook
           'delete-trailing-whitespace)
+
+(scroll-bar-mode -1)

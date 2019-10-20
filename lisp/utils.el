@@ -756,7 +756,8 @@ POS is optional position in file where to search for comment."
 (defmacro custom/with-simple-pop-up (name &rest content)
   (declare (indent 1))
   (let ((buffsym (gensym)))
-    `(let ((,buffsym (custom/get-buffer ,name)))
+    `(let ((,buffsym (custom/get-buffer ,name))
+           (kill-on-quit nil))
        (if ,buffsym
            (setq ,buffsym (cdr ,buffsym))
          (setq ,buffsym (generate-new-buffer ,name)))
@@ -768,7 +769,13 @@ POS is optional position in file where to search for comment."
        (switch-to-buffer-other-window ,name)
        (shrink-window-if-larger-than-buffer)
        (goto-char (point-min))
-       (local-set-key "q" 'custom/universal-quit))))
+       (if kill-on-quit
+           (local-set-key "q"
+                          (lambda ()
+                            (interactive)
+                            (custom/universal-quit)
+                            (kill-buffer ,name)))
+         (local-set-key "q" 'custom/universal-quit)))))
 
 (defun custom/list-overlays-at (&optional pos)
   (interactive)
@@ -1008,4 +1015,14 @@ POS is optional position in file where to search for comment."
                                (cdr forms)))))))
 
 (defmacro custom/chain-forms (&rest forms)
-  (apply #'custom/chain-forms-helper forms))
+  (apply #'custom/chain-forms-helper (nreverse forms)))
+
+(defun custom/find-string-occurences (string)
+  (save-excursion
+    (let ((len (length string))
+          (result nil))
+      (goto-char (point-min))
+      (while (search-forward string nil 0)
+        (push (cons (- (point) len) (point)) result))
+      (message "OCCURS: %s - %s" string result)
+      result)))
