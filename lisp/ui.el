@@ -67,9 +67,17 @@
 
 (custom-set-faces
  '(ace-jump-face-foreground ((t (:foreground "white"
-                                 :underline (:color "lightblue"
-                                             :style wave)))))
- '(whitespace-line ((t (:foreground "red")))))
+                                             :underline (:color "lightblue"
+                                                                :style wave)))))
+ '(whitespace-line ((t (:foreground "red"))))
+ '(avy-lead-face ((t (:background "red"
+                                  :foreground "white"
+                                  :underline (:color "lightblue"
+                                                     :style wave)))))
+ '(avy-lead-face-0 ((t (:background "red"
+                                    :foreground "white"
+                                    :underline (:color "lightblue"
+                                                       :style wave))))))
 
 (setq hexl-bits 8)
 

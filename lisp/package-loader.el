@@ -16,6 +16,7 @@
 (load "ace-jump-mode__.el")
 (load "ace-window__.el")
 (load "autopair__.el")
+(load "grep+.el")
 (load "dired__.el")
 (load "elisp-slime-nav__.el")
 (load "idle-highlight__.el")

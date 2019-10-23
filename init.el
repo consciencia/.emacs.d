@@ -38,6 +38,14 @@
     (setq custom/fs-separator "\\")
   (setq custom/fs-separator "/"))
 
+;; Grep combined with find is very slow on windows, replace it with
+;; native findstr.
+(when (eq system-type 'windows-nt)
+  (with-eval-after-load 'grep
+    (grep-apply-setting 'grep-find-template
+                        "findstr /s /n /d:. /c:<R> <F>")
+    (setq find-name-arg nil)))
+
 ;; set up Emacs custom settings file (used by UI settings manager)
 (setq custom-file
       (concat (expand-file-name user-emacs-directory)

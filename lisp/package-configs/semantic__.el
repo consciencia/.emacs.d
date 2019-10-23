@@ -278,35 +278,133 @@ Returns a table of all matching tags."
 ;;;; CODE NAVIGATION ROUTINES
 ;; CODE:
 
-(defun custom/semantic-goto-definition (point)
-  "Goto definition using semantic-ia-fast-jump
-save the pointer marker if tag is found"
+(defun semantic-ia-fast-jump (point)
+  "Jump to the tag referred to by the code at POINT.
+Uses `semantic-analyze-current-context' output to identify an accurate
+origin of the code at point."
   (interactive "d")
-  (condition-case err
-      (progn
-        (xref-push-marker-stack)
-        (semantic-ia-fast-jump point)
-        (if (not semantic-idle-scheduler-mode)
-            (semantic-idle-scheduler-mode))
-        (recenter))
-    (error
-     (xref-pop-marker-stack)
-     (signal (car err) (cdr err)))))
+  (let* ((*custom/semantic/grep-db-enabled* nil)
+         (ctxt (semantic-analyze-current-context point))
+         (pf (and ctxt (reverse (oref ctxt prefix))))
+         ;; In the analyzer context, the PREFIX is the list of items
+         ;; that makes up the code context at point.  Thus the c++ code
+         ;; this.that().theothe
+         ;; would make a list:
+         ;; ( ("this" variable ..) ("that" function ...) "theothe")
+         ;; Where the first two elements are the semantic tags of the prefix.
+         ;;
+         ;; PF is the reverse of this list.  If the first item is a string,
+         ;; then it is an incomplete symbol, thus we pick the second.
+         ;; The second cannot be a string, as that would have been an error.
+         (pf-len (length pf))
+         (first (car pf))
+         (second (nth 1 pf)))
+    (cond
+     ((semantic-tag-p first)
+      ;; We have a match.  Just go there.
+      (semantic-ia--fast-jump-helper first))
+     ((semantic-tag-p second)
+      ;; Because FIRST failed, we should visit our second tag.
+      ;; HOWEVER, the tag we actually want that was only an unfound
+      ;; string may be related to some take in the datatype that belongs
+      ;; to SECOND.  Thus, instead of visiting second directly, we
+      ;; can offer to find the type of SECOND, and go there.
+      (let ((secondclass (car (reverse (oref ctxt prefixtypes)))))
+        (cond
+         ((and (semantic-tag-with-position-p secondclass)
+               (y-or-n-p (format-message
+                          "Could not find `%s'.  Jump to %s? "
+                          first (semantic-tag-name secondclass))))
+          (semantic-ia--fast-jump-helper secondclass))
+         ;; If we missed out on the class of the second item, then
+         ;; just visit SECOND.
+         ((and (semantic-tag-p second)
+               (y-or-n-p (format-message
+                          "Could not find `%s'.  Jump to %s? "
+                          first (semantic-tag-name second))))
+          (semantic-ia--fast-jump-helper second)))))
+     ((semantic-tag-of-class-p (semantic-current-tag) 'include)
+      ;; Just borrow this cool fcn.
+      (require 'semantic/decorate/include)
+      ;; Push the mark, so you can pop global mark back, or
+      ;; use semantic-mru-bookmark mode to do so.
+      (xref-push-marker-stack)
+      (semantic-decoration-include-visit))
+     ((and (equal pf-len 1)
+           (stringp first))
+      ;; Lets try to handle enums and macros. These things are ignored
+      ;; by context analyzer so we must do it here.
+      (let* ((*custom/semantic/grep-db-enabled* nil)
+             (tags (semanticdb-strip-find-results
+                    (semanticdb-deep-find-tags-by-name first
+                                                       (current-buffer)
+                                                       t)
+                    t)))
+        (if tags
+            (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
+          (error "Could not find suitable jump point for %s"
+                 first))))
+     (t (error "Could not find suitable jump point for %s"
+               first)))))
 
-(defun custom/semantic-switch-proto ()
-  "Goto definition using semantic-ia-fast-jump
-save the pointer marker if tag is found"
+(defun semantic-ia--fast-jump-helper (dest)
+  "Jump to DEST, a Semantic tag.
+This helper manages the mark, buffer switching, and pulsing."
+  ;; We have a tag, but in C++, we usually get a prototype instead
+  ;; because of header files.  Let's try to find the actual
+  ;; implementation instead.
+  (when (semantic-tag-prototype-p dest)
+    (let* ((*custom/semantic/grep-db-enabled* t)
+           (refs (semantic-analyze-tag-references dest))
+           (impl (semantic-analyze-refs-impl refs t)))
+      (when impl (setq dest (car impl)))))
+  ;; Make sure we have a place to go...
+  (if (not (and (or (semantic-tag-with-position-p dest)
+                    (semantic-tag-get-attribute dest :line))
+                (semantic-tag-file-name dest)))
+      (error "Tag %s has no buffer information"
+             (semantic-format-tag-name dest)))
+  (custom/semantic/goto-tag dest))
+
+(defun semantic-analyze-proto-impl-toggle ()
+  "Toggle between the implementation, and a prototype of tag under point."
   (interactive)
-  (condition-case err
-      (progn
-        (xref-push-marker-stack)
-        (semantic-analyze-proto-impl-toggle)
-        (if (not semantic-idle-scheduler-mode)
-            (semantic-idle-scheduler-mode))
-        (recenter))
-    (error
-     (xref-pop-marker-stack)
-     (signal (car err) (cdr err)))))
+  (require 'semantic/decorate)
+  (semantic-fetch-tags)
+  (let* ((tag (semantic-current-tag))
+         (sar (if tag
+                  (semantic-analyze-tag-references tag)
+                (error "Point must be in a declaration")))
+         (target (if (semantic-tag-prototype-p tag)
+                     (car (semantic-analyze-refs-impl sar t))
+                   (car (semantic-analyze-refs-proto sar t)))))
+    (when (not target)
+      (error "Could not find suitable %s"
+             (if (semantic-tag-prototype-p tag)
+                 "implementation"
+               "prototype")))
+    (custom/semantic/goto-tag target)))
+
+(defun semantic-symref-symbol (sym)
+  "Find references to the symbol SYM.
+This command uses the currently configured references tool within the
+current project to find references to the input SYM.  The
+references are organized by file and the name of the function
+they are used in.
+Display the references in `semantic-symref-results-mode'."
+  (interactive (list (read-string "Look for symbol: "
+                                  (thing-at-point 'symbol))))
+  ;; Cant be used because my grep backend does not support
+  ;; tagcompletions. Probably not worth the effort.
+  ;; I let it stay here in comment because it looks like interesting feature.
+  ;;
+  ;; (interactive (list (semantic-tag-name (semantic-complete-read-tag-project
+  ;;                                        "Symrefs for: "))))
+  (semantic-fetch-tags)
+  ;; Gather results and tags
+  (message "Gathering References...")
+  (let ((res (semantic-symref-find-references-by-name sym)))
+    (semantic-symref-produce-list-on-results res sym)))
 
 (cl-defmethod semantic-symref-result-get-tags-as-is ((result semantic-symref-result)
                                                      &optional open-buffers)
@@ -627,50 +725,53 @@ already."
     (error "No tags provided for selection!"))
   (setq tags (loop for tag in tags
                    collect (semantic-tag-copy tag nil t)))
-  (when (not (equal (length tags) 0))
-    (let* ((tag-summary-f
-            (lambda (tag)
-              (format "%s = %s"
-                      (let* ((str
-                              (semantic-format-tag-prototype tag nil t))
-                             (real-len (length str))
-                             (limit-len 87))
-                        (if (> real-len limit-len)
-                            (concat (substring str 0 limit-len)
-                                    "...")
-                          str))
-                      (let* ((str (buffer-file-name
-                                   (semantic-tag-buffer tag)))
-                             (real-len (length str))
-                             (limit-len 57))
-                        (if (> real-len limit-len)
-                            (concat "..."
-                                    (substring str (- real-len
-                                                      limit-len)
-                                               real-len))
-                          str)))))
-           (get-tag-by-summary-f (lambda (summary summaries)
-                                   (loop for (summary2 tag) in summaries
-                                         if (equal summary2 summary)
-                                         return tag)))
-           (seen-summaries (custom/map/create))
-           (summaries (loop for tag in tags
-                            for name = (semantic-tag-name tag)
-                            for summary = (funcall tag-summary-f tag)
-                            unless (prog1
-                                       (custom/map/get summary seen-summaries)
-                                     (custom/map/set summary t seen-summaries))
-                            collect (list summary tag)))
-           (chosen-summary
-            (if (equal (length summaries) 1)
-                (caar summaries)
-              (ido-completing-read "Choose tag: "
-                                   (loop for summary in summaries
-                                         collect (car summary)))))
-           (chosen-tag (funcall get-tag-by-summary-f
-                                chosen-summary
-                                summaries)))
-      chosen-tag)))
+  (if (equal (length tags) 1)
+      (car tags)
+    (when (not (equal (length tags) 0))
+      (let* ((tag-summary-f
+              (lambda (tag)
+                (format "%s = %s"
+                        (let* ((str
+                                (semantic-format-tag-prototype tag nil t))
+                               (real-len (length str))
+                               (limit-len 87))
+                          (if (> real-len limit-len)
+                              (concat (substring str 0 limit-len)
+                                      "...")
+                            str))
+                        (let* ((str (buffer-file-name
+                                     (semantic-tag-buffer tag)))
+                               (real-len (length str))
+                               (limit-len 57))
+                          (if (> real-len limit-len)
+                              (concat "..."
+                                      (substring str (- real-len
+                                                        limit-len)
+                                                 real-len))
+                            str)))))
+             (get-tag-by-summary-f (lambda (summary summaries)
+                                     (loop for (summary2 tag) in summaries
+                                           if (equal summary2 summary)
+                                           return tag)))
+             (seen-summaries (custom/map/create))
+             (summaries
+              (loop for tag in tags
+                    for name = (semantic-tag-name tag)
+                    for summary = (funcall tag-summary-f tag)
+                    unless (prog1
+                               (custom/map/get summary seen-summaries)
+                             (custom/map/set summary t seen-summaries))
+                    collect (list summary tag)))
+             (chosen-summary
+              (if (equal (length summaries) 1)
+                  (caar summaries)
+                (ido-completing-read "Choose tag: "
+                                     (loop for summary in summaries
+                                           collect (car summary)))))
+             (chosen-tag (funcall get-tag-by-summary-f
+                                  chosen-summary
+                                  summaries)))
+        chosen-tag))))
 
 (defun custom/semantic/goto-tag (tag)
   (xref-push-marker-stack)
@@ -678,9 +779,9 @@ already."
   (semantic-go-to-tag tag)
   (if (not semantic-idle-scheduler-mode)
       (semantic-idle-scheduler-mode))
-  (recenter) (pulse-momentary-highlight-region
-              (semantic-tag-start tag)
-              (semantic-tag-end tag)))
+  (recenter)
+  (pulse-momentary-highlight-region (semantic-tag-start tag)
+                                    (semantic-tag-end tag)))
 
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
@@ -802,8 +903,23 @@ BUTTON is the button that was clicked."
 ;;;; GREP VIRTUAL DATABASE HACKS
 ;; CODE:
 
+(defun custom/gen-win-grep-emulation-cmd (searchfor)
+  (if (eq system-type 'windows-nt)
+      (custom/replace-all
+       `(,(cons "$dirlist"
+                (let* ((root (semantic-symref-calculate-rootdir))
+                       (proj-config (if root
+                                        (custom/ede/load-config-file root)))
+                       (source-roots (if proj-config
+                                         (custom/map/get "source-roots"
+                                                         proj-config))))
+                  (s-join ";" (cons root source-roots))))
+         ,(cons "$searchfor" searchfor)
+         ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
+       "findstr /r /n /d:$dirlist \"$searchfor\" $filters")))
+
 (defun custom/filter-raw-grep-output (hits searchfor)
-  ;; (message "HITS %s" hits)
+  ;; (message "GREP TAGNAME HITS %s" hits)
   (let ((deep-search #'custom/semantic/get-local-tags-no-includes)
         (files (@dict-new))
         (result nil))
@@ -824,7 +940,7 @@ BUTTON is the button that was clicked."
                                 (line-number-at-pos
                                  (semantic-tag-start tag)))
                               file)))
-    ;; (message "RESULT %s" result)
+    ;; (message "GREP TAGNAME RESULT %s" result)
     result))
 
 (setq *custom/semantic/grep-db-enabled* t)
@@ -882,17 +998,23 @@ BUTTON is the button that was clicked."
         (let ((cmd (semantic-symref-grep-use-template rootdir
                                                       filepattern
                                                       grepflags
-                                                      greppat)))
+                                                      greppat))
+              ;; Ugly hack for windows. Grep combined with find is
+              ;; awfully slow on windows so we must resort to native
+              ;; alternative which is fast.
+              (wincmd (custom/gen-win-grep-emulation-cmd
+                       (oref tool searchfor))))
           (call-process semantic-symref-grep-shell nil b nil
-                        shell-command-switch cmd)))
+                        shell-command-switch (or wincmd cmd))))
       (setq ans (semantic-symref-parse-tool-output tool b))
       ;; Special handling for search type tagname.
       ;; Semantic expect only positions of tags will be provided so we
       ;; must filter raw output from grep using semantic parsing
       ;; infrastructure.
       (if (equal (oref tool searchtype) 'tagname)
-          (custom/filter-raw-grep-output ans
-                                         (oref tool searchfor))
+          (custom/filter-raw-grep-output
+           ans
+           (oref tool searchfor))
         ans))))
 
 ;; Disable grepping in idle summary mode. We need just prototype here,
@@ -968,8 +1090,7 @@ BUTTON is the button that was clicked."
                   do (custom/attach-buttons-to-label-occurences
                       (substring (@at entry 1) 2 -2)
                       (@at entry 2)))))))
-     (t
-      (message "Unknown tag.")))))
+     (t (message "Unknown tag.")))))
 
 (defun custom/semantic/find-type-tags-of-var (tag &optional buffer)
   (if (not buffer)

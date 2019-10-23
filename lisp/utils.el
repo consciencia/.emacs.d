@@ -653,11 +653,11 @@ POS is optional position in file where to search for comment."
   (flycheck-list-errors)
   (switch-to-buffer-other-window "*Flycheck errors*"))
 
-(defun custom/ace-jump-word-mode ()
+(defun custom/ace-jump-char-mode ()
   (interactive)
   (deactivate-mark t)
   (custom/universal-push-mark)
-  (call-interactively 'ace-jump-word-mode))
+  (call-interactively 'avy-goto-char-timer))
 
 (defun custom/universal-push-mark ()
   (if (or (equal major-mode 'python-mode)
@@ -1024,5 +1024,15 @@ POS is optional position in file where to search for comment."
       (goto-char (point-min))
       (while (search-forward string nil 0)
         (push (cons (- (point) len) (point)) result))
-      (message "OCCURS: %s - %s" string result)
       result)))
+
+(defmacro custom/catch-error (do-form err-form)
+  (let ((err-sym (gensym)))
+    `(condition-case ,err-sym
+         (progn ,do-form)
+       (error
+        (let ((supress-error nil))
+          ,err-form
+          (if (not supress-error)
+              (signal (car ,err-sym)
+                      (cdr ,err-sym))))))))
