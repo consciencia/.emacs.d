@@ -133,13 +133,11 @@
 (advice-add #'company-semantic
             :around
             (lambda (oldfn &rest args)
-              (let ((*custom/semantic/grep-db-enabled* nil))
-                (apply oldfn args))))
+              (custom/semantic/with-disabled-grep-db (apply oldfn args))))
 (advice-add #'company-complete-common
             :around
             (lambda (oldfn &rest args)
-              (let ((*custom/semantic/grep-db-enabled* nil))
-                (apply oldfn args))))
+              (custom/semantic/with-disabled-grep-db (apply oldfn args))))
 
 ;; Hack done in order to be able to complete enums. By default, no deep
 ;; search was done in contextless searches so I introduced partial deep
@@ -153,6 +151,229 @@ Returns a table of all matching tags."
   (semantic-find-tags-for-completion prefix
                                      (custom/semantic/flatten-enum-tags-table
                                       (or tags (semanticdb-get-tags table)))))
+
+;; Fixed invalid usage of semantic-analyze-current-context which
+;; happened to be outside of semantic buffer.
+;; Also it was wrapped in error catcher because abstract class has no
+;; context slot.
+(cl-defmethod semantic-collector-calculate-completions
+  ((obj semantic-collector-abstract) prefix partial)
+  "Calculate completions for prefix as setup for other queries."
+  (let* ((case-fold-search semantic-case-fold)
+         (same-prefix-p (semantic-collector-last-prefix= obj prefix))
+         (last-prefix (and (slot-boundp obj 'last-prefix)
+                           (oref obj last-prefix)))
+         (completionlist
+          (cond ((or same-prefix-p
+                     (and last-prefix (eq (compare-strings
+                                           last-prefix 0 nil
+                                           prefix 0 (length last-prefix)) t)))
+                 ;; We have the same prefix, or last-prefix is a
+                 ;; substring of the of new prefix, in which case we are
+                 ;; refining our symbol so just re-use cache.
+                 (oref obj last-all-completions))
+                ((and last-prefix
+                      (> (length prefix) 1)
+                      (eq (compare-strings
+                           prefix 0 nil
+                           last-prefix 0 (length prefix)) t))
+                 ;; The new prefix is a substring of the old
+                 ;; prefix, and it's longer than one character.
+                 ;; Perform a full search to pull in additional
+                 ;; matches.
+                 (with-current-buffer (oref obj buffer)
+                   (ignore-errors
+                     (custom/semantic/with-disabled-grep-db
+                      (let ((context (semantic-analyze-current-context (point))))
+                        ;; Set new context and make first-pass-completions
+                        ;; unbound so that they are newly calculated.
+                        (oset obj context context)
+                        (when (slot-boundp obj 'first-pass-completions)
+                          (slot-makeunbound obj 'first-pass-completions))))))
+                 nil)))
+         ;; Get the result
+         (answer (if same-prefix-p
+                     completionlist
+                   (semantic-collector-calculate-completions-raw
+                    obj prefix completionlist)))
+         (completion nil)
+         (complete-not-uniq nil))
+    ;;(semanticdb-find-result-test answer)
+    (when (not same-prefix-p)
+      ;; Save results if it is interesting and beneficial
+      (oset obj last-prefix prefix)
+      (oset obj last-all-completions answer))
+    ;; Now calculate the completion.
+    (setq completion (try-completion
+                      prefix
+                      (semanticdb-strip-find-results answer)))
+    (oset obj last-whitespace-completion nil)
+    (oset obj current-exact-match nil)
+    ;; Only do this if a completion was found.  Letting a nil in
+    ;; could cause a full semanticdb search by accident.
+    (when completion
+      (oset obj last-completion
+            (cond
+             ;; Unique match in AC.  Last completion is a match.
+             ;; Also set the current-exact-match.
+             ((eq completion t)
+              (oset obj current-exact-match answer)
+              prefix)
+             ;; It may be complete (a symbol) but still not unique.
+             ;; We can capture a match
+             ((setq complete-not-uniq
+                    (semanticdb-find-tags-by-name
+                     prefix
+                     answer))
+              (oset obj current-exact-match
+                    complete-not-uniq)
+              prefix)
+             ;; Non unique match, return the string that handles
+             ;; completion
+             (t (or completion prefix))
+             )))))
+
+;; Redefined because original used more sophisticated displayor which
+;; refused to select not unique tag name.
+(defun semantic-complete-read-tag-project (prompt &optional
+                                                  default-tag
+                                                  initial-input
+                                                  history)
+  "Ask for a tag by name from the current project.
+Available tags are from the current project, at the top level.
+Completion options are presented in a traditional way, with highlighting
+to resolve same-name collisions.
+PROMPT is a string to prompt with.
+DEFAULT-TAG is a semantic tag or string to use as the default value.
+If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
+HISTORY is a symbol representing a variable to store the history in."
+  (semantic-complete-read-tag-engine
+   (semantic-collector-project-brutish prompt
+                                       :buffer (current-buffer)
+                                       :path (current-buffer))
+   (semantic-displayor-traditional)
+   prompt
+   default-tag
+   initial-input
+   history))
+
+;; Redefined to use semanticdb-find-result-nth instead of
+;; semanticdb-find-result-nth-in-buffer which caused unwanted
+;; buffer switching.
+(defun semantic-complete-current-match ()
+  "Calculate a match from the current completion environment.
+Save this in our completion variable.  Make sure that variable
+is cleared if any other keypress is made.
+Return value can be:
+  tag - a single tag that has been matched.
+  string - a message to show in the minibuffer."
+  ;; Query the environment for an active completion.
+  (let ((collector semantic-completion-collector-engine)
+        (displayor semantic-completion-display-engine)
+        (contents (semantic-completion-text))
+        matchlist
+        answer)
+    (if (string= contents "")
+        ;; The user wants the defaults!
+        (setq answer semantic-complete-active-default)
+      ;; This forces a full calculation of completion on CR.
+      (save-excursion
+        (semantic-collector-calculate-completions collector contents nil))
+      (semantic-complete-try-completion)
+      (cond
+       ;; Input match displayor focus entry
+       ((setq answer (semantic-displayor-current-focus displayor))
+        ;; We have answer, continue
+        )
+       ;; One match from the collector
+       ((setq matchlist (semantic-collector-current-exact-match collector))
+        (if (= (semanticdb-find-result-length matchlist) 1)
+            (setq answer (car (semanticdb-find-result-nth matchlist 0)))
+          (if (semantic-displayor-focus-abstract-child-p displayor)
+              ;; For focusing displayors, we can claim this is
+              ;; not unique.  Multiple focuses can choose the correct
+              ;; one.
+              (setq answer "Not Unique")
+            ;; If we don't have a focusing displayor, we need to do something
+            ;; graceful.  First, see if all the matches have the same name.
+            (let ((allsame t)
+                  (firstname (semantic-tag-name
+                              (car
+                               (semanticdb-find-result-nth matchlist 0))))
+                  (cnt 1)
+                  (max (semanticdb-find-result-length matchlist)))
+              (while (and allsame (< cnt max))
+                (if (not (string=
+                          firstname
+                          (semantic-tag-name
+                           (car
+                            (semanticdb-find-result-nth matchlist cnt)))))
+                    (setq allsame nil))
+                (setq cnt (1+ cnt)))
+              ;; Now we know if they are all the same.  If they are, just
+              ;; accept the first, otherwise complain.
+              (if allsame
+                  (setq answer (car (semanticdb-find-result-nth matchlist 0)))
+                (setq answer "Not Unique"))))))
+       ;; No match
+       (t (setq answer "No Match"))))
+    ;; Set it into our completion target.
+    (when (semantic-tag-p answer)
+      (setq semantic-complete-current-matched-tag answer)
+      ;; Make sure it is up to date by clearing it if the user dares
+      ;; to touch the keyboard.
+      (add-hook 'pre-command-hook
+                (lambda () (setq semantic-complete-current-matched-tag nil))))
+    ;; Return it
+    answer))
+
+;; Redefined to use semanticdb-find-result-nth instead of
+;; semanticdb-find-result-nth-in-buffer which caused unwanted
+;; buffer switching.
+(defun semantic-complete-default-to-tag (default)
+  "Convert a calculated or passed in DEFAULT into a tag."
+  (if (semantic-tag-p default)
+      ;; Just return what was passed in.
+      (setq semantic-complete-active-default default)
+    ;; If none was passed in, guess.
+    (if (null default)
+        (setq default (semantic-ctxt-current-thing)))
+    (if (null default)
+        ;; Do nothing
+        nil
+      ;; Turn default into something useful.
+      (let ((str
+             (cond
+              ;; Semantic-ctxt-current-symbol will return a list of
+              ;; strings.  Technically, we should use the analyzer to
+              ;; fully extract what we need, but for now, just grab the
+              ;; first string
+              ((and (listp default) (stringp (car default)))
+               (car default))
+              ((stringp default)
+               default)
+              ((symbolp default)
+               (symbol-name default))
+              (t
+               (signal 'wrong-type-argument
+                       (list default 'semantic-tag-p)))))
+            (tag nil))
+        ;; Now that we have that symbol string, look it up using the active
+        ;; collector.  If we get a match, use it.
+        (save-excursion
+          (semantic-collector-calculate-completions
+           semantic-completion-collector-engine
+           str nil))
+        ;; Do we have the perfect match???
+        (let ((ml (semantic-collector-current-exact-match
+                   semantic-completion-collector-engine)))
+          (when ml
+            ;; We don't care about uniqueness.  Just guess for convenience
+            (setq tag (car (semanticdb-find-result-nth ml 0)))))
+        ;; save it
+        (setq semantic-complete-active-default tag)
+        ;; Return it.. .whatever it may be
+        tag))))
 
 
 
@@ -283,69 +504,69 @@ Returns a table of all matching tags."
 Uses `semantic-analyze-current-context' output to identify an accurate
 origin of the code at point."
   (interactive "d")
-  (let* ((*custom/semantic/grep-db-enabled* nil)
-         (ctxt (semantic-analyze-current-context point))
-         (pf (and ctxt (reverse (oref ctxt prefix))))
-         ;; In the analyzer context, the PREFIX is the list of items
-         ;; that makes up the code context at point.  Thus the c++ code
-         ;; this.that().theothe
-         ;; would make a list:
-         ;; ( ("this" variable ..) ("that" function ...) "theothe")
-         ;; Where the first two elements are the semantic tags of the prefix.
-         ;;
-         ;; PF is the reverse of this list.  If the first item is a string,
-         ;; then it is an incomplete symbol, thus we pick the second.
-         ;; The second cannot be a string, as that would have been an error.
-         (pf-len (length pf))
-         (first (car pf))
-         (second (nth 1 pf)))
-    (cond
-     ((semantic-tag-p first)
-      ;; We have a match.  Just go there.
-      (semantic-ia--fast-jump-helper first))
-     ((semantic-tag-p second)
-      ;; Because FIRST failed, we should visit our second tag.
-      ;; HOWEVER, the tag we actually want that was only an unfound
-      ;; string may be related to some take in the datatype that belongs
-      ;; to SECOND.  Thus, instead of visiting second directly, we
-      ;; can offer to find the type of SECOND, and go there.
-      (let ((secondclass (car (reverse (oref ctxt prefixtypes)))))
-        (cond
-         ((and (semantic-tag-with-position-p secondclass)
-               (y-or-n-p (format-message
-                          "Could not find `%s'.  Jump to %s? "
-                          first (semantic-tag-name secondclass))))
-          (semantic-ia--fast-jump-helper secondclass))
-         ;; If we missed out on the class of the second item, then
-         ;; just visit SECOND.
-         ((and (semantic-tag-p second)
-               (y-or-n-p (format-message
-                          "Could not find `%s'.  Jump to %s? "
-                          first (semantic-tag-name second))))
-          (semantic-ia--fast-jump-helper second)))))
-     ((semantic-tag-of-class-p (semantic-current-tag) 'include)
-      ;; Just borrow this cool fcn.
-      (require 'semantic/decorate/include)
-      ;; Push the mark, so you can pop global mark back, or
-      ;; use semantic-mru-bookmark mode to do so.
-      (xref-push-marker-stack)
-      (semantic-decoration-include-visit))
-     ((and (equal pf-len 1)
-           (stringp first))
-      ;; Lets try to handle enums and macros. These things are ignored
-      ;; by context analyzer so we must do it here.
-      (let* ((*custom/semantic/grep-db-enabled* nil)
-             (tags (semanticdb-strip-find-results
-                    (semanticdb-deep-find-tags-by-name first
-                                                       (current-buffer)
-                                                       t)
-                    t)))
-        (if tags
-            (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
-          (error "Could not find suitable jump point for %s"
-                 first))))
-     (t (error "Could not find suitable jump point for %s"
-               first)))))
+  (custom/semantic/with-disabled-grep-db
+   (let* ((ctxt (semantic-analyze-current-context point))
+          (pf (and ctxt (reverse (oref ctxt prefix))))
+          ;; In the analyzer context, the PREFIX is the list of items
+          ;; that makes up the code context at point.  Thus the c++ code
+          ;; this.that().theothe
+          ;; would make a list:
+          ;; ( ("this" variable ..) ("that" function ...) "theothe")
+          ;; Where the first two elements are the semantic tags of the prefix.
+          ;;
+          ;; PF is the reverse of this list.  If the first item is a string,
+          ;; then it is an incomplete symbol, thus we pick the second.
+          ;; The second cannot be a string, as that would have been an error.
+          (pf-len (length pf))
+          (first (car pf))
+          (second (nth 1 pf)))
+     (cond
+      ((semantic-tag-p first)
+       ;; We have a match.  Just go there.
+       (semantic-ia--fast-jump-helper first))
+      ((semantic-tag-p second)
+       ;; Because FIRST failed, we should visit our second tag.
+       ;; HOWEVER, the tag we actually want that was only an unfound
+       ;; string may be related to some take in the datatype that belongs
+       ;; to SECOND.  Thus, instead of visiting second directly, we
+       ;; can offer to find the type of SECOND, and go there.
+       (let ((secondclass (car (reverse (oref ctxt prefixtypes)))))
+         (cond
+          ((and (semantic-tag-with-position-p secondclass)
+                (y-or-n-p (format-message
+                           "Could not find `%s'.  Jump to %s? "
+                           first (semantic-tag-name secondclass))))
+           (semantic-ia--fast-jump-helper secondclass))
+          ;; If we missed out on the class of the second item, then
+          ;; just visit SECOND.
+          ((and (semantic-tag-p second)
+                (y-or-n-p (format-message
+                           "Could not find `%s'.  Jump to %s? "
+                           first (semantic-tag-name second))))
+           (semantic-ia--fast-jump-helper second)))))
+      ((semantic-tag-of-class-p (semantic-current-tag) 'include)
+       ;; Just borrow this cool fcn.
+       (require 'semantic/decorate/include)
+       ;; Push the mark, so you can pop global mark back, or
+       ;; use semantic-mru-bookmark mode to do so.
+       (xref-push-marker-stack)
+       (semantic-decoration-include-visit))
+      ((and (equal pf-len 1)
+            (stringp first))
+       ;; Lets try to handle enums and macros. These things are ignored
+       ;; by context analyzer so we must do it here.
+       (custom/semantic/with-disabled-grep-db
+        (let* ((tags (semanticdb-strip-find-results
+                      (semanticdb-deep-find-tags-by-name first
+                                                         (current-buffer)
+                                                         t)
+                      t)))
+          (if tags
+              (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
+            (error "Could not find suitable jump point for %s"
+                   first)))))
+      (t (error "Could not find suitable jump point for %s"
+                first))))))
 
 (defun semantic-ia--fast-jump-helper (dest)
   "Jump to DEST, a Semantic tag.
@@ -354,10 +575,10 @@ This helper manages the mark, buffer switching, and pulsing."
   ;; because of header files.  Let's try to find the actual
   ;; implementation instead.
   (when (semantic-tag-prototype-p dest)
-    (let* ((*custom/semantic/grep-db-enabled* t)
-           (refs (semantic-analyze-tag-references dest))
-           (impl (semantic-analyze-refs-impl refs t)))
-      (when impl (setq dest (car impl)))))
+    (custom/semantic/with-enabled-grep-db
+     (let* ((refs (semantic-analyze-tag-references dest))
+            (impl (semantic-analyze-refs-impl refs t)))
+       (when impl (setq dest (custom/semantic/choose-tag impl))))))
   ;; Make sure we have a place to go...
   (if (not (and (or (semantic-tag-with-position-p dest)
                     (semantic-tag-get-attribute dest :line))
@@ -392,14 +613,10 @@ current project to find references to the input SYM.  The
 references are organized by file and the name of the function
 they are used in.
 Display the references in `semantic-symref-results-mode'."
-  (interactive (list (read-string "Look for symbol: "
-                                  (thing-at-point 'symbol))))
-  ;; Cant be used because my grep backend does not support
-  ;; tagcompletions. Probably not worth the effort.
-  ;; I let it stay here in comment because it looks like interesting feature.
-  ;;
-  ;; (interactive (list (semantic-tag-name (semantic-complete-read-tag-project
-  ;;                                        "Symrefs for: "))))
+  (interactive (list (custom/semantic/with-disabled-grep-db
+                      (semantic-tag-name (semantic-complete-read-tag-project
+                                          "Find references for: "
+                                          (thing-at-point 'symbol))))))
   (semantic-fetch-tags)
   ;; Gather results and tags
   (message "Gathering References...")
@@ -436,8 +653,10 @@ already."
       ans)))
 
 (defun custom/semantic/complete-jump (sym)
-  (interactive (list (read-string "Look for symbol: "
-                                  (thing-at-point 'symbol))))
+  (interactive (list (custom/semantic/with-disabled-grep-db
+                      (semantic-tag-name (semantic-complete-read-tag-project
+                                          "Look for symbol: "
+                                          (thing-at-point 'symbol))))))
   ;; Use modified symref module for getting all tags with target name in
   ;; current project and all its dependencies.
   ;; Bypasses bug when brute deep searching all tables in project
@@ -916,7 +1135,14 @@ BUTTON is the button that was clicked."
                   (s-join ";" (cons root source-roots))))
          ,(cons "$searchfor" searchfor)
          ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
-       "findstr /r /n /d:$dirlist \"$searchfor\" $filters")))
+       "findstr /s /n /d:$dirlist \"$searchfor\" $filters")))
+
+(defun custom/cleanse-findstr-output (buff)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((regexp (pcre-to-elisp/cached "^(?:\\s+|.+:\n)")))
+      (while (search-forward-regexp regexp nil t)
+        (replace-match "")))))
 
 (defun custom/filter-raw-grep-output (hits searchfor)
   ;; (message "GREP TAGNAME HITS %s" hits)
@@ -943,10 +1169,19 @@ BUTTON is the button that was clicked."
     ;; (message "GREP TAGNAME RESULT %s" result)
     result))
 
-(setq *custom/semantic/grep-db-enabled* t)
+(setq custom/semantic/grep-db-enabled t)
+
+(defmacro custom/semantic/with-disabled-grep-db (&rest forms)
+  `(let ((custom/semantic/grep-db-enabled nil))
+     ,@forms))
+
+(defmacro custom/semantic/with-enabled-grep-db (&rest forms)
+  `(let ((custom/semantic/grep-db-enabled t))
+     ,@forms))
+
 (cl-defmethod semantic-symref-perform-search ((tool semantic-symref-tool-grep))
   "Perform a search with Grep."
-  (when *custom/semantic/grep-db-enabled*
+  (when custom/semantic/grep-db-enabled
     ;; Grep doesn't support some types of searches.
     (let ((st (oref tool searchtype)))
       (when (not (memq st '(symbol regexp tagname)))
@@ -1002,10 +1237,15 @@ BUTTON is the button that was clicked."
               ;; Ugly hack for windows. Grep combined with find is
               ;; awfully slow on windows so we must resort to native
               ;; alternative which is fast.
-              (wincmd (custom/gen-win-grep-emulation-cmd
-                       (oref tool searchfor))))
-          (call-process semantic-symref-grep-shell nil b nil
-                        shell-command-switch (or wincmd cmd))))
+              (wincmd (custom/gen-win-grep-emulation-cmd (oref tool
+                                                               searchfor))))
+          (if wincmd
+              (progn
+                (call-process semantic-symref-grep-shell nil b nil
+                              shell-command-switch wincmd)
+                (custom/cleanse-findstr-output b))
+            (call-process semantic-symref-grep-shell nil b nil
+                          shell-command-switch cmd))))
       (setq ans (semantic-symref-parse-tool-output tool b))
       ;; Special handling for search type tagname.
       ;; Semantic expect only positions of tags will be provided so we
@@ -1021,8 +1261,7 @@ BUTTON is the button that was clicked."
 ;; no need to scan whole project by grep.
 (advice-add 'semantic-idle-summary-idle-function :around
             (lambda (oldfn)
-              (let ((*custom/semantic/grep-db-enabled* nil))
-                (funcall oldfn))))
+              (custom/semantic/with-disabled-grep-db (funcall oldfn))))
 
 ;;;; CODE DOC ACQUISITION
 ;; CODE:
@@ -1032,11 +1271,18 @@ BUTTON is the button that was clicked."
   (interactive "d")
   (let* ((actual-buffer (current-buffer))
          (ctxt (semantic-analyze-current-context point))
-         (pf (reverse (oref ctxt prefix)))
+         (pf (and ctxt (reverse (oref ctxt prefix))))
          (tag (car pf)))
-    ;; If PF, the prefix is non-nil, then the last element is either
-    ;; a string (incomplete type), or a semantic TAG.  If it is a TAG
-    ;; then we should be able to find DOC for it.
+    (when (and (equal (length pf) 1)
+               (stringp tag))
+      (custom/semantic/with-disabled-grep-db
+       (let ((tags (semanticdb-strip-find-results
+                    (semanticdb-deep-find-tags-by-name tag
+                                                       (current-buffer)
+                                                       t)
+                    t)))
+         (if tags
+             (setq tag (custom/semantic/choose-tag tags))))))
     (cond
      ((stringp tag)
       (message "Incomplete symbol name."))
@@ -1076,7 +1322,10 @@ BUTTON is the button that was clicked."
              (args-list (loop for entry in args-list-fat
                               collect (cons (@at entry 0)
                                             (@at entry 1)))))
-        (if (and (string= doc "") (string= other-doc ""))
+        (if (and (or (null doc)
+                     (string= doc ""))
+                 (or (null other-doc)
+                     (string= other-doc "")))
             (message "Doc unavailable!")
           (custom/with-simple-pop-up "*TAG DOCUMENTATION*"
             (setq kill-on-quit t)
@@ -1090,24 +1339,24 @@ BUTTON is the button that was clicked."
                   do (custom/attach-buttons-to-label-occurences
                       (substring (@at entry 1) 2 -2)
                       (@at entry 2)))))))
-     (t (message "Unknown tag.")))))
+     (t (message "No tag found.")))))
 
 (defun custom/semantic/find-type-tags-of-var (tag &optional buffer)
   (if (not buffer)
       (setq buffer (current-buffer)))
-  (let ((*custom/semantic/grep-db-enabled* nil))
-    (semanticdb-strip-find-results
-     (semanticdb-deep-find-tags-by-name
-      (if (equal (semantic-tag-class tag) 'variable)
-          (let ((tag-type (semantic-tag-type tag)))
-            (if (stringp tag-type)
-                tag-type
-              (semantic-tag-name tag-type)))
-        (error "Found invalid tag '%s' with name '%s'!"
-               (semantic-tag-class tag)
-               (semantic-tag-name tag)))
-      buffer t)
-     t)))
+  (custom/semantic/with-disabled-grep-db
+   (semanticdb-strip-find-results
+    (semanticdb-deep-find-tags-by-name
+     (if (equal (semantic-tag-class tag) 'variable)
+         (let ((tag-type (semantic-tag-type tag)))
+           (if (stringp tag-type)
+               tag-type
+             (semantic-tag-name tag-type)))
+       (error "Found invalid tag '%s' with name '%s'!"
+              (semantic-tag-class tag)
+              (semantic-tag-name tag)))
+     buffer t)
+    t)))
 
 (defun custom/attach-buttons-to-label-occurences (string tags)
   (loop for (beg . end) in (custom/find-string-occurences string)
