@@ -375,6 +375,100 @@ Return value can be:
         ;; Return it.. .whatever it may be
         tag))))
 
+;; Redefined because default implementation does not acquire databases
+;; of project dependencies.
+(defun semanticdb-find-translate-path-brutish-default (path)
+  "Translate PATH into a list of semantic tables.
+Default action as described in `semanticdb-find-translate-path'."
+  (let ((basedb
+         (cond ((null path)
+                semanticdb-current-database)
+               ((semanticdb-table-p path)
+                (oref path parent-db))
+               (t (let ((tt (semantic-something-to-tag-table path)))
+                    (if tt
+                        ;; @todo - What does this DO ??!?!
+                        ;; NOTE: Looks like some esoteric hack.
+                        (with-current-buffer (semantic-tag-buffer (car tt))
+                          semanticdb-current-database)
+                      semanticdb-current-database))))))
+    (apply
+     #'nconc
+     (mapcar
+      (lambda (db)
+        (let ((tabs (semanticdb-get-database-tables db))
+              (ret nil))
+          ;; Only return tables of the same language (major-mode)
+          ;; as the current search environment.
+          (while tabs
+            (semantic-throw-on-input 'translate-path-brutish)
+            (if (semanticdb-equivalent-mode-for-search (car tabs)
+                                                       (current-buffer))
+                (setq ret (cons (car tabs) ret)))
+            (setq tabs (cdr tabs)))
+          ret))
+      (custom/delete-dups-eq
+       (custom/append-new-backbone
+        (semanticdb-current-database-list
+         (if basedb
+             (oref basedb reference-directory)
+           default-directory))
+        (apply #'custom/append-new-backbone
+               (loop for root in (custom/ede/get-project-dependencies)
+                     collect (semanticdb-current-database-list root)))))))))
+
+;; Redefined because default implementation refused to list databases
+;; not attached to registered EDE projects or explicitly stated in
+;; semanticdb-project-roots.
+(defun semanticdb-current-database-list (&optional dir)
+  "Return a list of databases associated with the current buffer.
+If optional argument DIR is non-nil, then use DIR as the starting directory.
+If this buffer has a database, but doesn't have a project associated
+with it, return nil.
+First, it checks `semanticdb-project-root-functions', and if that
+has no results, it checks `semanticdb-project-roots'.  If that fails,
+it returns the results of function `semanticdb-current-database'.
+Always append `semanticdb-project-system-databases' if
+`semanticdb-search-system' is non-nil."
+  (let ((root nil)			; found root directory
+        (dbs nil)			; collected databases
+        ;; All user roots + project dependencies.
+        (roots (nconc semanticdb-project-roots
+                      (custom/ede/get-project-dependencies)))
+        (dir (file-truename (or dir default-directory))))
+    ;; Find the root based on project functions.
+    (setq root (run-hook-with-args-until-success
+                'semanticdb-project-root-functions
+                dir))
+    (if root
+        (setq root (file-truename root))
+      ;; Else, Find roots based on strings
+      (while roots
+        (let ((r (file-truename (car roots))))
+          (if (string-match (concat "^" (regexp-quote r)) dir)
+              (setq root r)))
+        (setq roots (cdr roots))))
+    ;; If no roots are found, use this directory.
+    (unless root (setq root dir))
+    ;; Find databases based on the root directory.
+    (when root
+      ;; The rootlist allows the root functions to possibly
+      ;; return several roots which are in different areas but
+      ;; all apart of the same system.
+      (let ((regexp (concat "^" (regexp-quote root)))
+            (adb semanticdb-database-list)) ; all databases
+        (while adb
+          ;; I don't like this part, but close enough.
+          (if (and (slot-boundp (car adb) 'reference-directory)
+                   (string-match regexp (oref (car adb) reference-directory)))
+              (setq dbs (cons (car adb) dbs)))
+          (setq adb (cdr adb)))))
+    ;; Add in system databases
+    (when semanticdb-search-system-databases
+      (setq dbs (nconc dbs semanticdb-project-system-databases)))
+    ;; Return
+    dbs))
+
 
 
 (defun custom/semantic/diagnostic-visualizations ()
@@ -394,7 +488,7 @@ Return value can be:
      ((equal decision "Tags by class")
       (semantic-chart-tags-by-class)))))
 
-(defun custom/ede/load-config-file (proj-root)
+(defun custom/ede/load-config-file (proj-root &optional dont-ask)
   (let ((config-path (concat proj-root
                              "emacs-project-config.json"))
         (config nil))
@@ -435,6 +529,7 @@ Return value can be:
                 (progn
                   (setq macro-files (seq-filter 'file-exists-p macro-files))
                   (if (and (hash-table-p config)
+                           (not dont-ask)
                            (yes-or-no-p (concat "Found nonexistent macro files "
                                                 (format "%s" not-found-files)
                                                 ". Do you want to remove them from JSON config?")))
@@ -448,8 +543,19 @@ Return value can be:
                                         config-path))))))))
       (if (not (equal config nil))
           (error "BAD FORMAT OF %s" config-path)
-        (custom/ede/generate-config-file (file-name-as-directory proj-root))))
+        (and (not dont-ask)
+             (custom/ede/generate-config-file
+              (file-name-as-directory proj-root)))))
     config))
+
+(defun custom/ede/get-project-dependencies ()
+  (let* ((root (semantic-symref-calculate-rootdir))
+         (proj-config (if root
+                          (custom/ede/load-config-file root t)))
+         (source-roots (if proj-config
+                           (custom/map/get "source-roots"
+                                           proj-config))))
+    source-roots))
 
 (defun custom/ede/load-project (name proj-root)
   (let* ((config (custom/ede/load-config-file proj-root)))
@@ -498,6 +604,33 @@ Return value can be:
 
 ;;;; CODE NAVIGATION ROUTINES
 ;; CODE:
+
+;; Added no function args version of semanticdb-deep-find-tags-by-name.
+;; We generally dont want to jump to some argument of some function somewhere.
+(defun semanticdb-deep-no-args-find-tags-by-name
+    (name &optional path find-file-match)
+  "Search for all tags matching NAME on PATH.
+Search also in all components of top level tags founds.
+See `semanticdb-find-translate-path' for details on PATH.
+FIND-FILE-MATCH indicates that any time a match is found, the file
+associated with that tag should be loaded into a buffer."
+  (semanticdb-find-tags-collector
+   (lambda (table tags)
+     (semanticdb-deep-no-args-find-tags-by-name-method table name tags))
+   path find-file-match))
+
+;; Added no function args version of semanticdb-deep-find-tags-by-name-method.
+;; Needed by semanticdb-deep-no-args-find-tags-by-name.
+(cl-defmethod semanticdb-deep-no-args-find-tags-by-name-method
+  ((table semanticdb-abstract-table) name &optional tags)
+  "In TABLE, find all occurrences of tags with NAME.
+Search in all tags in TABLE, and all components of top level tags in
+TABLE.
+Optional argument TAGS is a list of tags to search.
+Return a table of all matching tags."
+  (semantic-find-tags-by-name name
+                              (custom/semantic/flatten-tags-table
+                               (or tags (semanticdb-get-tags table)))))
 
 (defun semantic-ia-fast-jump (point)
   "Jump to the tag referred to by the code at POINT.
@@ -557,9 +690,10 @@ origin of the code at point."
        ;; by context analyzer so we must do it here.
        (custom/semantic/with-disabled-grep-db
         (let* ((tags (semanticdb-strip-find-results
-                      (semanticdb-deep-find-tags-by-name first
-                                                         (current-buffer)
-                                                         t)
+                      (semanticdb-deep-no-args-find-tags-by-name
+                       first
+                       (current-buffer)
+                       t)
                       t)))
           (if tags
               (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
@@ -896,7 +1030,8 @@ already."
     (apply 'append (nreverse lists))))
 
 (defun custom/semantic/flatten-tags-table (&optional table)
-  (let* ((lists (list table)))
+  (let* ((table (semantic-something-to-tag-table table))
+         (lists (list table)))
     (mapc (lambda (tag)
             ;; Optimize out function args. We are not interested in
             ;; them when processing grep hits.
@@ -1106,12 +1241,9 @@ BUTTON is the button that was clicked."
                                                         filepattern
                                                         flags
                                                         pattern)
-  (let* ((root (projectile-project-root))
-         (proj-config (if root (custom/ede/load-config-file root)))
-         (source-roots (if proj-config
-                           (custom/map/get "source-roots"
-                                           proj-config))))
-    (setq rootdir (s-join " " (cons rootdir source-roots))))
+  (setq rootdir (s-join " "
+                        (cons rootdir
+                              (custom/ede/get-project-dependencies))))
   (let ((res (funcall oldfn rootdir filepattern flags pattern)))
     ;; (message "Generated grep command: %s" res)
     res))
@@ -1126,13 +1258,9 @@ BUTTON is the button that was clicked."
   (if (eq system-type 'windows-nt)
       (custom/replace-all
        `(,(cons "$dirlist"
-                (let* ((root (semantic-symref-calculate-rootdir))
-                       (proj-config (if root
-                                        (custom/ede/load-config-file root)))
-                       (source-roots (if proj-config
-                                         (custom/map/get "source-roots"
-                                                         proj-config))))
-                  (s-join ";" (cons root source-roots))))
+                (s-join ";"
+                        (cons (semantic-symref-calculate-rootdir)
+                              (custom/ede/get-project-dependencies))))
          ,(cons "$searchfor" searchfor)
          ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
        "findstr /s /n /d:$dirlist \"$searchfor\" $filters")))
@@ -1140,12 +1268,25 @@ BUTTON is the button that was clicked."
 (defun custom/cleanse-findstr-output (buff)
   (save-excursion
     (goto-char (point-min))
-    (let ((regexp (pcre-to-elisp/cached "^(?:\\s+|.+:\n)")))
+    (let ((regexp (pcre-to-elisp/cached "^(?:(\\s+)|(.+):\n)"))
+          (prefix nil))
       (while (search-forward-regexp regexp nil t)
-        (replace-match "")))))
+        (let ((first (match-string 1))
+              (second (match-string 2)))
+          (if first
+              (progn
+                (if (not prefix)
+                    (error (concat "Error during normalization of "
+                                   "findstr result at line %s "
+                                   "(missing prefix)!")
+                           (line-number-at-pos (match-beginning 0))))
+                (replace-match prefix))
+            (progn
+              (setq prefix second)
+              (replace-match ""))))))))
 
 (defun custom/filter-raw-grep-output (hits searchfor)
-  ;; (message "GREP TAGNAME HITS %s" hits)
+  (setq custom/TAGNAME-HITS hits)
   (let ((deep-search #'custom/semantic/get-local-tags-no-includes)
         (files (@dict-new))
         (result nil))
@@ -1166,7 +1307,7 @@ BUTTON is the button that was clicked."
                                 (line-number-at-pos
                                  (semantic-tag-start tag)))
                               file)))
-    ;; (message "GREP TAGNAME RESULT %s" result)
+    (setq custom/TAGNAME-RESULT result)
     result))
 
 (setq custom/semantic/grep-db-enabled t)

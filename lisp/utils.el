@@ -1036,3 +1036,26 @@ POS is optional position in file where to search for comment."
           (if (not supress-error)
               (signal (car ,err-sym)
                       (cdr ,err-sym))))))))
+
+(defun custom/delete-dups-eq (list)
+  "Destructively remove `eq' duplicates from LIST.
+Store the result in LIST and return it.  LIST must be a proper list.
+Of several `eq' occurrences of an element in LIST, the first
+one is kept."
+  (let ((hash (make-hash-table :test #'eq :size (length list)))
+        (tail list) retail)
+    (puthash (car list) t hash)
+    (while (setq retail (cdr tail))
+      (let ((elt (car retail)))
+        (if (gethash elt hash)
+            (setcdr tail (cdr retail))
+          (puthash elt t hash)
+          (setq tail retail)))))
+  list)
+
+(defun custom/append-new-backbone (&rest lists)
+  (let ((result nil))
+    (dolist (list lists)
+      (dolist (element list)
+        (push element result)))
+    result))
