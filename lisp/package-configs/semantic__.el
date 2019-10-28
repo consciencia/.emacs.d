@@ -247,6 +247,12 @@ PROMPT is a string to prompt with.
 DEFAULT-TAG is a semantic tag or string to use as the default value.
 If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
 HISTORY is a symbol representing a variable to store the history in."
+  ;; Load all existing databases for current project and its
+  ;; dependencies into memory, otherwise this function will be unable
+  ;; to provide autocompletion for all project symbols. Of course,
+  ;; unparsed files which are logically missing in DB are not loaded
+  ;; and symbols from them are invisible for autocompletion.
+  (custom/semantic/load-all-project-dbs)
   (semantic-complete-read-tag-engine
    (semantic-collector-project-brutish prompt
                                        :buffer (current-buffer)
@@ -1142,6 +1148,9 @@ already."
 
 (defun custom/semantic/index-directory (root &optional selection-regex)
   (interactive (list (ido-read-directory-name "Select directory: ")))
+  (if (not selection-regex)
+      (setq selection-regex
+            (pcre-to-elisp/cached ".*\\.(?:c|cpp|h|hpp|cxx|hxx)$")))
   (let ((root (file-name-as-directory (file-truename root)))
         (files (directory-files root t)))
     (setq files (delete (format "%s." root) files))
@@ -1152,18 +1161,38 @@ already."
     (while files
       (setq file (pop files))
       (if (not (file-accessible-directory-p file))
-          (progn
-            (when (string-match-p
-                   (if selection-regex
-                       selection-regex
-                     (pcre-to-elisp/cached
-                      ".*\\.(?:c|cpp|h|hpp|cxx|hxx)$"))
-                   file)
-              (ignore-errors
-                (semanticdb-file-table-object file))))
-        (progn
-          (semanticdb-save-all-db)
-          (custom/semantic/index-directory file))))))
+          (when (string-match-p selection-regex file)
+            (ignore-errors (semanticdb-file-table-object file)))
+        (progn (semanticdb-save-all-db)
+               (custom/semantic/index-directory file selection-regex))))))
+
+(defun custom/semantic/load-all-project-dbs ()
+  (interactive)
+  (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
+                           (custom/ede/get-project-dependencies)))
+         (store-path (file-name-as-directory semanticdb-default-save-directory))
+         (check-regexp (concat "^\\(?:"
+                               (s-join "\\|"
+                                       (loop for proj-root in proj-roots
+                                             collect (regexp-quote proj-root)))
+                               "\\)"))
+
+         (raw-cache-paths (directory-files store-path))
+         (cache-paths (loop for raw-cache in raw-cache-paths
+                            for cache = (cedet-file-name-to-directory-name
+                                         raw-cache)
+                            if (s-match check-regexp cache)
+                            collect raw-cache)))
+    (loop for cache in cache-paths
+          for full-path = (expand-file-name (concat store-path cache))
+          if (not (semanticdb-file-loaded-p full-path))
+          do (progn (message "Loading: %s" full-path)
+                    (oset (semanticdb-load-database full-path)
+                          reference-directory
+                          (s-replace-regexp "semantic.cache"
+                                            ""
+                                            (cedet-file-name-to-directory-name
+                                             cache)))))))
 
 ;;;; SYMREF HACKS
 ;; CODE:
@@ -1621,6 +1650,3 @@ If NOSNARF is `lex', then only return the lex token."
 ;; NOTE: Interesting functions where include resolve process occurs
 ;;   semantic-dependency-tag-file
 ;;   semantic-dependency-find-file-on-path
-
-;; NOTE semanticdb-find-translate-path-brutish-default
-;; Dont return tables of project dependencies.
