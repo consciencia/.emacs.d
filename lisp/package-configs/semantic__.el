@@ -643,6 +643,7 @@ Return a table of all matching tags."
 Uses `semantic-analyze-current-context' output to identify an accurate
 origin of the code at point."
   (interactive "d")
+  (custom/semantic/load-all-project-dbs)
   (custom/semantic/with-disabled-grep-db
    (let* ((ctxt (semantic-analyze-current-context point))
           (pf (and ctxt (reverse (oref ctxt prefix))))
@@ -802,14 +803,14 @@ already."
   ;; Bypasses bug when brute deep searching all tables in project
   ;; using standard semantic find routines.
   (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
-                (semantic-symref-result-get-tags-as-is res))))
+                (if res
+                    (semantic-symref-result-get-tags-as-is res)))))
     (if tags
         (let* ((chosen-tag (custom/semantic/choose-tag tags)))
           (custom/semantic/goto-tag chosen-tag))
       (message "No tags found for %s" sym))))
 
-(defvar-local *is-prefix-pointer-state*
-  (cons nil 'allow))
+(defvar-local *is-prefix-pointer-state* (cons nil 'allow))
 (defun custom/semantic/is-prefix-pointer-p (&optional point)
   (interactive "d")
   (if (not point)
@@ -1166,33 +1167,39 @@ already."
         (progn (semanticdb-save-all-db)
                (custom/semantic/index-directory file selection-regex))))))
 
+(setq custom/semantic/loaded-projects (@dict-new))
 (defun custom/semantic/load-all-project-dbs ()
   (interactive)
-  (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
-                           (custom/ede/get-project-dependencies)))
-         (store-path (file-name-as-directory semanticdb-default-save-directory))
-         (check-regexp (concat "^\\(?:"
-                               (s-join "\\|"
-                                       (loop for proj-root in proj-roots
-                                             collect (regexp-quote proj-root)))
-                               "\\)"))
+  (when (not (@at custom/semantic/loaded-projects
+                  (semantic-symref-calculate-rootdir)))
+    (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
+                             (custom/ede/get-project-dependencies)))
+           (store-path (file-name-as-directory semanticdb-default-save-directory))
+           (check-regexp (concat "^\\(?:"
+                                 (s-join "\\|"
+                                         (loop for proj-root in proj-roots
+                                               collect (regexp-quote proj-root)))
+                                 "\\)"))
 
-         (raw-cache-paths (directory-files store-path))
-         (cache-paths (loop for raw-cache in raw-cache-paths
-                            for cache = (cedet-file-name-to-directory-name
-                                         raw-cache)
-                            if (s-match check-regexp cache)
-                            collect raw-cache)))
-    (loop for cache in cache-paths
-          for full-path = (expand-file-name (concat store-path cache))
-          if (not (semanticdb-file-loaded-p full-path))
-          do (progn (message "Loading: %s" full-path)
-                    (oset (semanticdb-load-database full-path)
-                          reference-directory
-                          (s-replace-regexp "semantic.cache"
-                                            ""
-                                            (cedet-file-name-to-directory-name
-                                             cache)))))))
+           (raw-cache-paths (directory-files store-path))
+           (cache-paths (loop for raw-cache in raw-cache-paths
+                              for cache = (cedet-file-name-to-directory-name
+                                           raw-cache)
+                              if (s-match check-regexp cache)
+                              collect raw-cache)))
+      (loop for cache in cache-paths
+            for full-path = (expand-file-name (concat store-path cache))
+            if (not (semanticdb-file-loaded-p full-path))
+            do (progn (message "Loading: %s" full-path)
+                      (oset (semanticdb-load-database full-path)
+                            reference-directory
+                            (s-replace-regexp "semantic.cache"
+                                              ""
+                                              (cedet-file-name-to-directory-name
+                                               cache))))))
+    (@dict-set (semantic-symref-calculate-rootdir)
+               t
+               custom/semantic/loaded-projects)))
 
 ;;;; SYMREF HACKS
 ;; CODE:
@@ -1297,22 +1304,34 @@ BUTTON is the button that was clicked."
 (defun custom/cleanse-findstr-output (buff)
   (save-excursion
     (goto-char (point-min))
-    (let ((regexp (pcre-to-elisp/cached "^(?:(\\s+)|(.+):\n)"))
+    (let ((regexp (pcre-to-elisp/cached
+                   (concat "^(?:"
+                           "([^\\s][\\w\\\\/\\._\\-:]+):"
+                           "|"
+                           "\\s+([\\w\\\\/\\._\\-:]+)(:\\d+:)([^\n]*)"
+                           ")\n")))
           (prefix nil))
       (while (search-forward-regexp regexp nil t)
-        (let ((first (match-string 1))
-              (second (match-string 2)))
-          (if first
+        (let ((root-path (match-string 1))
+              (hit-path (match-string 2))
+              (hit-line (match-string 3))
+              (hit-payload (match-string 4))
+              )
+          (if root-path
               (progn
-                (if (not prefix)
-                    (error (concat "Error during normalization of "
-                                   "findstr result at line %s "
-                                   "(missing prefix)!")
-                           (line-number-at-pos (match-beginning 0))))
-                (replace-match prefix))
+                (setq prefix (s-replace-regexp "\\\\" "/" root-path))
+                (replace-match ""))
             (progn
-              (setq prefix second)
-              (replace-match ""))))))))
+              (if (not prefix)
+                  (error (concat "Error during normalization of "
+                                 "findstr result at line %s "
+                                 "(missing prefix)!")
+                         (line-number-at-pos (match-beginning 0))))
+              (replace-match (concat prefix
+                                     (s-replace-regexp "\\\\" "/" hit-path)
+                                     hit-line
+                                     hit-payload
+                                     "\n")))))))))
 
 (defun custom/filter-raw-grep-output (hits searchfor)
   (setq custom/TAGNAME-HITS hits)
