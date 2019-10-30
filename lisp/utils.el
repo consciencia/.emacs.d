@@ -1059,3 +1059,13 @@ one is kept."
       (dolist (element list)
         (push element result)))
     result))
+
+(defun custom/longest-string (strings)
+  (let ((longest (car strings))
+        (head (cdr strings)))
+    (while head
+      (when (> (length (car head))
+               (length longest))
+        (setq longest (car head)))
+      (setq head (cdr head)))
+    longest))

@@ -152,235 +152,6 @@ Returns a table of all matching tags."
                                      (custom/semantic/flatten-enum-tags-table
                                       (or tags (semanticdb-get-tags table)))))
 
-;; Fixed invalid usage of semantic-analyze-current-context which
-;; happened to be outside of semantic buffer.
-;; Also it was wrapped in error catcher because abstract class has no
-;; context slot.
-(cl-defmethod semantic-collector-calculate-completions
-  ((obj semantic-collector-abstract) prefix partial)
-  "Calculate completions for prefix as setup for other queries."
-  (let* ((case-fold-search semantic-case-fold)
-         (same-prefix-p (semantic-collector-last-prefix= obj prefix))
-         (last-prefix (and (slot-boundp obj 'last-prefix)
-                           (oref obj last-prefix)))
-         (completionlist
-          (cond ((or same-prefix-p
-                     (and last-prefix (eq (compare-strings
-                                           last-prefix 0 nil
-                                           prefix 0 (length last-prefix)) t)))
-                 ;; We have the same prefix, or last-prefix is a
-                 ;; substring of the of new prefix, in which case we are
-                 ;; refining our symbol so just re-use cache.
-                 (oref obj last-all-completions))
-                ((and last-prefix
-                      (> (length prefix) 1)
-                      (eq (compare-strings
-                           prefix 0 nil
-                           last-prefix 0 (length prefix)) t))
-                 ;; The new prefix is a substring of the old
-                 ;; prefix, and it's longer than one character.
-                 ;; Perform a full search to pull in additional
-                 ;; matches.
-                 (with-current-buffer (oref obj buffer)
-                   (ignore-errors
-                     (custom/semantic/with-disabled-grep-db
-                      (let ((context (semantic-analyze-current-context (point))))
-                        ;; Set new context and make first-pass-completions
-                        ;; unbound so that they are newly calculated.
-                        (oset obj context context)
-                        (when (slot-boundp obj 'first-pass-completions)
-                          (slot-makeunbound obj 'first-pass-completions))))))
-                 nil)))
-         ;; Get the result
-         (answer (if same-prefix-p
-                     completionlist
-                   (semantic-collector-calculate-completions-raw
-                    obj prefix completionlist)))
-         (completion nil)
-         (complete-not-uniq nil))
-    ;;(semanticdb-find-result-test answer)
-    (when (not same-prefix-p)
-      ;; Save results if it is interesting and beneficial
-      (oset obj last-prefix prefix)
-      (oset obj last-all-completions answer))
-    ;; Now calculate the completion.
-    (setq completion (try-completion
-                      prefix
-                      (semanticdb-strip-find-results answer)))
-    (oset obj last-whitespace-completion nil)
-    (oset obj current-exact-match nil)
-    ;; Only do this if a completion was found.  Letting a nil in
-    ;; could cause a full semanticdb search by accident.
-    (when completion
-      (oset obj last-completion
-            (cond
-             ;; Unique match in AC.  Last completion is a match.
-             ;; Also set the current-exact-match.
-             ((eq completion t)
-              (oset obj current-exact-match answer)
-              prefix)
-             ;; It may be complete (a symbol) but still not unique.
-             ;; We can capture a match
-             ((setq complete-not-uniq
-                    (semanticdb-find-tags-by-name
-                     prefix
-                     answer))
-              (oset obj current-exact-match
-                    complete-not-uniq)
-              prefix)
-             ;; Non unique match, return the string that handles
-             ;; completion
-             (t (or completion prefix))
-             )))))
-
-;; Redefined because original used more sophisticated displayor which
-;; refused to select not unique tag name.
-(defun semantic-complete-read-tag-project (prompt &optional
-                                                  default-tag
-                                                  initial-input
-                                                  history)
-  "Ask for a tag by name from the current project.
-Available tags are from the current project, at the top level.
-Completion options are presented in a traditional way, with highlighting
-to resolve same-name collisions.
-PROMPT is a string to prompt with.
-DEFAULT-TAG is a semantic tag or string to use as the default value.
-If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
-HISTORY is a symbol representing a variable to store the history in."
-  ;; Load all existing databases for current project and its
-  ;; dependencies into memory, otherwise this function will be unable
-  ;; to provide autocompletion for all project symbols. Of course,
-  ;; unparsed files which are logically missing in DB are not loaded
-  ;; and symbols from them are invisible for autocompletion.
-  (custom/semantic/load-all-project-dbs)
-  (semantic-complete-read-tag-engine
-   (semantic-collector-project-brutish prompt
-                                       :buffer (current-buffer)
-                                       :path (current-buffer))
-   (semantic-displayor-traditional)
-   prompt
-   default-tag
-   initial-input
-   history))
-
-;; Redefined to use semanticdb-find-result-nth instead of
-;; semanticdb-find-result-nth-in-buffer which caused unwanted
-;; buffer switching.
-(defun semantic-complete-current-match ()
-  "Calculate a match from the current completion environment.
-Save this in our completion variable.  Make sure that variable
-is cleared if any other keypress is made.
-Return value can be:
-  tag - a single tag that has been matched.
-  string - a message to show in the minibuffer."
-  ;; Query the environment for an active completion.
-  (let ((collector semantic-completion-collector-engine)
-        (displayor semantic-completion-display-engine)
-        (contents (semantic-completion-text))
-        matchlist
-        answer)
-    (if (string= contents "")
-        ;; The user wants the defaults!
-        (setq answer semantic-complete-active-default)
-      ;; This forces a full calculation of completion on CR.
-      (save-excursion
-        (semantic-collector-calculate-completions collector contents nil))
-      (semantic-complete-try-completion)
-      (cond
-       ;; Input match displayor focus entry
-       ((setq answer (semantic-displayor-current-focus displayor))
-        ;; We have answer, continue
-        )
-       ;; One match from the collector
-       ((setq matchlist (semantic-collector-current-exact-match collector))
-        (if (= (semanticdb-find-result-length matchlist) 1)
-            (setq answer (car (semanticdb-find-result-nth matchlist 0)))
-          (if (semantic-displayor-focus-abstract-child-p displayor)
-              ;; For focusing displayors, we can claim this is
-              ;; not unique.  Multiple focuses can choose the correct
-              ;; one.
-              (setq answer "Not Unique")
-            ;; If we don't have a focusing displayor, we need to do something
-            ;; graceful.  First, see if all the matches have the same name.
-            (let ((allsame t)
-                  (firstname (semantic-tag-name
-                              (car
-                               (semanticdb-find-result-nth matchlist 0))))
-                  (cnt 1)
-                  (max (semanticdb-find-result-length matchlist)))
-              (while (and allsame (< cnt max))
-                (if (not (string=
-                          firstname
-                          (semantic-tag-name
-                           (car
-                            (semanticdb-find-result-nth matchlist cnt)))))
-                    (setq allsame nil))
-                (setq cnt (1+ cnt)))
-              ;; Now we know if they are all the same.  If they are, just
-              ;; accept the first, otherwise complain.
-              (if allsame
-                  (setq answer (car (semanticdb-find-result-nth matchlist 0)))
-                (setq answer "Not Unique"))))))
-       ;; No match
-       (t (setq answer "No Match"))))
-    ;; Set it into our completion target.
-    (when (semantic-tag-p answer)
-      (setq semantic-complete-current-matched-tag answer)
-      ;; Make sure it is up to date by clearing it if the user dares
-      ;; to touch the keyboard.
-      (add-hook 'pre-command-hook
-                (lambda () (setq semantic-complete-current-matched-tag nil))))
-    ;; Return it
-    answer))
-
-;; Redefined to use semanticdb-find-result-nth instead of
-;; semanticdb-find-result-nth-in-buffer which caused unwanted
-;; buffer switching.
-(defun semantic-complete-default-to-tag (default)
-  "Convert a calculated or passed in DEFAULT into a tag."
-  (if (semantic-tag-p default)
-      ;; Just return what was passed in.
-      (setq semantic-complete-active-default default)
-    ;; If none was passed in, guess.
-    (if (null default)
-        (setq default (semantic-ctxt-current-thing)))
-    (if (null default)
-        ;; Do nothing
-        nil
-      ;; Turn default into something useful.
-      (let ((str
-             (cond
-              ;; Semantic-ctxt-current-symbol will return a list of
-              ;; strings.  Technically, we should use the analyzer to
-              ;; fully extract what we need, but for now, just grab the
-              ;; first string
-              ((and (listp default) (stringp (car default)))
-               (car default))
-              ((stringp default)
-               default)
-              ((symbolp default)
-               (symbol-name default))
-              (t
-               (signal 'wrong-type-argument
-                       (list default 'semantic-tag-p)))))
-            (tag nil))
-        ;; Now that we have that symbol string, look it up using the active
-        ;; collector.  If we get a match, use it.
-        (save-excursion
-          (semantic-collector-calculate-completions
-           semantic-completion-collector-engine
-           str nil))
-        ;; Do we have the perfect match???
-        (let ((ml (semantic-collector-current-exact-match
-                   semantic-completion-collector-engine)))
-          (when ml
-            ;; We don't care about uniqueness.  Just guess for convenience
-            (setq tag (car (semanticdb-find-result-nth ml 0)))))
-        ;; save it
-        (setq semantic-complete-active-default tag)
-        ;; Return it.. .whatever it may be
-        tag))))
-
 ;; Redefined because default implementation does not acquire databases
 ;; of project dependencies.
 (defun semanticdb-find-translate-path-brutish-default (path)
@@ -755,9 +526,10 @@ references are organized by file and the name of the function
 they are used in.
 Display the references in `semantic-symref-results-mode'."
   (interactive (list (custom/semantic/with-disabled-grep-db
-                      (semantic-tag-name (semantic-complete-read-tag-project
-                                          "Find references for: "
-                                          (thing-at-point 'symbol))))))
+                      (custom/semantic-complete-read-tag-project
+                       "Find references for: "
+                       nil
+                       (thing-at-point 'symbol)))))
   (semantic-fetch-tags)
   ;; Gather results and tags
   (message "Gathering References...")
@@ -795,9 +567,10 @@ already."
 
 (defun custom/semantic/complete-jump (sym)
   (interactive (list (custom/semantic/with-disabled-grep-db
-                      (semantic-tag-name (semantic-complete-read-tag-project
-                                          "Look for symbol: "
-                                          (thing-at-point 'symbol))))))
+                      (custom/semantic-complete-read-tag-project
+                       "Look for symbol: "
+                       nil
+                       (thing-at-point 'symbol)))))
   ;; Use modified symref module for getting all tags with target name in
   ;; current project and all its dependencies.
   ;; Bypasses bug when brute deep searching all tables in project
@@ -1306,9 +1079,9 @@ BUTTON is the button that was clicked."
     (goto-char (point-min))
     (let ((regexp (pcre-to-elisp/cached
                    (concat "^(?:"
-                           "([^\\s][\\w\\\\/\\._\\-:]+):"
+                           "\\s+([\\w\\\\/\\._\\-:]+):"
                            "|"
-                           "\\s+([\\w\\\\/\\._\\-:]+)(:\\d+:)([^\n]*)"
+                           "([^\\s][\\w\\\\/\\._\\-:]+)(:\\d+:)([^\n]*)"
                            ")\n")))
           (prefix nil))
       (while (search-forward-regexp regexp nil t)
@@ -1429,12 +1202,13 @@ BUTTON is the button that was clicked."
               (wincmd (custom/gen-win-grep-emulation-cmd (oref tool
                                                                searchfor))))
           (if wincmd
-              (progn
-                (call-process semantic-symref-grep-shell nil b nil
-                              shell-command-switch wincmd)
-                (custom/cleanse-findstr-output b))
-            (call-process semantic-symref-grep-shell nil b nil
-                          shell-command-switch cmd))))
+              (progn (setq custom/GREP-CMD wincmd)
+                     (call-process semantic-symref-grep-shell nil b nil
+                                   shell-command-switch wincmd)
+                     (custom/cleanse-findstr-output b))
+            (progn (setq custom/GREP-CMD cmd)
+                   (call-process semantic-symref-grep-shell nil b nil
+                                 shell-command-switch cmd)))))
       (setq ans (semantic-symref-parse-tool-output tool b))
       ;; Special handling for search type tagname.
       ;; Semantic expect only positions of tags will be provided so we
@@ -1484,12 +1258,15 @@ BUTTON is the button that was clicked."
       ;; complete. Currently indication of completeness is string
       ;; length which is probably not optimal but good enough for now.
       (let* ((sar (semantic-analyze-tag-references tag))
-             (other-tag (if (semantic-tag-prototype-p tag)
-                            (car (semantic-analyze-refs-impl sar t))
-                          (car (semantic-analyze-refs-proto sar t))))
+             (other-tags (if (semantic-tag-prototype-p tag)
+                             (semantic-analyze-refs-impl sar t)
+                           (semantic-analyze-refs-proto sar t)))
              (doc (or (semantic-documentation-for-tag tag) ""))
-             (other-doc (or (if other-tag
-                                (semantic-documentation-for-tag other-tag))
+             (other-doc (or (if other-tags
+                                (custom/longest-string
+                                 (loop for other-tag in other-tags
+                                       collect (semantic-documentation-for-tag
+                                                other-tag))))
                             ""))
              (args-list-fat
               (loop for arg in (semantic-tag-function-arguments tag)
@@ -1516,8 +1293,9 @@ BUTTON is the button that was clicked."
                  (or (null other-doc)
                      (string= other-doc "")))
             (message "Doc unavailable!")
-          (custom/with-simple-pop-up "*TAG DOCUMENTATION*"
-            (setq kill-on-quit t)
+          (custom/with-simple-pop-up (format "*Semantic DocView (%s)*"
+                                             (semantic-tag-name tag))
+            (setq kill-on-quit nil)
             (insert (semantic-format-tag-prototype tag nil t))
             (insert "\n")
             (insert "\n")
@@ -1560,10 +1338,7 @@ BUTTON is the button that was clicked."
 (defun custom/doc-button-handler (&optional button)
   (interactive)
   (let* ((tags (button-get button 'tags))
-         (selected-tag
-          (if (equal (length tags) 1)
-              (car tags)
-            (custom/semantic/choose-tag tags))))
+         (selected-tag (custom/semantic/choose-tag tags)))
     (custom/semantic/goto-tag selected-tag)))
 
 (define-overloadable-function semantic-documentation-for-tag (&optional tag nosnarf)
@@ -1599,6 +1374,10 @@ If NOSNARF is `lex', then only return the lex token."
                       (semantic-tag-end starttag)
                     (point-min)))
            (stop (semantic-tag-start tag))
+           ;; TODO: Move start at the same line as typedef, enum, struct or
+           ;; class keywords outside of comment. Reason is, we dont
+           ;; want to have documentation for first member prepended
+           ;; with documentation for enclosing type.
            (raw-comment (custom/extract-comments-from-region start stop)))
       ;; Comment cleanup. Removes comment symbols and preprocess doxygen.
       (custom/chain-forms
@@ -1638,6 +1417,321 @@ If NOSNARF is `lex', then only return the lex token."
        (s-replace-regexp (pcre-to-elisp/cached
                           "^\\*\\s*(.+)\\s*\\*$")
                          "\\1")))))
+
+;;;; MINIBUFFER TAG AUTOCOMPLETION
+;; CODE:
+
+;; Fixed invalid usage of semantic-analyze-current-context which
+;; happened to be outside of semantic buffer.
+;; Also it was wrapped in error catcher because abstract class has no
+;; context slot.
+(cl-defmethod semantic-collector-calculate-completions
+  ((obj semantic-collector-abstract) prefix partial)
+  "Calculate completions for prefix as setup for other queries."
+  (let* ((case-fold-search semantic-case-fold)
+         (same-prefix-p (semantic-collector-last-prefix= obj prefix))
+         (last-prefix (and (slot-boundp obj 'last-prefix)
+                           (oref obj last-prefix)))
+         (completionlist
+          (cond ((or same-prefix-p
+                     (and last-prefix (eq (compare-strings
+                                           last-prefix 0 nil
+                                           prefix 0 (length last-prefix)) t)))
+                 ;; We have the same prefix, or last-prefix is a
+                 ;; substring of the of new prefix, in which case we are
+                 ;; refining our symbol so just re-use cache.
+                 (oref obj last-all-completions))
+                ((and last-prefix
+                      (> (length prefix) 1)
+                      (eq (compare-strings
+                           prefix 0 nil
+                           last-prefix 0 (length prefix)) t))
+                 ;; The new prefix is a substring of the old
+                 ;; prefix, and it's longer than one character.
+                 ;; Perform a full search to pull in additional
+                 ;; matches.
+                 (with-current-buffer (oref obj buffer)
+                   (ignore-errors
+                     (custom/semantic/with-disabled-grep-db
+                      (let ((context (semantic-analyze-current-context (point))))
+                        ;; Set new context and make first-pass-completions
+                        ;; unbound so that they are newly calculated.
+                        (oset obj context context)
+                        (when (slot-boundp obj 'first-pass-completions)
+                          (slot-makeunbound obj 'first-pass-completions))))))
+                 nil)))
+         ;; Get the result
+         (answer (if same-prefix-p
+                     completionlist
+                   (semantic-collector-calculate-completions-raw
+                    obj prefix completionlist)))
+         (completion nil)
+         (complete-not-uniq nil))
+    ;;(semanticdb-find-result-test answer)
+    (when (not same-prefix-p)
+      ;; Save results if it is interesting and beneficial
+      (oset obj last-prefix prefix)
+      (oset obj last-all-completions answer))
+    ;; Now calculate the completion.
+    (setq completion (try-completion
+                      prefix
+                      (semanticdb-strip-find-results answer)))
+    (oset obj last-whitespace-completion nil)
+    (oset obj current-exact-match nil)
+    ;; Only do this if a completion was found.  Letting a nil in
+    ;; could cause a full semanticdb search by accident.
+    (when completion
+      (oset obj last-completion
+            (cond
+             ;; Unique match in AC.  Last completion is a match.
+             ;; Also set the current-exact-match.
+             ((eq completion t)
+              (oset obj current-exact-match answer)
+              prefix)
+             ;; It may be complete (a symbol) but still not unique.
+             ;; We can capture a match
+             ((setq complete-not-uniq
+                    (semanticdb-find-tags-by-name
+                     prefix
+                     answer))
+              (oset obj current-exact-match
+                    complete-not-uniq)
+              prefix)
+             ;; Non unique match, return the string that handles
+             ;; completion
+             (t (or completion prefix)))))))
+
+;; Redefined to use semanticdb-find-result-nth instead of
+;; semanticdb-find-result-nth-in-buffer which caused unwanted
+;; buffer switching.
+;; Added support for unknown input when custom/semantic/complete-accepts-unknown
+;; is set to true.
+(defun semantic-complete-current-match ()
+  "Calculate a match from the current completion environment.
+Save this in our completion variable.  Make sure that variable
+is cleared if any other keypress is made.
+Return value can be:
+  tag - a single tag that has been matched.
+  string - a message to show in the minibuffer."
+  ;; Query the environment for an active completion.
+  (let ((collector semantic-completion-collector-engine)
+        (displayor semantic-completion-display-engine)
+        (contents (semantic-completion-text))
+        matchlist
+        answer)
+    (if (string= contents "")
+        ;; The user wants the defaults!
+        (setq answer semantic-complete-active-default)
+      ;; This forces a full calculation of completion on CR.
+      (when (not custom/semantic/complete-accepts-unknown)
+        (save-excursion
+          (semantic-collector-calculate-completions collector contents nil))
+        (semantic-complete-try-completion))
+      (cond
+       (custom/semantic/complete-accepts-unknown
+        (setq answer (semantic-completion-text)))
+       ;; Input match displayor focus entry
+       ((setq answer (semantic-displayor-current-focus displayor))
+        ;; We have answer, continue
+        )
+       ;; One match from the collector
+       ((setq matchlist (semantic-collector-current-exact-match collector))
+        (if (= (semanticdb-find-result-length matchlist) 1)
+            (setq answer (car (semanticdb-find-result-nth matchlist 0)))
+          (if (semantic-displayor-focus-abstract-child-p displayor)
+              ;; For focusing displayors, we can claim this is
+              ;; not unique.  Multiple focuses can choose the correct
+              ;; one.
+              (setq answer "Not Unique")
+            ;; If we don't have a focusing displayor, we need to do something
+            ;; graceful.  First, see if all the matches have the same name.
+            (let ((allsame t)
+                  (firstname (semantic-tag-name
+                              (car
+                               (semanticdb-find-result-nth matchlist 0))))
+                  (cnt 1)
+                  (max (semanticdb-find-result-length matchlist)))
+              (while (and allsame (< cnt max))
+                (if (not (string=
+                          firstname
+                          (semantic-tag-name
+                           (car
+                            (semanticdb-find-result-nth matchlist cnt)))))
+                    (setq allsame nil))
+                (setq cnt (1+ cnt)))
+              ;; Now we know if they are all the same.  If they are, just
+              ;; accept the first, otherwise complain.
+              (if allsame
+                  (setq answer (car (semanticdb-find-result-nth matchlist 0)))
+                (setq answer "Not Unique"))))))
+       ;; No match
+       (t (setq answer "No Match"))))
+    ;; Set it into our completion target.
+    (when (or (semantic-tag-p answer)
+              custom/semantic/complete-accepts-unknown)
+      (setq semantic-complete-current-matched-tag answer)
+      ;; Make sure it is up to date by clearing it if the user dares
+      ;; to touch the keyboard.
+      (add-hook 'pre-command-hook
+                (lambda () (setq semantic-complete-current-matched-tag nil))))
+    ;; Return it
+    answer))
+
+;; Redefined to use semanticdb-find-result-nth instead of
+;; semanticdb-find-result-nth-in-buffer which caused unwanted
+;; buffer switching.
+(defun semantic-complete-default-to-tag (default)
+  "Convert a calculated or passed in DEFAULT into a tag."
+  (if (semantic-tag-p default)
+      ;; Just return what was passed in.
+      (setq semantic-complete-active-default default)
+    ;; If none was passed in, guess.
+    (if (null default)
+        (setq default (semantic-ctxt-current-thing)))
+    (if (null default)
+        ;; Do nothing
+        nil
+      ;; Turn default into something useful.
+      (let ((str
+             (cond
+              ;; Semantic-ctxt-current-symbol will return a list of
+              ;; strings.  Technically, we should use the analyzer to
+              ;; fully extract what we need, but for now, just grab the
+              ;; first string
+              ((and (listp default) (stringp (car default)))
+               (car default))
+              ((stringp default)
+               default)
+              ((symbolp default)
+               (symbol-name default))
+              (t
+               (signal 'wrong-type-argument
+                       (list default 'semantic-tag-p)))))
+            (tag nil))
+        ;; Now that we have that symbol string, look it up using the active
+        ;; collector.  If we get a match, use it.
+        (save-excursion
+          (semantic-collector-calculate-completions
+           semantic-completion-collector-engine
+           str nil))
+        ;; Do we have the perfect match???
+        (let ((ml (semantic-collector-current-exact-match
+                   semantic-completion-collector-engine)))
+          (when ml
+            ;; We don't care about uniqueness.  Just guess for convenience
+            (setq tag (car (semanticdb-find-result-nth ml 0)))))
+        ;; save it
+        (setq semantic-complete-active-default tag)
+        ;; Return it.. .whatever it may be
+        tag))))
+
+;; Replaced semantic-complete-done for custom/semantic-complete-done
+;; in order to support raw string outputs of names not known to semantic.
+(defvar custom/semantic-complete-key-map
+  (let ((km (make-sparse-keymap)))
+    (define-key km " " 'semantic-complete-complete-space)
+    (define-key km "\t" 'semantic-complete-complete-tab)
+    (define-key km "\C-m" 'custom/semantic-complete-done)
+    (define-key km "\C-g" 'abort-recursive-edit)
+    (define-key km "\M-n" 'next-history-element)
+    (define-key km "\M-p" 'previous-history-element)
+    (define-key km "\C-n" 'next-history-element)
+    (define-key km "\C-p" 'previous-history-element)
+    km)
+  "Keymap used while completing across a list of tags.")
+
+;; Accepts string result. Old behavior is to treat it as an error
+;; message. Result from original implementation is always tag, not raw
+;; unresolved name.
+(setq custom/semantic/complete-accepts-unknown nil)
+(defun custom/semantic-complete-done ()
+  "Accept the current input."
+  (interactive)
+  (let* ((custom/semantic/complete-accepts-unknown t)
+         (ans (semantic-complete-current-match)))
+    (exit-minibuffer)))
+
+;; Replaced semantic-complete-key-map for custom/semantic-complete-key-map
+;; in order to support raw string outputs.
+(defun custom/semantic-complete-read-tag-engine
+    (collector displayor prompt default-tag initial-input history)
+  "Read a semantic tag, and return a tag for the selection.
+Argument COLLECTOR is an object which can be used to calculate
+a list of possible hits.  See `semantic-completion-collector-engine'
+for details on COLLECTOR.
+Argument DISPLAYOR is an object used to display a list of possible
+completions for a given prefix.  See`semantic-completion-display-engine'
+for details on DISPLAYOR.
+PROMPT is a string to prompt with.
+DEFAULT-TAG is a semantic tag or string to use as the default value.
+If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
+HISTORY is a symbol representing a variable to story the history in."
+  (let* ((semantic-completion-collector-engine collector)
+         (semantic-completion-display-engine displayor)
+         (semantic-complete-active-default nil)
+         (semantic-complete-current-matched-tag nil)
+         (default-as-tag (semantic-complete-default-to-tag default-tag))
+         (default-as-string (when (semantic-tag-p default-as-tag)
+                              (semantic-tag-name default-as-tag))))
+    (when default-as-string
+      ;; Add this to the prompt.
+      ;;
+      ;; I really want to add a lookup of the symbol in those
+      ;; tags available to the collector and only add it if it
+      ;; is available as a possibility, but I'm too lazy right
+      ;; now.
+      ;;
+      ;; @todo - move from () to into the editable area
+      (if (string-match ":" prompt)
+          (setq prompt (concat
+                        (substring prompt 0 (match-beginning 0))
+                        " (default " default-as-string ")"
+                        (substring prompt (match-beginning 0))))
+        (setq prompt (concat prompt " (" default-as-string "): "))))
+    ;; Perform the Completion
+    (unwind-protect
+        (read-from-minibuffer prompt
+                              initial-input
+                              custom/semantic-complete-key-map
+                              nil
+                              (or history
+                                  'semantic-completion-default-history)
+                              default-tag)
+      (semantic-collector-cleanup semantic-completion-collector-engine)
+      (semantic-displayor-cleanup semantic-completion-display-engine))
+    ;; Extract the tag from the completion machinery.
+    semantic-complete-current-matched-tag))
+
+;; Redefined because original used more sophisticated displayor which
+;; refused to select not unique tag name.
+(defun custom/semantic-complete-read-tag-project (prompt &optional
+                                                         default-tag
+                                                         initial-input
+                                                         history)
+  "Ask for a tag by name from the current project.
+Available tags are from the current project, at the top level.
+Completion options are presented in a traditional way, with highlighting
+to resolve same-name collisions.
+PROMPT is a string to prompt with.
+DEFAULT-TAG is a semantic tag or string to use as the default value.
+If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
+HISTORY is a symbol representing a variable to store the history in."
+  ;; Load all existing databases for current project and its
+  ;; dependencies into memory, otherwise this function will be unable
+  ;; to provide autocompletion for all project symbols. Of course,
+  ;; unparsed files which are logically missing in DB are not loaded
+  ;; and symbols from them are invisible for autocompletion.
+  (custom/semantic/load-all-project-dbs)
+  (custom/semantic-complete-read-tag-engine
+   (semantic-collector-project-brutish prompt
+                                       :buffer (current-buffer)
+                                       :path (current-buffer))
+   (semantic-displayor-traditional)
+   prompt
+   default-tag
+   initial-input
+   history))
+
 
 
 ;; TODO: Implement simple semantic aware font locking.
