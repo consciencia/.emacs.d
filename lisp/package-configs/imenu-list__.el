@@ -2,6 +2,9 @@
 (custom/install-package-when-needed 'imenu-list)
 (require 'imenu-list)
 
+;; TODO: Alternative?
+;; https://github.com/emacsmirror/imenu-tree/blob/master/imenu-tree.el
+
 (setq-default imenu-list-position 'right)
 (setq-default imenu-list-size 0.25)
 (setq-default imenu-list-auto-resize nil)

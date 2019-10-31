@@ -64,13 +64,15 @@
                         (equal major-mode 'c++-mode)
                         (equal major-mode 'emacs-lisp-mode)))))
 
-(advice-add 'save-buffer :after
-            (lambda (&rest args)
-              (if (or (equal major-mode 'c-mode)
-                      (equal major-mode 'c++-mode)
-                      (equal major-mode 'emacs-lisp-mode))
-                  (save-mark-and-excursion
-                    (semantic-force-refresh)))))
+;; Replaced by manual triggering (M-g).
+;;
+;; (advice-add 'save-buffer :after
+;;             (lambda (&rest args)
+;;               (if (or (equal major-mode 'c-mode)
+;;                       (equal major-mode 'c++-mode)
+;;                       (equal major-mode 'emacs-lisp-mode))
+;;                   (save-mark-and-excursion
+;;                     (semantic-force-refresh)))))
 
 (global-ede-mode 1)
 (semantic-mode 1)
@@ -475,9 +477,10 @@ origin of the code at point."
                       t)))
           (if tags
               (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
-            (error "Could not find suitable jump point for %s"
-                   first)))))
-      (t (error "Could not find suitable jump point for %s"
+            ;; Last regard, use brute force.
+            (custom/semantic/complete-jump first)))))
+      (t (error (concat "Could not find suitable jump point for '%s'"
+                        " (try custom/semantic/complete-jump)!")
                 first))))))
 
 (defun semantic-ia--fast-jump-helper (dest)
@@ -575,13 +578,14 @@ already."
   ;; current project and all its dependencies.
   ;; Bypasses bug when brute deep searching all tables in project
   ;; using standard semantic find routines.
-  (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
-                (if res
-                    (semantic-symref-result-get-tags-as-is res)))))
-    (if tags
-        (let* ((chosen-tag (custom/semantic/choose-tag tags)))
-          (custom/semantic/goto-tag chosen-tag))
-      (message "No tags found for %s" sym))))
+  (custom/semantic/with-enabled-grep-db
+   (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
+                 (if res
+                     (semantic-symref-result-get-tags-as-is res)))))
+     (if tags
+         (let* ((chosen-tag (custom/semantic/choose-tag tags)))
+           (custom/semantic/goto-tag chosen-tag))
+       (message "No tags found for %s" sym)))))
 
 (defvar-local *is-prefix-pointer-state* (cons nil 'allow))
 (defun custom/semantic/is-prefix-pointer-p (&optional point)
@@ -866,9 +870,13 @@ already."
               (lambda (tag)
                 (format "%s = %s"
                         (let* ((str
-                                (semantic-format-tag-prototype tag nil t))
+                                (concat
+                                 (if (semantic-tag-prototype-p tag)
+                                     "[prototype] "
+                                   "")
+                                 (semantic-format-tag-prototype tag nil t)))
                                (real-len (length str))
-                               (limit-len 87))
+                               (limit-len 97))
                           (if (> real-len limit-len)
                               (concat (substring str 0 limit-len)
                                       "...")
@@ -876,7 +884,7 @@ already."
                         (let* ((str (buffer-file-name
                                      (semantic-tag-buffer tag)))
                                (real-len (length str))
-                               (limit-len 57))
+                               (limit-len 67))
                           (if (> real-len limit-len)
                               (concat "..."
                                       (substring str (- real-len
@@ -1064,15 +1072,15 @@ BUTTON is the button that was clicked."
 ;; CODE:
 
 (defun custom/gen-win-grep-emulation-cmd (searchfor)
-  (if (eq system-type 'windows-nt)
-      (custom/replace-all
-       `(,(cons "$dirlist"
-                (s-join ";"
-                        (cons (semantic-symref-calculate-rootdir)
-                              (custom/ede/get-project-dependencies))))
-         ,(cons "$searchfor" searchfor)
-         ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
-       "findstr /s /n /d:$dirlist \"$searchfor\" $filters")))
+  (when (eq system-type 'windows-nt)
+    (custom/replace-all
+     `(,(cons "$dirlist"
+              (s-join ";"
+                      (cons (semantic-symref-calculate-rootdir)
+                            (custom/ede/get-project-dependencies))))
+       ,(cons "$searchfor" searchfor)
+       ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
+     "findstr /s /n /d:$dirlist \"$searchfor\" $filters")))
 
 (defun custom/cleanse-findstr-output (buff)
   (save-excursion
@@ -1406,7 +1414,7 @@ If NOSNARF is `lex', then only return the lex token."
                           "@retval[ \t]*(\\w+)[ \t]*")
                          "Option \\1 = ")
        (s-replace-regexp (pcre-to-elisp/cached
-                          "@param\\[([^\\]]*)\\][ \t]*(\\w+)[ \t]*")
+                          "@param(?:\\[([^\\]]*)\\])?[ \t]*(\\w+)[ \t]*")
                          "Parameter[\\1] \\2 = ")
        (s-replace-regexp (pcre-to-elisp/cached
                           "^//\\s*")
@@ -1416,6 +1424,9 @@ If NOSNARF is `lex', then only return the lex token."
                          "")
        (s-replace-regexp (pcre-to-elisp/cached
                           "^\\*\\s*(.+)\\s*\\*$")
+                         "\\1")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "^\\*\\s*(.+)\\s*$")
                          "\\1")))))
 
 ;;;; MINIBUFFER TAG AUTOCOMPLETION
@@ -1733,6 +1744,93 @@ HISTORY is a symbol representing a variable to store the history in."
    history))
 
 
+;; TODO:
+;; Refactor semantic-up-reference (semantic-up-reference-default)
+
+(defun senator-go-to-up-reference (&optional tag)
+  "Move up one reference from the current TAG.
+A \"reference\" could be any interesting feature of TAG.
+In C++, a function may have a `parent' which is non-local.
+If that parent which is only a reference in the function tag
+is found, we can jump to it.
+Some tags such as includes have other reference features."
+  (interactive)
+  (semantic-error-if-unparsed)
+  (let ((result (semantic-up-reference (or tag (semantic-current-tag)))))
+    (if (not result)
+        (error "No up reference found!")
+      (push-mark)
+      (cond
+       ;; A tag
+       ((semantic-tag-p result)
+        (custom/semantic/goto-tag result))
+       ;; Buffers
+       ((bufferp result)
+        (xref-push-marker-stack)
+        (pop-to-buffer-same-window result))
+       ;; Files
+       ((and (stringp result) (file-exists-p result))
+        (xref-push-marker-stack)
+        (find-file result))
+       (t
+        (error "Unknown result type from `semantic-up-reference'"))))))
+
+(defun semantic-up-reference-default (tag)
+  "Return a tag that is referred to by TAG.
+Makes C/C++ language like assumptions."
+  (custom/semantic/with-disabled-grep-db
+   (cond ((semantic-tag-faux-p tag)
+          ;; Faux tags should have a real tag in some other location.
+          (require 'semantic/sort)
+          (let ((options (semantic-tag-external-class tag)))
+            (custom/semantic/choose-tag options)))
+
+         ;; Include always point to another file.
+         ((eq (semantic-tag-class tag) 'include)
+          (let ((file (semantic-dependency-tag-file tag)))
+            (cond
+             ((or (not file) (not (file-exists-p file)))
+              (error "Could not locate include %s"
+                     (semantic-tag-name tag)))
+             ((get-file-buffer file)
+              (get-file-buffer file))
+             ((stringp file)
+              file))))
+
+         ;; Is there a parent of the function to jump to?
+         ((and (semantic-tag-of-class-p tag 'function)
+               (semantic-tag-function-parent tag))
+          (let* ((scope (semantic-calculate-scope (point))))
+            (custom/semantic/choose-tag (oref scope parents))))
+
+         ;; Is there a non-prototype version of the tag to jump to?
+         ((semantic-tag-get-attribute tag :prototype-flag)
+          (require 'semantic/analyze/refs)
+          (custom/semantic/with-enabled-grep-db
+           (let* ((sar (semantic-analyze-tag-references tag))
+                  (impls (semantic-analyze-refs-impl sar t)))
+             (custom/semantic/choose-tag impls))))
+
+         ;; If this is a datatype, and we have superclasses
+         ((and (semantic-tag-of-class-p tag 'type)
+               (semantic-tag-type-superclasses tag))
+          (require 'semantic/analyze)
+          (let ((scope (semantic-calculate-scope (point)))
+                (parents (semantic-tag-type-superclasses tag)))
+            (semantic-analyze-find-tag (ido-completing-read "Choose parent: "
+                                                            parents)
+                                       'type scope)))
+
+         ;; Get the data type, and try to find that.
+         ((semantic-tag-type tag)
+          (require 'semantic/analyze)
+          (let ((scope (semantic-calculate-scope (point))))
+            (semantic-analyze-tag-type tag scope)))
+
+         (t nil))))
+
+;; TODO: Implement call graph using https://github.com/DamienCassou/hierarchy.
+;; For navigation in it use https://www.emacswiki.org/emacs/TreeMode.
 
 ;; TODO: Implement simple semantic aware font locking.
 

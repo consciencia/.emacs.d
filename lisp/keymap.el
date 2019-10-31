@@ -273,6 +273,7 @@
                                (senator-previous-tag))))
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
             (local-set-key (kbd "M-d") 'custom/mark-defun)
+            (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>")
                            'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
@@ -284,7 +285,8 @@
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
-            (flyspell-prog-mode)))
+            (when (not (eq system-type 'windows-nt))
+              (flyspell-prog-mode))))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -299,7 +301,6 @@
             (local-set-key (kbd "M-,") 'custom/universal-pop-mark)
             (local-set-key (kbd "M--") 'semantic-symref-symbol)
             (local-set-key (kbd "M-*") 'semantic-ia-show-doc)
-            (local-set-key (kbd "M-<kp-divide>") 'call-graph)
             (local-set-key (kbd "C-,") 'semantic-analyze-proto-impl-toggle)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "C--") 'semantic-symref-rename-local-variable)
@@ -311,8 +312,16 @@
                                (insert "."))))
             (local-set-key (kbd "M-<next>") 'senator-next-tag)
             (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
+            (local-set-key (kbd "M-p") 'senator-go-to-up-reference)
+            (define-prefix-command 'custom/semantic/transpose-map)
+            (local-set-key (kbd "M-t") 'custom/semantic/transpose-map)
+            (define-key custom/semantic/transpose-map
+              (kbd "<down>") 'senator-transpose-tags-down)
+            (define-key custom/semantic/transpose-map
+              (kbd "<up>") 'senator-transpose-tags-up)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
             (local-set-key (kbd "M-d") 'custom/mark-defun)
+            (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-c-headers
@@ -323,7 +332,8 @@
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
-            (flyspell-prog-mode)))
+            (when (not (eq system-type 'windows-nt))
+              (flyspell-prog-mode))))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -333,7 +343,6 @@
             (local-set-key (kbd "M-,") 'custom/universal-pop-mark)
             (local-set-key (kbd "M--") 'semantic-symref-symbol)
             (local-set-key (kbd "M-*") 'semantic-ia-show-doc)
-            (local-set-key (kbd "M-<kp-divide>") 'call-graph)
             (local-set-key (kbd "C-,") 'semantic-analyze-proto-impl-toggle)
             (local-set-key (kbd "C-.") 'custom/semantic/complete-jump)
             (local-set-key (kbd "C--") 'semantic-symref-rename-local-variable)
@@ -345,8 +354,16 @@
                                (insert "."))))
             (local-set-key (kbd "M-<next>") 'senator-next-tag)
             (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
+            (local-set-key (kbd "M-p") 'senator-go-to-up-reference)
+            (define-prefix-command 'custom/semantic/transpose-map)
+            (local-set-key (kbd "M-t") 'custom/semantic/transpose-map)
+            (define-key custom/semantic/transpose-map
+              (kbd "<down>") 'senator-transpose-tags-down)
+            (define-key custom/semantic/transpose-map
+              (kbd "<up>") 'senator-transpose-tags-up)
             (local-set-key (kbd "M-f") 'senator-fold-tag-toggle)
             (local-set-key (kbd "M-d") 'custom/mark-defun)
+            (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-c-headers
@@ -357,7 +374,8 @@
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
-            (flyspell-prog-mode)))
+            (when (not (eq system-type 'windows-nt))
+              (flyspell-prog-mode))))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook

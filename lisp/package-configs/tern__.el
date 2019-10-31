@@ -18,7 +18,8 @@
                  (lambda ()
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
-            (flyspell-prog-mode)))
+            (when (not (eq system-type 'windows-nt))
+              (flyspell-prog-mode))))
 
 (advice-add #'tern-go-to-position
             :after (lambda (&rest args)
