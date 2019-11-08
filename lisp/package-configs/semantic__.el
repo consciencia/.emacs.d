@@ -840,8 +840,45 @@ already."
               if (equal symbol (semantic-tag-name tag))
               collect tag)))))
 
-(defun custom/semantic/get-current-tag ()
-  (semantic-current-tag))
+(defun custom/semantic/get-tag-code-symbols (tag &optional collector)
+  (interactive (list (semantic-current-tag)))
+  (with-current-buffer (semantic-tag-buffer tag)
+    (save-excursion
+      (let* ((tokens (if (equal (semantic-tag-class tag)
+                                'function)
+                         (semantic-lex (save-excursion
+                                         (goto-char (semantic-tag-start tag))
+                                         (search-forward "{"))
+                                       (semantic-tag-end tag)
+                                       99)))
+             (symbols (if collector
+                          (loop for token in tokens
+                                for type = (car token)
+                                for range = (cdr token)
+                                if (equal type 'symbol)
+                                do (funcall collector
+                                            (buffer-substring-no-properties
+                                             (car range)
+                                             (cdr range))))
+                        (loop for token in tokens
+                              for type = (car token)
+                              for range = (cdr token)
+                              if (equal type 'symbol)
+                              collect (buffer-substring-no-properties
+                                       (car range)
+                                       (cdr range))))))
+        (if (called-interactively-p)
+            (custom/with-simple-pop-up "*Semantic Tag Code Symbols*"
+              (setq kill-on-quit t)
+              (loop for sym in symbols
+                    do (insert sym "\n")))
+          symbols)))))
+
+(defun custom/semantic/get-tag-code-symbols-as-map (tag)
+  (let ((map (@dict-new))
+        (collector (lambda (sym) (@dict-set sym t map))))
+    (custom/semantic/get-tag-code-symbols tag collector)
+    map))
 
 (defun custom/semantic/get-current-function-tag ()
   (let ((tag (semantic-current-tag)))
@@ -972,12 +1009,17 @@ already."
             for full-path = (expand-file-name (concat store-path cache))
             if (not (semanticdb-file-loaded-p full-path))
             do (progn (message "Loading: %s" full-path)
-                      (oset (semanticdb-load-database full-path)
-                            reference-directory
-                            (s-replace-regexp "semantic.cache"
-                                              ""
-                                              (cedet-file-name-to-directory-name
-                                               cache))))))
+                      (let* ((db (semanticdb-load-database full-path))
+                             (tables (semanticdb-get-database-tables db)))
+                        (oset db
+                              reference-directory
+                              (s-replace-regexp "semantic.cache"
+                                                ""
+                                                (cedet-file-name-to-directory-name
+                                                 cache)))
+                        (loop for table in tables
+                              if (semanticdb-needs-refresh-p table)
+                              do (semanticdb-refresh-table table t))))))
     (@dict-set (semantic-symref-calculate-rootdir)
                t
                custom/semantic/loaded-projects)))
@@ -1111,7 +1153,7 @@ BUTTON is the button that was clicked."
               (replace-match (concat prefix
                                      (s-replace-regexp "\\\\" "/" hit-path)
                                      hit-line
-                                     hit-payload
+                                     (s-replace-regexp "\\\\s*$" "" hit-payload)
                                      "\n")))))))))
 
 (defun custom/filter-raw-grep-output (hits searchfor)
@@ -1377,15 +1419,14 @@ If NOSNARF is `lex', then only return the lex token."
   (save-excursion
     (semantic-go-to-tag tag)
     (let* ((tag-start (semantic-tag-start tag))
-           (starttag (semantic-find-tag-by-overlay-prev tag-start))
+           ;; semantic-find-tag-by-overlay-prev
+           (starttag (senator-previous-tag-or-parent tag-start))
            (start (if starttag
-                      (semantic-tag-end starttag)
+                      (if (custom/val-in-range tag-start starttag)
+                          (semantic-tag-start starttag)
+                        (semantic-tag-end starttag))
                     (point-min)))
            (stop (semantic-tag-start tag))
-           ;; TODO: Move start at the same line as typedef, enum, struct or
-           ;; class keywords outside of comment. Reason is, we dont
-           ;; want to have documentation for first member prepended
-           ;; with documentation for enclosing type.
            (raw-comment (custom/extract-comments-from-region start stop)))
       ;; Comment cleanup. Removes comment symbols and preprocess doxygen.
       (custom/chain-forms
@@ -1427,7 +1468,10 @@ If NOSNARF is `lex', then only return the lex token."
                          "\\1")
        (s-replace-regexp (pcre-to-elisp/cached
                           "^\\*\\s*(.+)\\s*$")
-                         "\\1")))))
+                         "\\1")
+       (s-replace-regexp (pcre-to-elisp/cached
+                          "(\\s)@p\\s+([^\\s\\.]+)([\\s\\.])")
+                         "\\1[param: \\2]\\3")))))
 
 ;;;; MINIBUFFER TAG AUTOCOMPLETION
 ;; CODE:
@@ -1743,10 +1787,6 @@ HISTORY is a symbol representing a variable to store the history in."
    initial-input
    history))
 
-
-;; TODO:
-;; Refactor semantic-up-reference (semantic-up-reference-default)
-
 (defun senator-go-to-up-reference (&optional tag)
   "Move up one reference from the current TAG.
 A \"reference\" could be any interesting feature of TAG.
@@ -1829,10 +1869,14 @@ Makes C/C++ language like assumptions."
 
          (t nil))))
 
-;; TODO: Implement call graph using https://github.com/DamienCassou/hierarchy.
-;; For navigation in it use https://www.emacswiki.org/emacs/TreeMode.
+;; TODO: symref fails to recognize symbols in macros
+;; only macro name is include in its bounds
+;; use regexp to deduce real macro bounds
 
 ;; TODO: Implement simple semantic aware font locking.
+
+;; TODO: Implement call graph using https://github.com/DamienCassou/hierarchy.
+;; For navigation in it use https://www.emacswiki.org/emacs/TreeMode.
 
 ;; Extend semantic-default-c-setup to also check if buffer is in
 ;; projectile project. If yes, try to load config file and register

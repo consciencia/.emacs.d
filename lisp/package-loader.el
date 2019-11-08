@@ -46,3 +46,5 @@
 (load "which-key__.el")
 (load "too-long-lines-mode__.el")
 (load "multi-term__.el")
+(load "elisp-refs__.el")
+(load "helpful__.el")

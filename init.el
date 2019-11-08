@@ -81,6 +81,7 @@
 (load "db.el")
 (load "ui.el")
 (load "keymap.el")
+(load "edebug-tweaks.el")
 
 ;; When enabled, its faster but it eats a lot more memory.
 ;; Its up to you.
@@ -98,10 +99,6 @@
 (setq create-lockfiles nil)
 
 (global-auto-revert-mode)
-
-;; add Wilfred/helpfull
-
-;; add semantic refactor
 
 ;; fix problem with aggressive indent module when find and replace
 ;; operations is in progress.

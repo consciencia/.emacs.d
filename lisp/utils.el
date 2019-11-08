@@ -888,9 +888,11 @@ POS is optional position in file where to search for comment."
               collect `(custom/silence-eldoc-for ,func))))
 
 (custom/silence-eldoc-for-funcs yes-or-no-p
+                                y-or-n-p
                                 read-from-minibuffer
                                 read-string
-                                read-regexp save-some-buffers)
+                                read-regexp
+                                save-some-buffers)
 
 (load "monkey.el")
 
@@ -1069,3 +1071,29 @@ one is kept."
         (setq longest (car head)))
       (setq head (cdr head)))
     longest))
+
+(defun custom/edebug-remove-instrumentation ()
+  "Remove Edebug instrumentation from all functions."
+  (interactive)
+  (let ((functions nil))
+    (mapatoms
+     (lambda (symbol)
+       (when (and (functionp symbol)
+                  (get symbol 'edebug))
+         (let ((unwrapped (edebug-unwrap* (symbol-function symbol))))
+           (unless (equal unwrapped (symbol-function symbol))
+             (push symbol functions)
+             (setf (symbol-function symbol) unwrapped)))))
+     obarray)
+    (if (not functions)
+        (message "Found no functions to remove instrumentation from")
+      (message "Remove edebug instrumentation from %s"
+               (mapconcat #'symbol-name functions ", ")))))
+
+(defun custom/val-in-range (val range)
+  (when (semantic-tag-p range)
+    (setq range
+          (cons (semantic-tag-start range)
+                (semantic-tag-end range))))
+  (and (>= val (car range))
+       (<= val (cdr range))))
