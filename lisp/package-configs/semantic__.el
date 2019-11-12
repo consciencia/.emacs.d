@@ -1913,8 +1913,7 @@ Makes C/C++ language like assumptions."
               file))))
 
          ;; Is there a parent of the function to jump to?
-         ((and (semantic-tag-of-class-p tag 'function)
-               (semantic-tag-function-parent tag))
+         ((semantic-tag-of-class-p tag 'function)
           (let* ((scope (semantic-calculate-scope (point))))
             (custom/semantic/choose-tag (oref scope parents))))
 
@@ -1926,7 +1925,7 @@ Makes C/C++ language like assumptions."
                   (impls (semantic-analyze-refs-impl sar t)))
              (custom/semantic/choose-tag impls))))
 
-         ;; If this is a datatype, and we have superclasses
+         ;; If this is a datatype, and we have superclasses.
          ((and (semantic-tag-of-class-p tag 'type)
                (semantic-tag-type-superclasses tag))
           (require 'semantic/analyze)
