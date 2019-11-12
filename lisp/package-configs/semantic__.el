@@ -416,6 +416,8 @@ Return a table of all matching tags."
 Uses `semantic-analyze-current-context' output to identify an accurate
 origin of the code at point."
   (interactive "d")
+  ;; Reparse buffer when needed.
+  (semantic-fetch-tags)
   (custom/semantic/load-all-project-dbs)
   (custom/semantic/with-disabled-grep-db
    (let* ((ctxt (semantic-analyze-current-context point))
@@ -1010,7 +1012,8 @@ already."
             if (not (semanticdb-file-loaded-p full-path))
             do (progn (message "Loading: %s" full-path)
                       (let* ((db (semanticdb-load-database full-path))
-                             (tables (semanticdb-get-database-tables db)))
+                             (tables (ignore-errors
+                                       (semanticdb-get-database-tables db))))
                         (oset db
                               reference-directory
                               (s-replace-regexp "semantic.cache"
@@ -1018,7 +1021,10 @@ already."
                                                 (cedet-file-name-to-directory-name
                                                  cache)))
                         (loop for table in tables
-                              if (semanticdb-needs-refresh-p table)
+                              if (and (file-exists-p
+                                       (concat (oref db reference-directory)
+                                               (oref table file)))
+                                      (semanticdb-needs-refresh-p table))
                               do (semanticdb-refresh-table table t))))))
     (@dict-set (semantic-symref-calculate-rootdir)
                t
@@ -1112,6 +1118,16 @@ BUTTON is the button that was clicked."
 
 ;;;; GREP VIRTUAL DATABASE HACKS
 ;; CODE:
+
+;; Fix for too strict symref excludes for C and C++.
+(setq semantic-symref-filepattern-alist
+      (loop for entry in semantic-symref-filepattern-alist
+            for label = (car entry)
+            if (or (equal label 'c-mode)
+                   (equal label 'c++-mode))
+            collect `(,label "*.[chCH]" "*.[ch]pp" "*.cc" "*.hh")
+            else
+            collect entry))
 
 (defun custom/gen-win-grep-emulation-cmd (searchfor)
   (when (eq system-type 'windows-nt)
@@ -1506,14 +1522,14 @@ If NOSNARF is `lex', then only return the lex token."
                  ;; Perform a full search to pull in additional
                  ;; matches.
                  (with-current-buffer (oref obj buffer)
-                   (ignore-errors
-                     (custom/semantic/with-disabled-grep-db
-                      (let ((context (semantic-analyze-current-context (point))))
-                        ;; Set new context and make first-pass-completions
-                        ;; unbound so that they are newly calculated.
-                        (oset obj context context)
-                        (when (slot-boundp obj 'first-pass-completions)
-                          (slot-makeunbound obj 'first-pass-completions))))))
+                   (custom/semantic/with-disabled-grep-db
+                    (let ((context (semantic-analyze-current-context (point))))
+                      ;; Set new context and make first-pass-completions
+                      ;; unbound so that they are newly calculated.
+                      (when (slot-exists-p obj context)
+                        (oset obj context context))
+                      (when (slot-boundp obj 'first-pass-completions)
+                        (slot-makeunbound obj 'first-pass-completions)))))
                  nil)))
          ;; Get the result
          (answer (if same-prefix-p
@@ -1787,6 +1803,65 @@ HISTORY is a symbol representing a variable to store the history in."
    initial-input
    history))
 
+;;;; GOTO PARENT
+;; CODE:
+
+(setq custom/semantic/select-best-tag-by-user nil)
+
+(defmacro custom/semantic/best-tag-user-assist-enabled (&rest forms)
+  `(let ((custom/semantic/select-best-tag-by-user t))
+     ,@forms))
+
+(defmacro custom/semantic/best-tag-user-assist-disabled (&rest forms)
+  `(let ((custom/semantic/select-best-tag-by-user nil))
+     ,@forms))
+
+;; Added support for optional user intervention when choosing best tag.
+(defun semantic-analyze-select-best-tag (sequence &optional tagclass)
+  "For a SEQUENCE of tags, all with good names, pick the best one.
+If SEQUENCE is made up of namespaces, merge the namespaces together.
+If SEQUENCE has several prototypes, find the non-prototype.
+If SEQUENCE has some items w/ no type information, find the one with a type.
+If SEQUENCE is all prototypes, or has no prototypes, get the first one.
+Optional TAGCLASS indicates to restrict the return to only
+tags of TAGCLASS."
+  ;; If there is a srew up and we get just one tag.. massage over it.
+  (when (semantic-tag-p sequence)
+    (setq sequence (list sequence)))
+  ;; Filter out anything not of TAGCLASS
+  (when tagclass
+    (setq sequence
+          (semantic-find-tags-by-class tagclass
+                                       sequence)))
+  (if (< (length sequence) 2)
+      ;; If the remaining sequence is 1 tag or less, just return it
+      ;; and skip the rest of this mumbo-jumbo.
+      (car sequence)
+    ;; 1)
+    ;; This step will eliminate a vast majority of the types,
+    ;; in addition to merging namespaces together.
+    ;;
+    ;; 2)
+    ;; It will also remove prototypes.
+    (require 'semantic/db-typecache)
+    (setq sequence (semanticdb-typecache-merge-streams sequence nil))
+    (if (< (length sequence) 2)
+        ;; If the remaining sequence after the merge is 1 tag or less,
+        ;; just return it and skip the rest of this mumbo-jumbo.
+        (car sequence)
+      (let ((best nil)
+            (notypeinfo nil))
+        (if custom/semantic/select-best-tag-by-user
+            (custom/semantic/choose-tag sequence)
+          (while (and (not best) sequence)
+            ;; 3) select a non-prototype.
+            (if (not (semantic-tag-type (car sequence)))
+                (setq notypeinfo (car sequence))
+              (setq best (car sequence)))
+            (setq sequence (cdr sequence))))
+        ;; Select the best, or at least the prototype.
+        (or best notypeinfo)))))
+
 (defun senator-go-to-up-reference (&optional tag)
   "Move up one reference from the current TAG.
 A \"reference\" could be any interesting feature of TAG.
@@ -1855,11 +1930,23 @@ Makes C/C++ language like assumptions."
          ((and (semantic-tag-of-class-p tag 'type)
                (semantic-tag-type-superclasses tag))
           (require 'semantic/analyze)
-          (let ((scope (semantic-calculate-scope (point)))
-                (parents (semantic-tag-type-superclasses tag)))
-            (semantic-analyze-find-tag (ido-completing-read "Choose parent: "
-                                                            parents)
-                                       'type scope)))
+          (let* ((scope (semantic-calculate-scope (point)))
+                 (parents (semantic-tag-type-superclasses tag))
+                 (parent (if (<= (length parents) 1)
+                             (car-safe parents)
+                           (ido-completing-read "Choose parent: "
+                                                parents))))
+            (or (custom/semantic/best-tag-user-assist-enabled
+                 (semantic-analyze-find-tag parent 'type scope))
+                (if (y-or-n-p (format (concat "Failed to find '%s' "
+                                              "intelligently, try "
+                                              "brute force?")
+                                      parent))
+                    (custom/semantic/with-enabled-grep-db
+                     (let* ((res (semantic-symref-find-tags-by-name parent))
+                            (tags (if res (semantic-symref-result-get-tags-as-is
+                                           res))))
+                       (if tags (custom/semantic/choose-tag tags))))))))
 
          ;; Get the data type, and try to find that.
          ((semantic-tag-type tag)
