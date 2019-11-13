@@ -248,6 +248,67 @@ Always append `semanticdb-project-system-databases' if
     ;; Return
     dbs))
 
+;; Added more relaxed checking for types because old implementation
+;; failed to infer type definition from forward type declaration.
+(cl-defmethod semantic-analyze-refs-impl
+  ((refs semantic-analyze-references) &optional in-buffer)
+  "Return the implementations derived in the reference analyzer REFS.
+Optional argument IN-BUFFER indicates that the returned tag should be in an active buffer."
+  (let ((allhits (oref refs rawsearchdata))
+        (tag (oref refs :tag))
+        (impl nil))
+    (semanticdb-find-result-mapc
+     (lambda (T DB)
+       "Examine T in the database DB, and sort it."
+       (let* ((ans (semanticdb-normalize-one-tag DB T))
+              (aT (cdr ans))
+              (aDB (car ans)))
+         (when (and (not (semantic-tag-prototype-p aT))
+                    ;; When searching for type implementations,
+                    ;; semantic-tag-similar-p is too strict, so we
+                    ;; must use our simplified tag comparison.
+                    (if (equal (semantic-tag-class tag) 'type)
+                        (and (equal (semantic-tag-type tag)
+                                    (semantic-tag-type aT))
+                             (equal (semantic-tag-name tag)
+                                    (semantic-tag-name aT)))
+                      (semantic-tag-similar-p tag aT
+                                              :prototype-flag
+                                              :parent
+                                              :typemodifiers
+                                              :default-value)))
+           (when in-buffer (save-excursion (semantic-go-to-tag aT aDB)))
+           (push aT impl))))
+     allhits)
+    impl))
+
+;; Fixed bad handling of macros. Bodies of macro definitions were not
+;; detected by old implementation so ugly regex hack was used in order
+;; to fix it.
+(defun semantic-current-tag ()
+  "Return the current tag in the current buffer.
+If there are more than one in the same location, return the
+smallest tag.  Return nil if there is no tag here."
+  (if (or (equal major-mode 'c-mode)
+          (equal major-mode 'c++-mode))
+      (or (car (nreverse (semantic-find-tag-by-overlay)))
+          (save-excursion
+            (let* ((old-pos (point))
+                   (tag (or (car (nreverse (semantic-find-tag-by-overlay)))
+                            (semantic-find-tag-by-overlay-prev))))
+              (when (semantic-tag-variable-constant-p tag)
+                (goto-char (semantic-tag-start tag))
+                (beginning-of-visual-line)
+                (save-match-data
+                  (when (looking-at (pcre-to-elisp
+                                     "\\s*#define\\s(?:[^\\\n]+\\\n)*[^\n]+\n"))
+                    (goto-char (match-end 0))))
+                (when (>= (1- (point)) old-pos)
+                  ;; Real macro range
+                  ;; (cons (semantic-tag-start tag) (1- (point)))
+                  tag)))))
+    (car (nreverse (semantic-find-tag-by-overlay)))))
+
 
 
 (defun custom/semantic/diagnostic-visualizations ()
@@ -541,13 +602,10 @@ Display the references in `semantic-symref-results-mode'."
   (let ((res (semantic-symref-find-references-by-name sym)))
     (semantic-symref-produce-list-on-results res sym)))
 
+;; In compared to semantic-symref-result-get-tags, it does not strip
+;; out duplicates and populate hit property of tags.
 (cl-defmethod semantic-symref-result-get-tags-as-is ((result semantic-symref-result)
                                                      &optional open-buffers)
-  "Get the list of tags from the symref result RESULT.
-Optional OPEN-BUFFERS indicates that the buffers that the hits are
-in should remain open after scanning.
-Note: This can be quite slow if most of the hits are not in buffers
-already."
   (if (and (slot-boundp result 'hit-tags) (oref result hit-tags))
       (oref result hit-tags)
     ;; Calculate the tags.
@@ -566,8 +624,7 @@ already."
       (if (not open-buffers)
           (add-hook 'post-command-hook 'semantic-symref-cleanup-recent-buffers-fcn)
         ;; Else, just clear the saved buffers so they aren't deleted later.
-        (setq semantic-symref-recently-opened-buffers nil)
-        )
+        (setq semantic-symref-recently-opened-buffers nil))
       ans)))
 
 (defun custom/semantic/complete-jump (sym)
@@ -1009,23 +1066,24 @@ already."
                               collect raw-cache)))
       (loop for cache in cache-paths
             for full-path = (expand-file-name (concat store-path cache))
+            for decoded-cache = (cedet-file-name-to-directory-name cache)
             if (not (semanticdb-file-loaded-p full-path))
-            do (progn (message "Loading: %s" full-path)
-                      (let* ((db (semanticdb-load-database full-path))
-                             (tables (ignore-errors
-                                       (semanticdb-get-database-tables db))))
-                        (oset db
-                              reference-directory
-                              (s-replace-regexp "semantic.cache"
-                                                ""
-                                                (cedet-file-name-to-directory-name
-                                                 cache)))
-                        (loop for table in tables
-                              if (and (file-exists-p
-                                       (concat (oref db reference-directory)
-                                               (oref table file)))
-                                      (semanticdb-needs-refresh-p table))
-                              do (semanticdb-refresh-table table t))))))
+            do (progn
+                 (message "Loading: %s" full-path)
+                 (let* ((db (semanticdb-load-database full-path))
+                        (tables (if db (semanticdb-get-database-tables db))))
+                   (when db
+                     (oset db
+                           reference-directory
+                           (s-replace-regexp "semantic.cache"
+                                             ""
+                                             decoded-cache)))
+                   (loop for table in tables
+                         if (and (file-exists-p
+                                  (concat (oref db reference-directory)
+                                          (oref table file)))
+                                 (semanticdb-needs-refresh-p table))
+                         do (semanticdb-refresh-table table t))))))
     (@dict-set (semantic-symref-calculate-rootdir)
                t
                custom/semantic/loaded-projects)))
@@ -1913,7 +1971,8 @@ Makes C/C++ language like assumptions."
               file))))
 
          ;; Is there a parent of the function to jump to?
-         ((semantic-tag-of-class-p tag 'function)
+         ((and  (semantic-tag-of-class-p tag 'function)
+                (not (semantic-tag-get-attribute tag :prototype-flag)))
           (let* ((scope (semantic-calculate-scope (point))))
             (custom/semantic/choose-tag (oref scope parents))))
 

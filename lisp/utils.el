@@ -290,6 +290,10 @@
   (interactive)
   (unless (featurep 'imenu)
     (require 'imenu nil t))
+  (when (or (equal major-mode 'c-mode)
+            (equal major-mode 'c++-mode)
+            (equal major-mode 'emacs-lisp-mode))
+    (semantic-fetch-tags))
   (cond
    ((not symbol-list)
     (let ((ido-mode ido-mode)
