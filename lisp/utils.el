@@ -739,7 +739,7 @@ POS is optional position in file where to search for comment."
        `(define-key ,map ,key func)))
     (funcall (intern name) t)))
 
-(defun custom/eieo-inspect (obj)
+(defun custom/inspect-eieio (obj)
   (require 'eieio-datadebug)
   (data-debug-new-buffer "*Inspector*")
   (data-debug-insert-object-slots obj ">>"))

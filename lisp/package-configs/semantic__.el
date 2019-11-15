@@ -64,15 +64,13 @@
                         (equal major-mode 'c++-mode)
                         (equal major-mode 'emacs-lisp-mode)))))
 
-;; Replaced by manual triggering (M-g).
-;;
-;; (advice-add 'save-buffer :after
-;;             (lambda (&rest args)
-;;               (if (or (equal major-mode 'c-mode)
-;;                       (equal major-mode 'c++-mode)
-;;                       (equal major-mode 'emacs-lisp-mode))
-;;                   (save-mark-and-excursion
-;;                     (semantic-force-refresh)))))
+(advice-add 'save-buffer :after
+            (lambda (&rest args)
+              (if (or (equal major-mode 'c-mode)
+                      (equal major-mode 'c++-mode)
+                      (equal major-mode 'emacs-lisp-mode))
+                  (save-mark-and-excursion
+                    (semantic-force-refresh)))))
 
 (global-ede-mode 1)
 (semantic-mode 1)
@@ -481,70 +479,70 @@ origin of the code at point."
   (semantic-fetch-tags)
   (custom/semantic/load-all-project-dbs)
   (custom/semantic/with-disabled-grep-db
-   (let* ((ctxt (semantic-analyze-current-context point))
-          (pf (and ctxt (reverse (oref ctxt prefix))))
-          ;; In the analyzer context, the PREFIX is the list of items
-          ;; that makes up the code context at point.  Thus the c++ code
-          ;; this.that().theothe
-          ;; would make a list:
-          ;; ( ("this" variable ..) ("that" function ...) "theothe")
-          ;; Where the first two elements are the semantic tags of the prefix.
-          ;;
-          ;; PF is the reverse of this list.  If the first item is a string,
-          ;; then it is an incomplete symbol, thus we pick the second.
-          ;; The second cannot be a string, as that would have been an error.
-          (pf-len (length pf))
-          (first (car pf))
-          (second (nth 1 pf)))
-     (cond
-      ((semantic-tag-p first)
-       ;; We have a match.  Just go there.
-       (semantic-ia--fast-jump-helper first))
-      ((semantic-tag-p second)
-       ;; Because FIRST failed, we should visit our second tag.
-       ;; HOWEVER, the tag we actually want that was only an unfound
-       ;; string may be related to some take in the datatype that belongs
-       ;; to SECOND.  Thus, instead of visiting second directly, we
-       ;; can offer to find the type of SECOND, and go there.
-       (let ((secondclass (car (reverse (oref ctxt prefixtypes)))))
-         (cond
-          ((and (semantic-tag-with-position-p secondclass)
-                (y-or-n-p (format-message
-                           "Could not find `%s'.  Jump to %s? "
-                           first (semantic-tag-name secondclass))))
-           (semantic-ia--fast-jump-helper secondclass))
-          ;; If we missed out on the class of the second item, then
-          ;; just visit SECOND.
-          ((and (semantic-tag-p second)
-                (y-or-n-p (format-message
-                           "Could not find `%s'.  Jump to %s? "
-                           first (semantic-tag-name second))))
-           (semantic-ia--fast-jump-helper second)))))
-      ((semantic-tag-of-class-p (semantic-current-tag) 'include)
-       ;; Just borrow this cool fcn.
-       (require 'semantic/decorate/include)
-       ;; Push the mark, so you can pop global mark back, or
-       ;; use semantic-mru-bookmark mode to do so.
-       (xref-push-marker-stack)
-       (semantic-decoration-include-visit))
-      ((and (equal pf-len 1)
-            (stringp first))
-       ;; Lets try to handle enums and macros. These things are ignored
-       ;; by context analyzer so we must do it here.
-       (custom/semantic/with-disabled-grep-db
-        (let* ((tags (semanticdb-strip-find-results
-                      (semanticdb-deep-no-args-find-tags-by-name
-                       first
-                       (current-buffer)
-                       t)
-                      t)))
-          (if tags
-              (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
-            ;; Last regard, use brute force.
-            (custom/semantic/complete-jump first)))))
-      (t (error (concat "Could not find suitable jump point for '%s'"
-                        " (try custom/semantic/complete-jump)!")
-                first))))))
+      (let* ((ctxt (semantic-analyze-current-context point))
+             (pf (and ctxt (reverse (oref ctxt prefix))))
+             ;; In the analyzer context, the PREFIX is the list of items
+             ;; that makes up the code context at point.  Thus the c++ code
+             ;; this.that().theothe
+             ;; would make a list:
+             ;; ( ("this" variable ..) ("that" function ...) "theothe")
+             ;; Where the first two elements are the semantic tags of the prefix.
+             ;;
+             ;; PF is the reverse of this list.  If the first item is a string,
+             ;; then it is an incomplete symbol, thus we pick the second.
+             ;; The second cannot be a string, as that would have been an error.
+             (pf-len (length pf))
+             (first (car pf))
+             (second (nth 1 pf)))
+        (cond
+         ((semantic-tag-p first)
+          ;; We have a match.  Just go there.
+          (semantic-ia--fast-jump-helper first))
+         ((semantic-tag-p second)
+          ;; Because FIRST failed, we should visit our second tag.
+          ;; HOWEVER, the tag we actually want that was only an unfound
+          ;; string may be related to some take in the datatype that belongs
+          ;; to SECOND.  Thus, instead of visiting second directly, we
+          ;; can offer to find the type of SECOND, and go there.
+          (let ((secondclass (car (reverse (oref ctxt prefixtypes)))))
+            (cond
+             ((and (semantic-tag-with-position-p secondclass)
+                   (y-or-n-p (format-message
+                              "Could not find `%s'.  Jump to %s? "
+                              first (semantic-tag-name secondclass))))
+              (semantic-ia--fast-jump-helper secondclass))
+             ;; If we missed out on the class of the second item, then
+             ;; just visit SECOND.
+             ((and (semantic-tag-p second)
+                   (y-or-n-p (format-message
+                              "Could not find `%s'.  Jump to %s? "
+                              first (semantic-tag-name second))))
+              (semantic-ia--fast-jump-helper second)))))
+         ((semantic-tag-of-class-p (semantic-current-tag) 'include)
+          ;; Just borrow this cool fcn.
+          (require 'semantic/decorate/include)
+          ;; Push the mark, so you can pop global mark back, or
+          ;; use semantic-mru-bookmark mode to do so.
+          (xref-push-marker-stack)
+          (semantic-decoration-include-visit))
+         ((and (equal pf-len 1)
+               (stringp first))
+          ;; Lets try to handle enums and macros. These things are ignored
+          ;; by context analyzer so we must do it here.
+          (custom/semantic/with-disabled-grep-db
+              (let* ((tags (semanticdb-strip-find-results
+                            (semanticdb-deep-no-args-find-tags-by-name
+                             first
+                             (current-buffer)
+                             t)
+                            t)))
+                (if tags
+                    (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
+                  ;; Last regard, use brute force.
+                  (custom/semantic/complete-jump first)))))
+         (t (error (concat "Could not find suitable jump point for '%s'"
+                           " (try custom/semantic/complete-jump)!")
+                   first))))))
 
 (defun semantic-ia--fast-jump-helper (dest)
   "Jump to DEST, a Semantic tag.
@@ -554,9 +552,9 @@ This helper manages the mark, buffer switching, and pulsing."
   ;; implementation instead.
   (when (semantic-tag-prototype-p dest)
     (custom/semantic/with-enabled-grep-db
-     (let* ((refs (semantic-analyze-tag-references dest))
-            (impl (semantic-analyze-refs-impl refs t)))
-       (when impl (setq dest (custom/semantic/choose-tag impl))))))
+        (let* ((refs (semantic-analyze-tag-references dest))
+               (impl (semantic-analyze-refs-impl refs t)))
+          (when impl (setq dest (custom/semantic/choose-tag impl))))))
   ;; Make sure we have a place to go...
   (if (not (and (or (semantic-tag-with-position-p dest)
                     (semantic-tag-get-attribute dest :line))
@@ -570,13 +568,16 @@ This helper manages the mark, buffer switching, and pulsing."
   (interactive)
   (require 'semantic/decorate)
   (semantic-fetch-tags)
+  (custom/semantic/load-all-project-dbs)
   (let* ((tag (semantic-current-tag))
          (sar (if tag
                   (semantic-analyze-tag-references tag)
                 (error "Point must be in a declaration")))
          (target (if (semantic-tag-prototype-p tag)
-                     (car (semantic-analyze-refs-impl sar t))
-                   (car (semantic-analyze-refs-proto sar t)))))
+                     (custom/semantic/choose-tag
+                      (semantic-analyze-refs-impl sar t))
+                   (custom/semantic/choose-tag
+                    (semantic-analyze-refs-proto sar t)))))
     (when (not target)
       (error "Could not find suitable %s"
              (if (semantic-tag-prototype-p tag)
@@ -592,10 +593,10 @@ references are organized by file and the name of the function
 they are used in.
 Display the references in `semantic-symref-results-mode'."
   (interactive (list (custom/semantic/with-disabled-grep-db
-                      (custom/semantic-complete-read-tag-project
-                       "Find references for: "
-                       nil
-                       (thing-at-point 'symbol)))))
+                         (custom/semantic-complete-read-tag-project
+                          "Find references for: "
+                          nil
+                          (thing-at-point 'symbol)))))
   (semantic-fetch-tags)
   ;; Gather results and tags
   (message "Gathering References...")
@@ -629,29 +630,33 @@ Display the references in `semantic-symref-results-mode'."
 
 (defun custom/semantic/complete-jump (sym)
   (interactive (list (custom/semantic/with-disabled-grep-db
-                      (custom/semantic-complete-read-tag-project
-                       "Look for symbol: "
-                       nil
-                       (thing-at-point 'symbol)))))
+                         (custom/semantic-complete-read-tag-project
+                          "Look for symbol: "
+                          nil
+                          (thing-at-point 'symbol)))))
   ;; Use modified symref module for getting all tags with target name in
   ;; current project and all its dependencies.
   ;; Bypasses bug when brute deep searching all tables in project
   ;; using standard semantic find routines.
   (custom/semantic/with-enabled-grep-db
-   (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
-                 (if res
-                     (semantic-symref-result-get-tags-as-is res)))))
-     (if tags
-         (let* ((chosen-tag (custom/semantic/choose-tag tags)))
-           (custom/semantic/goto-tag chosen-tag))
-       (message "No tags found for %s" sym)))))
+      (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
+                    (if res
+                        (semantic-symref-result-get-tags-as-is res)))))
+        (if tags
+            (let* ((chosen-tag (custom/semantic/choose-tag tags)))
+              (custom/semantic/goto-tag chosen-tag))
+          (message "No tags found for %s" sym)))))
 
-(defvar-local *is-prefix-pointer-state* (cons nil 'allow))
+(defvar-local custom/semantic/is-prefix-pointer-state (cons nil 'allow))
 (defun custom/semantic/is-prefix-pointer-p (&optional point)
   (interactive "d")
   (if (not point)
       (setq point (point)))
-  (when (not (custom/pos-is-in-comment point))
+  (when (and (not (custom/pos-is-in-comment point))
+             (semantic-current-tag)
+             (equal (semantic-tag-class (semantic-current-tag))
+                    'function)
+             (not (semantic-tag-prototype-p (semantic-current-tag))))
     (let* ((guess-if-pointer
             (lambda (sym)
               (if sym
@@ -659,10 +664,12 @@ Display the references in `semantic-symref-results-mode'."
                     (s-match (pcre-to-elisp/cached "^p[A-Z].*") sym)))))
            (ctx-sym (cadr (semantic-ctxt-current-symbol-and-bounds point)))
            (curr-fun-name (custom/semantic/get-current-function-name))
-           (decision (not (and (equal curr-fun-name
-                                      (car *is-prefix-pointer-state*))
-                               (not (equal (cdr *is-prefix-pointer-state*)
-                                           'allow)))))
+           (decision (not
+                      (and
+                       (equal curr-fun-name
+                              (car custom/semantic/is-prefix-pointer-state))
+                       (not (equal (cdr custom/semantic/is-prefix-pointer-state)
+                                   'allow)))))
            (ctx-with-time
             (custom/with-measure-time
                 (if decision
@@ -672,184 +679,92 @@ Display the references in `semantic-symref-results-mode'."
            (prefix (if ctx (oref ctx prefix) nil))
            (last-pref (car (last prefix))))
       (when (> run-time 2)
-        (setq *is-prefix-pointer-state*
+        (setq custom/semantic/is-prefix-pointer-state
               (cons curr-fun-name 'no-ctx-fetch))
-        (when (yes-or-no-p (format
-                            (concat "Context fetch was too slow (%s) so it was "
-                                    "disabled temporary for this function (%s). Do "
-                                    "you want to enable type guessing (pSomething "
-                                    "is considered as a pointer)?")
-                            run-time
-                            curr-fun-name))
-          (setq *is-prefix-pointer-state*
+        (when (yes-or-no-p
+               (format
+                (concat "Context fetch was too slow (%s) so it was "
+                        "disabled temporary for this function (%s). Do "
+                        "you want to enable type guessing (pSomething "
+                        "is considered as a pointer)?")
+                run-time
+                curr-fun-name))
+          (setq custom/semantic/is-prefix-pointer-state
                 (cons curr-fun-name 'guess))))
       (if last-pref
           (if (semantic-tag-p last-pref)
               (semantic-tag-get-attribute last-pref
                                           :pointer)
-            (if (equal (cdr *is-prefix-pointer-state*)
+            (if (equal (cdr custom/semantic/is-prefix-pointer-state)
                        'guess)
                 (funcall guess-if-pointer ctx-sym)))
-        (if (equal (cdr *is-prefix-pointer-state*)
+        (if (equal (cdr custom/semantic/is-prefix-pointer-state)
                    'guess)
             (funcall guess-if-pointer ctx-sym))))))
 
-;; SOME NOTES ABOUT SEMANTIC RESEARCH
+;;;; TAG ACCESS AND VARIOUS INDEX QUERIES
+;; CODE:
+
+;; Return eieio object with analyzed current context.
+;; For inspection, use custom/inspect-eieio.
+;;     (semantic-analyze-current-context)
 ;;
-;; Functions for analyzation of context around point
-;; It is used for autocompletion and for smart jumps
-;; via semantic-ia-fast-jump
-;;
-;;     Get/Set data from/to overlay -> (semantic-analyze-current-context)
-;;     Generate conteext -> (semantic-analyze-current-context-default)
-;;     Context is generated            ||
-;;     by parsing local syms           ||
-;;     and linking them against        ||
-;;     scope tags                      ||
-;;                                     ||
-;;                                     \/
-;;     Current prefix tags: (oref (semantic-analyze-current-context) prefix)
-;;     Enclosing tag: (oref (oref (semantic-analyze-current-context) scope)
-;;                           tag)
-;;     Scope tags: (oref (oref (semantic-analyze-current-context) scope)
-;;                       scope)
-;;     local var tags: (oref (oref (semantic-analyze-current-context) scope)
-;;                           localvar)
-;;                                     ...
-;;     And many many more info, its gold mine for context type info
-;;
-;; Internally semantic-analyze-current-context-default uses
-;; semantic-calculate-scope for scope calculation
-;; by scope calculation, it is meant collection of all accessible tags
-;; from curent location including local variables
-;;
+;; Return eieio object with analyzed current scope.
+;; It is functional subset of semantic-analyze-current-context.
+;;     (semantic-calculate-scope)
 ;;
 ;; Control tag sources when quering DB
-;;   (semanticdb-find-default-throttle)
+;;     (semanticdb-find-default-throttle)
+;;
 ;; Add preprocesor value for all projects
-;;   (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
+;;     (semantic-c-add-preprocessor-symbol "__SYM__" "VAL")
 ;;
 ;; System includes are not project includes, these apply for
 ;; every project (and are not saved)
-;;   (semantic-add-system-include include-root-dir symbol-for-mode)
-;;   (semantic-remove-system-include include-root-dir symbol-for-mode)
-;;
-;; CODE:
+;;     (semantic-add-system-include include-root-dir symbol-for-mode)
+;;     (semantic-remove-system-include include-root-dir symbol-for-mode)
 
-;;;; TAGS ACCESS AND VARIOUS INDEX QUERIES
-;; CODE:
-
-;; with help of custom/eieo-inspect
-(defun custom/semantic/get-local-tags (&optional path brutish live-tags)
-  (interactive)
-  (let ((tags (loop for tag in (loop for table
-                                     in (semanticdb-find-translate-path path
-                                                                        brutish)
-                                     append (oref table tags))
-                    for tagbuff = (semantic-tag-buffer tag)
-                    collect (list (if live-tags tag (semantic-tag-copy tag nil t))
-                                  (semantic-tag-name tag)
-                                  (semantic-tag-class tag)
-                                  (if tagbuff (buffer-name tagbuff) nil)
-                                  (if tagbuff (buffer-file-name tagbuff) nil)
-                                  tagbuff))))
-    (if (called-interactively-p 'any)
-        (if tags
-            (custom/with-simple-pop-up "*LOCAL SYMS*"
-              (dolist (tag tags)
-                (let* ((cls (format "%s" (caddr tag)))
-                       (cls-len (length cls))
-                       (name (s-truncate 40 (cadr tag)))
-                       (nice-proto (semantic-format-tag-prototype (car tag)
-                                                                  nil
-                                                                  t))
-                       (first-gap (- 10 cls-len))
-                       (second-gap (max 10
-                                        (- 60
-                                           (+ cls-len
-                                              (length name)
-                                              first-gap)))))
-                  (insert (concat cls
-                                  (s-repeat first-gap " ")
-                                  name
-                                  (s-repeat second-gap " ")
-                                  nice-proto
-                                  "\n"))))))
-      tags)))
-
-(defun custom/semantic/get-scope-tags (&optional point)
+(defun custom/semantic/get-local-variables (&optional point)
   (interactive "d")
-  (let ((tags (loop for tag in (semantic-get-all-local-variables)
-                    collect (list tag
-                                  (semantic-tag-name tag)
-                                  (semantic-tag-class tag)
-                                  nil
-                                  nil
-                                  nil))))
+  (let ((tags (semantic-get-all-local-variables)))
     (if (called-interactively-p 'any)
         (if tags
             (custom/with-simple-pop-up "*FUNCTION VARS*"
+              (setq kill-on-quit t)
               (dolist (tag tags)
-                (insert (concat (format "%s" (caddr tag))
-                                " "
-                                (cadr tag)
-                                (s-repeat (max 10
-                                               (- 60 (+ 9
-                                                        (length (cadr tag)))))
-                                          " ")
-                                (semantic-format-tag-prototype
-                                 (car tag) nil t)
-                                "\n"))))
-          (message "Failed to find local variables."))
+                (insert (semantic-format-tag-prototype tag nil t)
+                        "\n")))
+          (error "Failed to find local variables!"))
       tags)))
 
-(defun custom/semantic/get-global-tags (sym &optional live-tags)
-  (interactive (list (read-string "Enter tag name: ")))
-  (let ((tags (loop for tag
-                    in (semanticdb-strip-find-results
-                        (semanticdb-brute-deep-find-tags-by-name sym nil t)
-                        t)
-                    for tagbuff = (semantic-tag-buffer tag)
-                    if tagbuff
-                    collect (list (if live-tags tag (semantic-tag-copy tag nil t))
-                                  (semantic-tag-name tag)
-                                  (semantic-tag-class tag)
-                                  (buffer-name tagbuff)
-                                  (buffer-file-name tagbuff)
-                                  tagbuff))))
-    (if (called-interactively-p 'any)
-        (if tags
-            (custom/with-simple-pop-up "*QUERY SYMS*"
-              (dolist (tag tags)
-                (let* ((cls (format "%s" (caddr tag)))
-                       (cls-len (length cls))
-                       (name (s-truncate 40 (cadr tag)))
-                       (nice-proto (semantic-format-tag-prototype (car tag)
-                                                                  nil
-                                                                  t))
-                       (first-gap (- 10 cls-len))
-                       (second-gap (max 10
-                                        (- 60
-                                           (+ cls-len
-                                              (length name)
-                                              first-gap))))
-                       (filename (car (last tag 2)))
-                       (third-gap (max 10
-                                       (- 60
-                                          (+ cls-len
-                                             (length name)
-                                             (length nice-proto)
-                                             first-gap
-                                             second-gap)))))
-                  (insert (concat cls
-                                  (s-repeat first-gap " ")
-                                  name
-                                  (s-repeat second-gap " ")
-                                  nice-proto
-                                  (s-repeat third-gap " ")
-                                  filename
-                                  "\n"))))))
-      tags)))
+(defun custom/semantic/search-db (sym &optional
+                                      buffer
+                                      find-file-match)
+  (let ((tags (semanticdb-find-tags-by-name sym
+                                            buffer
+                                            find-file-match)))
+    (if find-file-match
+        (semanticdb-strip-find-results tags find-file-match)
+      (semanticdb-fast-strip-find-results tags))))
+
+(defun custom/semantic/search-db-deep (sym &optional
+                                           buffer
+                                           find-file-match)
+  (let ((tags (semanticdb-deep-find-tags-by-name sym
+                                                 buffer
+                                                 find-file-match)))
+    (if find-file-match
+        (semanticdb-strip-find-results tags find-file-match)
+      (semanticdb-fast-strip-find-results tags))))
+
+(defun custom/semantic/search-db-brute-deep (sym &optional find-file-match)
+  (let ((tags (semanticdb-brute-deep-find-tags-by-name sym
+                                                       nil
+                                                       find-file-match)))
+    (if find-file-match
+        (semanticdb-strip-find-results tags find-file-match)
+      (semanticdb-fast-strip-find-results tags))))
+
 
 (defun custom/semantic/flatten-enum-tags-table (&optional table)
   (let* ((table (semantic-something-to-tag-table table))
@@ -890,14 +805,16 @@ Display the references in `semantic-symref-results-mode'."
           table)
     (apply 'append (nreverse lists))))
 
-(defun custom/semantic/get-local-tags-no-includes (file symbol)
-  (with-current-buffer (find-file-noselect file)
+(defun custom/semantic/search-file-no-includes (symbol &optional file)
+  (when (not file)
+    (setq file (current-buffer)))
+  (with-current-buffer (if (bufferp file)
+                           file
+                         (find-file-noselect file))
     (save-excursion
       (let ((tags (custom/semantic/flatten-tags-table
                    (semantic-fetch-tags))))
-        (loop for tag in tags
-              if (equal symbol (semantic-tag-name tag))
-              collect tag)))))
+        (semantic-find-tags-by-name symbol tags)))))
 
 (defun custom/semantic/get-tag-code-symbols (tag &optional collector)
   (interactive (list (semantic-current-tag)))
@@ -980,7 +897,7 @@ Display the references in `semantic-symref-results-mode'."
                         (let* ((str (buffer-file-name
                                      (semantic-tag-buffer tag)))
                                (real-len (length str))
-                               (limit-len 67))
+                               (limit-len 77))
                           (if (> real-len limit-len)
                               (concat "..."
                                       (substring str (- real-len
@@ -1012,14 +929,90 @@ Display the references in `semantic-symref-results-mode'."
         chosen-tag))))
 
 (defun custom/semantic/goto-tag (tag)
-  (xref-push-marker-stack)
+  (custom/universal-push-mark)
   (find-file (buffer-file-name (semantic-tag-buffer tag)))
   (semantic-go-to-tag tag)
   (if (not semantic-idle-scheduler-mode)
       (semantic-idle-scheduler-mode))
+  ;; Maybe database was from some reason outdated, we need to somehow
+  ;; hide that from user and land exactly where he wants.
+  (let* ((curr-pos (point))
+         (curr-name (semantic-tag-name tag))
+         (enclosing-tag (semantic-current-tag))
+         (enclosing-tag-name (if enclosing-tag
+                                 (semantic-tag-name enclosing-tag)))
+         (expected-pos (if enclosing-tag
+                           (semantic-tag-start enclosing-tag)))
+         (candidate-tags nil)
+         (nearest-tag nil)
+         (nearest-tag-distance 0)
+         (temp-distance 0)
+         (temp-distance2 0))
+    (cond ((and (equal curr-pos expected-pos)
+                (equal curr-name enclosing-tag-name))
+           ;; All is ok.
+           )
+
+          ((equal curr-name enclosing-tag-name)
+           ;; We are not exactly ok, but we landed somehow somewhere
+           ;; in correct tag, just readjust.
+           (goto-char expected-pos)
+           (setq tag enclosing-tag))
+
+          (t
+           ;; All is wrong, we landed completely somewhere else.
+           ;; As an fix, list all tags with same name and jump to
+           ;; nearest one.
+           (setq candidate-tags
+                 (custom/semantic/search-file-no-includes curr-name))
+           (loop for candidate-tag in candidate-tags
+                 do (progn
+                      (setq temp-distance
+                            (abs (- curr-pos
+                                    (semantic-tag-start candidate-tag)))
+                            temp-distance2
+                            (abs (- curr-pos
+                                    (semantic-tag-end candidate-tag))))
+                      (when (< temp-distance2 temp-distance)
+                        (setq temp-distance temp-distance2))
+                      (if nearest-tag
+                          (when (<= temp-distance nearest-tag-distance)
+                            (setq nearest-tag-distance temp-distance
+                                  nearest-tag candidate-tag))
+                        (setq nearest-tag-distance temp-distance
+                              nearest-tag candidate-tag))))
+           (if nearest-tag
+               (setq tag nearest-tag)
+             (setq tag nil))
+           (if nearest-tag
+               ;; We found tag with same name which is nearest from
+               ;; our position of arrival.
+               (goto-char (semantic-tag-start nearest-tag))
+             ;; We failed to find nearest tag. Not good. We must
+             ;; resort to solution based on search-forward and search-backward.
+             ;; Choose the nearest.
+             (let ((f-pos (save-excursion (search-forward curr-name nil t)))
+                   (b-pos (save-excursion (search-backward curr-name nil t))))
+               (cond ((and f-pos b-pos)
+                      (if (< (abs (- curr-pos f-pos))
+                             (abs (- curr-pos b-pos)))
+                          (goto-char f-pos)
+                        (goto-char b-pos)))
+
+                     (f-pos
+                      (goto-char f-pos))
+
+                     (b-pos
+                      (goto-char b-pos))
+
+                     (t
+                      ;; Sorry, DB had really shitty data.
+                      (error (concat "Invalid DB record was "
+                                     "found and recovery failed!")))))))))
   (recenter)
-  (pulse-momentary-highlight-region (semantic-tag-start tag)
-                                    (semantic-tag-end tag)))
+  (when tag
+    (pulse-momentary-highlight-region (semantic-tag-start tag)
+                                      (semantic-tag-end tag))))
 
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
@@ -1051,11 +1044,13 @@ Display the references in `semantic-symref-results-mode'."
                   (semantic-symref-calculate-rootdir)))
     (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
                              (custom/ede/get-project-dependencies)))
-           (store-path (file-name-as-directory semanticdb-default-save-directory))
+           (store-path (file-name-as-directory
+                        semanticdb-default-save-directory))
            (check-regexp (concat "^\\(?:"
                                  (s-join "\\|"
                                          (loop for proj-root in proj-roots
-                                               collect (regexp-quote proj-root)))
+                                               collect
+                                               (regexp-quote proj-root)))
                                  "\\)"))
 
            (raw-cache-paths (directory-files store-path))
@@ -1225,43 +1220,65 @@ BUTTON is the button that was clicked."
                                  "(missing prefix)!")
                          (line-number-at-pos (match-beginning 0))))
               (replace-match (concat prefix
-                                     (s-replace-regexp "\\\\" "/" hit-path)
+                                     (s-replace-regexp (regexp-quote "\\")
+                                                       "/"
+                                                       hit-path)
                                      hit-line
-                                     (s-replace-regexp "\\\\s*$" "" hit-payload)
+                                     (s-replace-regexp (regexp-quote "\\")
+                                                       "/"
+                                                       hit-payload)
                                      "\n")))))))))
 
+;; Decoration mode awfully slow down parsing of file on windows. No
+;; idea why.
+;; Easy fix is to disable it temporary in places where lots of parsing
+;; is expected.
+;;
+;; TODO: Find out why it is so slow on windows.
+(defmacro custom/semantic/with-disabled-decorations (&rest forms)
+  (declare (indent 99))
+  (let ((was-enabled-sym (gensym)))
+    `(let ((,was-enabled-sym global-semantic-decoration-mode))
+       (global-semantic-decoration-mode nil)
+       (unwind-protect
+           (progn ,@forms)
+         (global-semantic-decoration-mode ,was-enabled-sym)))))
+
 (defun custom/filter-raw-grep-output (hits searchfor)
-  (setq custom/TAGNAME-HITS hits)
-  (let ((deep-search #'custom/semantic/get-local-tags-no-includes)
-        (files (@dict-new))
-        (result nil))
-    (loop for (line . path) in hits
-          do (@dict-set path t files))
-    (@map (lambda (filename dummy)
-            (setq result
-                  (append result
-                          (loop for tag
-                                in (funcall deep-search
-                                            filename
-                                            searchfor)
-                                collect (cons tag filename)))))
-          files)
-    (setq result
-          (loop for (tag . file) in result
-                collect (cons (with-current-buffer (find-file-noselect file)
-                                (line-number-at-pos
-                                 (semantic-tag-start tag)))
-                              file)))
-    (setq custom/TAGNAME-RESULT result)
-    result))
+  (custom/semantic/with-disabled-decorations
+      (setq custom/TAGNAME-HITS hits)
+      (let ((deep-search #'custom/semantic/search-file-no-includes)
+            (files (@dict-new))
+            (result nil))
+        (loop for (line . path) in hits
+              do (@dict-set path t files))
+        (@map (lambda (filename dummy)
+                (setq result
+                      (append result
+                              (loop for tag
+                                    in (funcall deep-search
+                                                searchfor
+                                                filename)
+                                    collect (cons tag filename)))))
+              files)
+        (setq result
+              (loop for (tag . file) in result
+                    collect (cons (with-current-buffer (find-file-noselect file)
+                                    (line-number-at-pos
+                                     (semantic-tag-start tag)))
+                                  file)))
+        (setq custom/TAGNAME-RESULT result)
+        result)))
 
 (setq custom/semantic/grep-db-enabled t)
 
 (defmacro custom/semantic/with-disabled-grep-db (&rest forms)
+  (declare (indent 99))
   `(let ((custom/semantic/grep-db-enabled nil))
      ,@forms))
 
 (defmacro custom/semantic/with-enabled-grep-db (&rest forms)
+  (declare (indent 99))
   `(let ((custom/semantic/grep-db-enabled t))
      ,@forms))
 
@@ -1363,13 +1380,13 @@ BUTTON is the button that was clicked."
     (when (and (equal (length pf) 1)
                (stringp tag))
       (custom/semantic/with-disabled-grep-db
-       (let ((tags (semanticdb-strip-find-results
-                    (semanticdb-deep-find-tags-by-name tag
-                                                       (current-buffer)
-                                                       t)
-                    t)))
-         (if tags
-             (setq tag (custom/semantic/choose-tag tags))))))
+          (let ((tags (semanticdb-strip-find-results
+                       (semanticdb-deep-find-tags-by-name tag
+                                                          (current-buffer)
+                                                          t)
+                       t)))
+            (if tags
+                (setq tag (custom/semantic/choose-tag tags))))))
     (cond
      ((stringp tag)
       (message "Incomplete symbol name."))
@@ -1436,18 +1453,18 @@ BUTTON is the button that was clicked."
   (if (not buffer)
       (setq buffer (current-buffer)))
   (custom/semantic/with-disabled-grep-db
-   (semanticdb-strip-find-results
-    (semanticdb-deep-find-tags-by-name
-     (if (equal (semantic-tag-class tag) 'variable)
-         (let ((tag-type (semantic-tag-type tag)))
-           (if (stringp tag-type)
-               tag-type
-             (semantic-tag-name tag-type)))
-       (error "Found invalid tag '%s' with name '%s'!"
-              (semantic-tag-class tag)
-              (semantic-tag-name tag)))
-     buffer t)
-    t)))
+      (semanticdb-strip-find-results
+       (semanticdb-deep-find-tags-by-name
+        (if (equal (semantic-tag-class tag) 'variable)
+            (let ((tag-type (semantic-tag-type tag)))
+              (if (stringp tag-type)
+                  tag-type
+                (semantic-tag-name tag-type)))
+          (error "Found invalid tag '%s' with name '%s'!"
+                 (semantic-tag-class tag)
+                 (semantic-tag-name tag)))
+        buffer t)
+       t)))
 
 (defun custom/attach-buttons-to-label-occurences (string tags)
   (loop for (beg . end) in (custom/find-string-occurences string)
@@ -1581,13 +1598,13 @@ If NOSNARF is `lex', then only return the lex token."
                  ;; matches.
                  (with-current-buffer (oref obj buffer)
                    (custom/semantic/with-disabled-grep-db
-                    (let ((context (semantic-analyze-current-context (point))))
-                      ;; Set new context and make first-pass-completions
-                      ;; unbound so that they are newly calculated.
-                      (when (slot-exists-p obj context)
-                        (oset obj context context))
-                      (when (slot-boundp obj 'first-pass-completions)
-                        (slot-makeunbound obj 'first-pass-completions)))))
+                       (let ((context (semantic-analyze-current-context (point))))
+                         ;; Set new context and make first-pass-completions
+                         ;; unbound so that they are newly calculated.
+                         (when (slot-exists-p obj context)
+                           (oset obj context context))
+                         (when (slot-boundp obj 'first-pass-completions)
+                           (slot-makeunbound obj 'first-pass-completions)))))
                  nil)))
          ;; Get the result
          (answer (if same-prefix-p
@@ -1952,71 +1969,70 @@ Some tags such as includes have other reference features."
   "Return a tag that is referred to by TAG.
 Makes C/C++ language like assumptions."
   (custom/semantic/with-disabled-grep-db
-   (cond ((semantic-tag-faux-p tag)
-          ;; Faux tags should have a real tag in some other location.
-          (require 'semantic/sort)
-          (let ((options (semantic-tag-external-class tag)))
-            (custom/semantic/choose-tag options)))
+      (cond ((semantic-tag-faux-p tag)
+             ;; Faux tags should have a real tag in some other location.
+             (require 'semantic/sort)
+             (let ((options (semantic-tag-external-class tag)))
+               (custom/semantic/choose-tag options)))
 
-         ;; Include always point to another file.
-         ((eq (semantic-tag-class tag) 'include)
-          (let ((file (semantic-dependency-tag-file tag)))
-            (cond
-             ((or (not file) (not (file-exists-p file)))
-              (error "Could not locate include %s"
-                     (semantic-tag-name tag)))
-             ((get-file-buffer file)
-              (get-file-buffer file))
-             ((stringp file)
-              file))))
+            ;; Include always point to another file.
+            ((eq (semantic-tag-class tag) 'include)
+             (let ((file (semantic-dependency-tag-file tag)))
+               (cond
+                ((or (not file) (not (file-exists-p file)))
+                 (error "Could not locate include %s"
+                        (semantic-tag-name tag)))
+                ((get-file-buffer file)
+                 (get-file-buffer file))
+                ((stringp file)
+                 file))))
 
-         ;; Is there a parent of the function to jump to?
-         ((and  (semantic-tag-of-class-p tag 'function)
-                (not (semantic-tag-get-attribute tag :prototype-flag)))
-          (let* ((scope (semantic-calculate-scope (point))))
-            (custom/semantic/choose-tag (oref scope parents))))
+            ;; Is there a parent of the function to jump to?
+            ((and  (semantic-tag-of-class-p tag 'function)
+                   (not (semantic-tag-get-attribute tag :prototype-flag)))
+             (let* ((scope (semantic-calculate-scope (point))))
+               (custom/semantic/choose-tag (oref scope parents))))
 
-         ;; Is there a non-prototype version of the tag to jump to?
-         ((semantic-tag-get-attribute tag :prototype-flag)
-          (require 'semantic/analyze/refs)
-          (custom/semantic/with-enabled-grep-db
-           (let* ((sar (semantic-analyze-tag-references tag))
-                  (impls (semantic-analyze-refs-impl sar t)))
-             (custom/semantic/choose-tag impls))))
+            ;; Is there a non-prototype version of the tag to jump to?
+            ((semantic-tag-get-attribute tag :prototype-flag)
+             (require 'semantic/analyze/refs)
+             (custom/semantic/with-enabled-grep-db
+                 (let* ((sar (semantic-analyze-tag-references tag))
+                        (impls (semantic-analyze-refs-impl sar t)))
+                   (custom/semantic/choose-tag impls))))
 
-         ;; If this is a datatype, and we have superclasses.
-         ((and (semantic-tag-of-class-p tag 'type)
-               (semantic-tag-type-superclasses tag))
-          (require 'semantic/analyze)
-          (let* ((scope (semantic-calculate-scope (point)))
-                 (parents (semantic-tag-type-superclasses tag))
-                 (parent (if (<= (length parents) 1)
-                             (car-safe parents)
-                           (ido-completing-read "Choose parent: "
-                                                parents))))
-            (or (custom/semantic/best-tag-user-assist-enabled
-                 (semantic-analyze-find-tag parent 'type scope))
-                (if (y-or-n-p (format (concat "Failed to find '%s' "
-                                              "intelligently, try "
-                                              "brute force?")
-                                      parent))
-                    (custom/semantic/with-enabled-grep-db
-                     (let* ((res (semantic-symref-find-tags-by-name parent))
-                            (tags (if res (semantic-symref-result-get-tags-as-is
-                                           res))))
-                       (if tags (custom/semantic/choose-tag tags))))))))
+            ;; If this is a datatype, and we have superclasses.
+            ((and (semantic-tag-of-class-p tag 'type)
+                  (semantic-tag-type-superclasses tag))
+             (require 'semantic/analyze)
+             (let* ((scope (semantic-calculate-scope (point)))
+                    (parents (semantic-tag-type-superclasses tag))
+                    (parent (if (<= (length parents) 1)
+                                (car-safe parents)
+                              (ido-completing-read "Choose parent: "
+                                                   parents))))
+               (or (custom/semantic/best-tag-user-assist-enabled
+                    (semantic-analyze-find-tag parent 'type scope))
+                   (if (y-or-n-p (format (concat "Failed to find '%s' "
+                                                 "intelligently, try "
+                                                 "brute force?")
+                                         parent))
+                       (custom/semantic/with-enabled-grep-db
+                           (let* ((res (semantic-symref-find-tags-by-name
+                                        parent))
+                                  (tags
+                                   (if res
+                                       (semantic-symref-result-get-tags-as-is
+                                        res))))
+                             (if tags (custom/semantic/choose-tag tags))))))))
 
-         ;; Get the data type, and try to find that.
-         ((semantic-tag-type tag)
-          (require 'semantic/analyze)
-          (let ((scope (semantic-calculate-scope (point))))
-            (semantic-analyze-tag-type tag scope)))
+            ;; Get the data type, and try to find that.
+            ((semantic-tag-type tag)
+             (require 'semantic/analyze)
+             (let ((scope (semantic-calculate-scope (point))))
+               (semantic-analyze-tag-type tag scope)))
 
-         (t nil))))
-
-;; TODO: symref fails to recognize symbols in macros
-;; only macro name is include in its bounds
-;; use regexp to deduce real macro bounds
+            (t nil))))
 
 ;; TODO: Implement simple semantic aware font locking.
 
