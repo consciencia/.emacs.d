@@ -107,7 +107,7 @@
 ;; Make it sync or at least add support for operation in synced manner
 ;; is some circumstances.
 
-;; refactor install script too
+;; refactor install script
 ;; add install targets --target js --target cpp --target py
 ;; add some printing options so user can inspect what are emacs
 ;; dependencies
@@ -119,20 +119,3 @@
 ;; another thing is to create custom key bind functions in order
 ;; to collect automatically documentation and make key binds
 ;; docs generation automatic
-
-;; there's a lot space for enhancements
-;; 1) doxygen generator from function prototype
-;; 2) python doc generator from function prototype
-;; 3) custom dashboard
-;; 4) semantic font lock
-;;    Basically, all required info can be scrapped from imenu index
-;;    symbols from imported sources can be acquired again via imenu
-;;    indexer but there will be needed some help from other packages in
-;;    order to follow imports/includes.
-;;
-;;    Lv0: after 1s -> local args and vars are highligted
-;;    Lv1: after 3s -> symbols from current file are highlighted
-;;    Lv2: after 30s -> symbols from 1 layer of dependecies are highlighted
-;;    Lv3: after 60s -> symbols from all direct and indirect dependecies are highlighted
-;;
-;; Lv0 and Lv1 can be done relatively easy, so lets start with that.

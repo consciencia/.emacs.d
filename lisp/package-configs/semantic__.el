@@ -2039,25 +2039,14 @@ Makes C/C++ language like assumptions."
 ;; TODO: Implement call graph using https://github.com/DamienCassou/hierarchy.
 ;; For navigation in it use https://www.emacswiki.org/emacs/TreeMode.
 
-;; Extend semantic-default-c-setup to also check if buffer is in
-;; projectile project. If yes, try to load config file and register
-;; project into EDE according to data inside it.
-;; Or create my own EDE project class which will be using directly
-;; JSON config.
+;; TODO: Create my own EDE project class which will get all information from
+;; JSON config and will be created automatically upon finding that
+;; config somewhere in lower levels of file tree.
 ;;
-;; Another thing is that I can populate macro definition list here
-;; with some constants used by std lib and potentially QT. It causes
-;; parse errors without it.
+;; For that instantiation, use either something build-in in EDE or
+;; just hook yourself to semantic-default-c-setup.
 ;;
 ;; ede-cpp-root-project-list is a list of all registered projects
-;; oref and with-slots for object inspection
-;;
-;; Use this for detection if project was registered and for dynamic
-;; update of project info from config file.
-;; Update project if save operation occurred in something what looks
-;; like project config file.
-;; Also advice revert-buffer and perform this on all reverted files
-;; which looks like project config files.
 
 ;; TODO: Try to download and compile newest parser definition from
 ;; https://sourceforge.net/p/cedet/git/ci/master/tree/lisp/cedet/semantic/bovine/c.by
@@ -2066,3 +2055,205 @@ Makes C/C++ language like assumptions."
 ;; NOTE: Interesting functions where include resolve process occurs
 ;;   semantic-dependency-tag-file
 ;;   semantic-dependency-find-file-on-path
+
+;; Overrided because default implementation completely ignored
+;; function parameters in function signature.
+(defun semantic-symref-hits-in-region (target hookfcn start end)
+  "Find all occurrences of the symbol TARGET that match TARGET the tag.
+For each match, call HOOKFCN.
+HOOKFCN takes three arguments that match
+`semantic-analyze-current-symbol's use of HOOKFCN.
+  ( START END PREFIX )
+
+Search occurs in the current buffer between START and END."
+  (require 'semantic/idle)
+  (save-excursion
+    (goto-char start)
+    (let* ((str (semantic-tag-name target))
+           (case-fold-search semantic-case-fold)
+           (regexp (concat "\\<" (regexp-quote str) "\\>")))
+      (while (re-search-forward regexp end t)
+        (when (semantic-idle-summary-useful-context-p)
+          (semantic-analyze-current-symbol
+           (lambda (start end prefix)
+             (let ((tag (car (nreverse prefix)))
+                   (parent-tag (semantic-current-tag-parent)))
+               ;; check for semantic match on the text match.
+               (when (or (and (semantic-tag-p tag)
+                              (semantic-equivalent-tag-p target tag))
+                         ;; Hack in order to get recognized functional
+                         ;; arguments.
+                         ;; When tag failed to be analyzed, it might
+                         ;; actually be hit into function parameter
+                         ;; enumeration.
+                         ;; In such case, we must somehow decide if it
+                         ;; is true.
+                         ;; 1) We get parent tag.
+                         ;; 2) If it is function, we get all its arguments.
+                         ;; 3) We try to find all arguments which
+                         ;;    match to unresolved prefix name.
+                         ;; 4) After that, we iterate over result from
+                         ;;    step 3 and try to find at least one similar
+                         ;;    parameter tag to the passed target tag.
+                         ;;
+                         ;; If at least one hit was found, we can be
+                         ;; pretty sure that we are looking at
+                         ;; functional parameter.
+                         (and (stringp tag)
+                              (semantic-tag-p parent-tag)
+                              (equal (semantic-tag-class parent-tag)
+                                     'function)
+                              (loop for candidate
+                                    in (semantic-find-tags-by-name
+                                        tag
+                                        (semantic-tag-function-arguments
+                                         parent-tag))
+                                    if (semantic-equivalent-tag-p target
+                                                                  candidate)
+                                    collect candidate)))
+                 (save-excursion (funcall hookfcn
+                                          start
+                                          end
+                                          prefix)))))
+           (point)))))))
+
+;; Overrided because default implementation ignored functional
+;; parameters in function signatures.
+(defun semantic-symref-rename-local-variable ()
+  "Fancy way to rename the local variable under point.
+Depends on the SRecode Field editing API."
+  (interactive)
+  ;; Do the replacement as needed.
+  (let* ((ctxt (semantic-analyze-current-context))
+         (target (car (reverse (oref ctxt prefix))))
+         (tag (semantic-current-tag)))
+    ;; Hack for the situation when we are trying to renamed function
+    ;; parameter and point is positioned in function signature.
+    ;; We dont get any analysis here, so we must try to do it ourselves.
+    (when (and (stringp target)
+               (semantic-tag-with-position-p tag)
+               (equal (semantic-tag-name tag) target))
+      (setq target tag
+            tag (semantic-current-tag-parent)))
+    (when (not tag)
+      (error "Failed to find containing tag!"))
+    (when (or (not target)
+              (not (semantic-tag-with-position-p target)))
+      (error "Cannot identify symbol under point"))
+    (when (not (semantic-tag-of-class-p target 'variable))
+      (error "Can only rename variables"))
+    (when (or (< (semantic-tag-start target) (semantic-tag-start tag))
+              (> (semantic-tag-end target) (semantic-tag-end tag)))
+      (error "Can only rename variables declared in %s"
+             (semantic-tag-name tag)))
+    ;; I think we're good for this example.  Give it a go through
+    ;; our fancy interface from SRecode.
+    (require 'srecode/fields)
+    ;; Make sure there is nothing active.
+    (let ((ar (srecode-active-template-region)))
+      (when ar (srecode-delete ar)))
+    (let ((srecode-field-archive nil)
+          (region nil))
+      (semantic-symref-hits-in-region
+       target (lambda (start end prefix)
+                ;; For every valid hit, create one field.
+                (srecode-field "LOCAL" :name "LOCAL" :start start :end end))
+       (semantic-tag-start tag) (semantic-tag-end tag))
+      ;; Now that the fields are setup, create the region.
+      (setq region (srecode-template-inserted-region
+                    "REGION" :start (semantic-tag-start tag)
+                    :end (semantic-tag-end tag)))
+      ;; Activate the region.
+      (if (not (null (oref region fields)))
+          (srecode-overlaid-activate region)
+        (error "No reference in region was found!")))))
+
+;; Overrided because old implementation does not detected invalid
+;; tagname hits. That way, users blamed CEDET instead of shitty tools
+;; which CEDET uses (hello, GNU Global).
+(defun semantic-symref-hit-to-tag-via-buffer
+    (hit searchtxt searchtype &optional open-buffers)
+  "Convert the symref HIT into a TAG by looking up the tag via a buffer.
+Return the Semantic tag associated with HIT.
+SEARCHTXT is the text that is being searched for.
+Used to narrow the in-buffer search.
+SEARCHTYPE is the type of search (such as 'symbol or 'tagname).
+Optional OPEN-BUFFERS, when nil will use a faster version of
+`find-file' when a file needs to be opened.  If non-nil, then
+normal buffer initialization will be used.
+This function will leave buffers loaded from a file open, but
+will add buffers that must be opened to `semantic-symref-recently-opened-buffers'.
+Any caller MUST deal with that variable, either clearing it, or deleting the
+buffers that were opened."
+  (let* ((line (car hit))
+         (file (cdr hit))
+         (buff (find-buffer-visiting file))
+         (tag nil))
+    (cond
+     ;; We have a buffer already.  Check it out.
+     (buff
+      (set-buffer buff))
+
+     ;; We have a table, but it needs a refresh.
+     ;; This means we should load in that buffer.
+     (t
+      (let ((kbuff
+             (if open-buffers
+                 ;; Even if we keep the buffers open, don't
+                 ;; let EDE ask lots of questions.
+                 (let ((ede-auto-add-method 'never))
+                   (find-file-noselect file t))
+               ;; When not keeping the buffers open, then
+               ;; don't setup all the fancy froo-froo features
+               ;; either.
+               (semantic-find-file-noselect file t))))
+        (set-buffer kbuff)
+        (push kbuff semantic-symref-recently-opened-buffers)
+        (semantic-fetch-tags))))
+
+    ;; Too much baggage in goto-line
+    ;; (goto-line line)
+    (goto-char (point-min))
+    (forward-line (1- line))
+
+    ;; Search forward for the matching text.
+    ;; FIXME: This still fails if the regexp uses something specific
+    ;; to the extended syntax, like grouping.
+    (when (re-search-forward (if (memq searchtype '(regexp tagregexp))
+                                 searchtxt
+                               (regexp-quote searchtxt))
+                             (point-at-eol)
+                             t)
+      (goto-char (match-beginning 0)))
+
+    (setq tag (semantic-current-tag))
+
+    ;; If we are searching for a tag, but bound the tag we are looking
+    ;; for, see if it resides in some other parent tag.
+    ;;
+    ;; If there is no parent tag, then we still need to hang the originator
+    ;; in our list.
+    (when (and (eq searchtype 'symbol)
+               (string= (semantic-tag-name tag) searchtxt))
+      (setq tag (or (semantic-current-tag-parent) tag)))
+
+    (when (and (eq searchtype 'tagname)
+               (not (string= (semantic-tag-name tag)
+                             searchtxt))
+               (yes-or-no-p (concat "Potential invalid hit was "
+                                    "found, continue or raise exception "
+                                    "with report?")))
+      (error (cocant "Hit %s:%s does not match to %s (searched for %s), this "
+                     "is with high probability error of symref "
+                     "backend, not semantic!")
+             file
+             line
+             (semantic-tag-name tag)
+             searchtxt))
+
+    ;; Copy the tag, which adds a :filename property.
+    (when tag
+      (setq tag (semantic-tag-copy tag nil t))
+      ;; Ad this hit to the tag.
+      (semantic--tag-put-property tag :hit (list line)))
+    tag))
