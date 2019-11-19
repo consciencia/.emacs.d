@@ -23,12 +23,29 @@
 (global-semantic-highlight-edits-mode t)
 (global-semantic-idle-summary-mode t)
 (global-semantic-highlight-func-mode t)
-(global-semantic-decoration-mode t)
+;; Disabled because decoration mode awfully slows down parsing of
+;; larger chunks of unparsed files.
+;; Also, when turning on, it will iterate all buffers and turns itself on
+;; in every buffer managed by semantic which is very slow when many
+;; buffers are opened.
+;; Because of that, its not good idea to switch it off and on when
+;; parsing.
+;; We will solve it by idle timer hack.
+(global-semantic-decoration-mode -1)
 (global-semantic-idle-breadcrumbs-mode t)
 ;; idle breadcrumbs are better, but are in conflict
 ;; with stickyfunc, so its disabled.
 (global-semantic-stickyfunc-mode -1)
+;; We dont want this globally, it kinds of annoys in some situations.
 (global-semantic-show-unmatched-syntax-mode -1)
+
+;; Active decoration mode for current buffer only after some seconds
+;; of idling. This way, no slow down due to decoration happen during
+;; bulk file parsing in grep and indexer.
+(run-with-idle-timer 2 t
+                     'custom/semantic/enable-decorations-locally)
+
+
 
 (setq-default semantic-idle-breadcrumbs-format-tag-function
               'semantic-format-tag-summarize)
@@ -309,6 +326,21 @@ smallest tag.  Return nil if there is no tag here."
 
 
 
+(defun custom/semantic/enable-decorations-locally ()
+  (when (and (featurep 'semantic)
+             (semantic-active-p)
+             ;; Ugly way how to check if mode is
+             ;; open, unfortunately, variable
+             ;; semantic-decoration-mode
+             ;; cant be trusted. No idea why.
+             (not (loop for o
+                        in (with-current-buffer (current-buffer)
+                             (semantic-overlays-in (point-min)
+                                                   (point-max)))
+                        if (semantic-decoration-p o)
+                        return t)))
+    (semantic-decoration-mode 1)))
+
 (defun custom/semantic/diagnostic-visualizations ()
   (interactive)
   (let ((decision (ido-completing-read "Select thing to visualize: "
@@ -325,6 +357,16 @@ smallest tag.  Return nil if there is no tag here."
       (semantic-chart-tag-complexity))
      ((equal decision "Tags by class")
       (semantic-chart-tags-by-class)))))
+
+(defun custom/semantic/show-parser-errors ()
+  (interactive)
+  (semantic-show-unmatched-syntax-mode 1)
+  (message "Parser errors are shown as red underlines"))
+
+(defun custom/semantic/hide-parser-errors ()
+  (interactive)
+  (semantic-show-unmatched-syntax-mode -1)
+  (message "Parser errors are hidden"))
 
 (defun custom/ede/load-config-file (proj-root &optional dont-ask)
   (let ((config-path (concat proj-root
@@ -1229,46 +1271,30 @@ BUTTON is the button that was clicked."
                                                        hit-payload)
                                      "\n")))))))))
 
-;; Decoration mode awfully slow down parsing of file on windows. No
-;; idea why.
-;; Easy fix is to disable it temporary in places where lots of parsing
-;; is expected.
-;;
-;; TODO: Find out why it is so slow on windows.
-(defmacro custom/semantic/with-disabled-decorations (&rest forms)
-  (declare (indent 99))
-  (let ((was-enabled-sym (gensym)))
-    `(let ((,was-enabled-sym global-semantic-decoration-mode))
-       (global-semantic-decoration-mode nil)
-       (unwind-protect
-           (progn ,@forms)
-         (global-semantic-decoration-mode ,was-enabled-sym)))))
-
 (defun custom/filter-raw-grep-output (hits searchfor)
-  (custom/semantic/with-disabled-decorations
-      (setq custom/TAGNAME-HITS hits)
-      (let ((deep-search #'custom/semantic/search-file-no-includes)
-            (files (@dict-new))
-            (result nil))
-        (loop for (line . path) in hits
-              do (@dict-set path t files))
-        (@map (lambda (filename dummy)
-                (setq result
-                      (append result
-                              (loop for tag
-                                    in (funcall deep-search
-                                                searchfor
-                                                filename)
-                                    collect (cons tag filename)))))
-              files)
-        (setq result
-              (loop for (tag . file) in result
-                    collect (cons (with-current-buffer (find-file-noselect file)
-                                    (line-number-at-pos
-                                     (semantic-tag-start tag)))
-                                  file)))
-        (setq custom/TAGNAME-RESULT result)
-        result)))
+  (setq custom/TAGNAME-HITS hits)
+  (let ((deep-search #'custom/semantic/search-file-no-includes)
+        (files (@dict-new))
+        (result nil))
+    (loop for (line . path) in hits
+          do (@dict-set path t files))
+    (@map (lambda (filename dummy)
+            (setq result
+                  (append result
+                          (loop for tag
+                                in (funcall deep-search
+                                            searchfor
+                                            filename)
+                                collect (cons tag filename)))))
+          files)
+    (setq result
+          (loop for (tag . file) in result
+                collect (cons (with-current-buffer (find-file-noselect file)
+                                (line-number-at-pos
+                                 (semantic-tag-start tag)))
+                              file)))
+    (setq custom/TAGNAME-RESULT result)
+    result))
 
 (setq custom/semantic/grep-db-enabled t)
 
@@ -2132,7 +2158,10 @@ Depends on the SRecode Field editing API."
     ;; We dont get any analysis here, so we must try to do it ourselves.
     (when (and (stringp target)
                (semantic-tag-with-position-p tag)
-               (equal (semantic-tag-name tag) target))
+               (equal (semantic-tag-name tag) target)
+               (semantic-current-tag-parent)
+               (equal (semantic-tag-class (semantic-current-tag-parent))
+                      'function))
       (setq target tag
             tag (semantic-current-tag-parent)))
     (when (not tag)
