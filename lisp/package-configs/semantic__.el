@@ -995,6 +995,18 @@ Display the references in `semantic-symref-results-mode'."
            ;; All is ok.
            )
 
+          ;; Local variables have no overlays thus no enclosing tag can
+          ;; be found for them. In order to correctly detect valid
+          ;; landing for local variables, we must iterate through all local
+          ;; variables in current scope and check if one of them match
+          ;; to visited tag.
+          ((loop for var-tag in (semantic-get-local-variables)
+                 if (and (equal curr-pos (semantic-tag-start var-tag))
+                         (equal curr-name (semantic-tag-name var-tag)))
+                 return t)
+           ;; All is ok.
+           )
+
           ((equal curr-name enclosing-tag-name)
            ;; We are not exactly ok, but we landed somehow somewhere
            ;; in correct tag, just readjust.
@@ -2077,6 +2089,41 @@ Makes C/C++ language like assumptions."
 ;; TODO: Try to download and compile newest parser definition from
 ;; https://sourceforge.net/p/cedet/git/ci/master/tree/lisp/cedet/semantic/bovine/c.by
 ;; It might fix some things and provide speedup.
+;;
+;; Python: Some issue with general parsing. Probably issue with tabs
+;; vs spaces.
+;;
+;; C/C++:
+;;    // Parser fails here probably.
+;;    int unparseable1[8
+;;                     + 9] = {0};
+;;
+;;    for (Baz_t* pUnparseable2 =
+;;             foo->baz.baz;
+;;         pUnparseable2 != NULL;
+;;         pUnparseable2 = pUnparseable2->pNext)
+;;    {
+;;        // Multiline cycles are not parsed.
+;;        // Actually, parser works fine but body of cycle is
+;;        // considered to be foreign scope.
+;;        // No need to tweak parser, only parser invocation logic
+;;        // which tries to manage scope needs to be fixed.
+;;    }
+;;
+;;    for (Baz_t* pUnparseable4 = foo->baz.baz;
+;;         pUnparseable4 != NULL;
+;;         pUnparseable4 = pUnparseable4->pNext)
+;;    {
+;;        // Multiline cycles are not parsed.
+;;        // Actually, parser works fine but body of cycle is
+;;        // considered to be foreign scope.
+;;        // No need to tweak parser, only parser invocation logic
+;;        // which tries to manage scope needs to be fixed.
+;;    }
+;;
+;;    // Reason is that sizeof() invocation.
+;;    // Parser fails here probably.
+;;    uint32_t unparseable3 = sizeof(uint8_t);
 
 ;; NOTE: Interesting functions where include resolve process occurs
 ;;   semantic-dependency-tag-file
@@ -2272,7 +2319,7 @@ buffers that were opened."
                (yes-or-no-p (concat "Potential invalid hit was "
                                     "found, continue or raise exception "
                                     "with report?")))
-      (error (cocant "Hit %s:%s does not match to %s (searched for %s), this "
+      (error (concat "Hit %s:%s does not match to %s (searched for %s), this "
                      "is with high probability error of symref "
                      "backend, not semantic!")
              file
