@@ -12,9 +12,13 @@
 (require 'semantic/chart)
 (require 'srecode)
 (require 'srecode/fields)
+(require 'semantic/ctxt)
+(require 'semantic/bovine/c)
+(require 'mode-local)
 (require 'json)
 (require 'seq)
 (require 'company-semantic)
+
 (load "custom-semantic-db-grep.el")
 
 (global-semanticdb-minor-mode t)
@@ -2094,32 +2098,9 @@ Makes C/C++ language like assumptions."
 ;; vs spaces.
 ;;
 ;; C/C++:
-;;    // Parser fails here probably.
+;;    // Reason is that newline in brackets.
 ;;    int unparseable1[8
 ;;                     + 9] = {0};
-;;
-;;    for (Baz_t* pUnparseable2 =
-;;             foo->baz.baz;
-;;         pUnparseable2 != NULL;
-;;         pUnparseable2 = pUnparseable2->pNext)
-;;    {
-;;        // Multiline cycles are not parsed.
-;;        // Actually, parser works fine but body of cycle is
-;;        // considered to be foreign scope.
-;;        // No need to tweak parser, only parser invocation logic
-;;        // which tries to manage scope needs to be fixed.
-;;    }
-;;
-;;    for (Baz_t* pUnparseable4 = foo->baz.baz;
-;;         pUnparseable4 != NULL;
-;;         pUnparseable4 = pUnparseable4->pNext)
-;;    {
-;;        // Multiline cycles are not parsed.
-;;        // Actually, parser works fine but body of cycle is
-;;        // considered to be foreign scope.
-;;        // No need to tweak parser, only parser invocation logic
-;;        // which tries to manage scope needs to be fixed.
-;;    }
 ;;
 ;;    // Reason is that sizeof() invocation.
 ;;    // Parser fails here probably.
@@ -2333,3 +2314,139 @@ buffers that were opened."
       ;; Ad this hit to the tag.
       (semantic--tag-put-property tag :hit (list line)))
     tag))
+
+;; Walks all for cycles in range and parses variables defined in them.
+(defun custom/semantic/parse-vars-in-fors-in-c/c++ (context-begin context-end)
+  (save-excursion
+    (goto-char context-begin)
+    (let ((vars nil))
+      (while (re-search-forward (pcre-to-elisp/cached "^\\s*for\\s*\\(")
+                                context-end
+                                t)
+        (goto-char (match-end 0))
+        (push (semantic-parse-region (point)
+                                     (save-excursion
+                                       (semantic-end-of-context)
+                                       (point))
+                                     'bovine-inner-scope
+                                     nil
+                                     t)
+              vars)
+        (semantic-end-of-context))
+      (apply #'append vars))))
+
+;; Enhanced version of function semantic-get-local-variables-default.
+;; In C/C++, local variables in for cycles are not parsed because
+;; variable parser just refuses to parse stuff inside statements.
+;; As an workaround, we walk all seen for cycles and release our
+;; parser only on its internals which are parsed just fine.
+;;
+;; WARNING: This hack does not respect nesting of cycle contextes, it
+;;          will just parse all variables in for cycles located in
+;;          <start-of-toplevel-context,starting-point>. As an result, more
+;;          variables is catched even though they are in unaccessible
+;;          scopes.
+;;
+;; NOTE: It is not exactly true that variable parser refuses to parse
+;;       variables in cycles. Actually it is able to parse them when lexer
+;;       is configured with depth of 2 instead of nil which defaults to 0.
+;;       Unfortunately it is a lot slower and it catches more false
+;;       positives than when configured with lexer depth 0 and it is even worse
+;;       when it comes to respecting nesting of for cycles. At least, my
+;;       hack knows that all for cycles after cursor are out of game.
+;;
+;; TODO: Add support for semantically correct parsing of for cycles.
+;;       Parse all parent for cycles and skip for cycles in neighbor
+;;       syntactical branches.
+(defun custom/semantic/semantic-get-local-variables-in-c/c++ ()
+  "Get local values from a specific context.
+Uses the bovinator with the special top-symbol `bovine-inner-scope'
+to collect tags, such as local variables or prototypes."
+  ;; This assumes a bovine parser.  Make sure we don't do
+  ;; anything in that case.
+  (when (and semantic--parse-table (not (eq semantic--parse-table t)))
+    (let ((vars (semantic-get-cache-data 'get-local-variables)))
+      (if vars
+          (progn
+            ;;(message "Found cached vars.")
+            vars)
+        (let ((vars2 nil)
+              ;; We want nothing to do with funny syntaxing while doing this.
+              (semantic-unmatched-syntax-hook nil)
+              (start (point))
+              (firstusefulstart nil)
+              (last-context-begin nil))
+          (while (not (semantic-up-context (point) 'function))
+            (when (not vars)
+              (setq firstusefulstart (point)))
+            (setq last-context-begin (point))
+            (save-excursion
+              (forward-char 1)
+              (setq vars
+                    ;; Note to self: semantic-parse-region returns cooked
+                    ;; but unlinked tags.  File information is lost here
+                    ;; and is added next.
+                    (append (semantic-parse-region (point)
+                                                   (save-excursion
+                                                     (semantic-end-of-context)
+                                                     (point))
+                                                   'bovine-inner-scope
+                                                   nil
+                                                   t)
+                            vars))))
+          ;; Get variables from all previous for cycles.
+          (when last-context-begin
+            (setq vars
+                  (append
+                   (custom/semantic/parse-vars-in-fors-in-c/c++
+                    last-context-begin
+                    start)
+                   vars)))
+          ;; Modify the tags in place.
+          (setq vars2 vars)
+          (while vars2
+            (semantic--tag-put-property (car vars2)
+                                        :filename (buffer-file-name))
+            (setq vars2 (cdr vars2)))
+          ;; Hash our value into the first context that produced useful results.
+          (when (and vars firstusefulstart)
+            (let ((end (save-excursion
+                         (goto-char firstusefulstart)
+                         (save-excursion
+                           (unless (semantic-end-of-context)
+                             (point))))))
+              ;;(message "Caching values %d->%d." firstusefulstart end)
+              (semantic-cache-data-to-buffer (current-buffer)
+                                             firstusefulstart
+                                             (or end
+                                                 ;; If the end-of-context fails,
+                                                 ;; just use our cursor starting
+                                                 ;; position.
+                                                 start)
+                                             vars
+                                             'get-local-variables
+                                             'exit-cache-zone)))
+          ;; Return our list.
+          vars)))))
+
+(define-mode-local-override semantic-get-local-variables c-mode
+  (&optional point)
+  "Get all variables from cycles in c mode"
+  (custom/semantic/semantic-get-local-variables-in-c/c++))
+
+(define-mode-local-override semantic-get-local-variables c++-mode
+  (&optional point)
+  "Get all variables from cycles in c++ mode"
+  (let* ((origvar (custom/semantic/semantic-get-local-variables-in-c/c++))
+         (ct (semantic-current-tag))
+         (p (when (semantic-tag-of-class-p ct 'function)
+              (or (semantic-tag-function-parent ct)
+                  (car-safe (semantic-find-tags-by-type
+                             "class" (semantic-find-tag-by-overlay)))))))
+    ;; If we have a function parent, then that implies we can
+    (if p
+        ;; Append a new tag THIS into our space.
+        (cons (semantic-tag-new-variable "this" p nil :pointer 1)
+              origvar)
+      ;; No parent, just return the usual.
+      origvar)))
