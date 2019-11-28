@@ -359,6 +359,8 @@
             (local-set-key (kbd "M-<next>") 'senator-next-tag)
             (local-set-key (kbd "M-<prior>") 'senator-previous-tag)
             (local-set-key (kbd "M-p") 'senator-go-to-up-reference)
+            (local-set-key (kbd "M-c")
+                           'custom/semantic/find-children-of-current-class)
             (define-prefix-command 'custom/semantic/transpose-map)
             (local-set-key (kbd "M-t") 'custom/semantic/transpose-map)
             (define-key custom/semantic/transpose-map

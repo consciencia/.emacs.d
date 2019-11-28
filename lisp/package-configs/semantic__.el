@@ -631,6 +631,50 @@ This helper manages the mark, buffer switching, and pulsing."
                "prototype")))
     (custom/semantic/goto-tag target)))
 
+(defun custom/semantic/find-children-of-current-class ()
+  (interactive)
+  (semantic-fetch-tags)
+  (custom/semantic/load-all-project-dbs)
+  (let ((curr-tag (semantic-current-tag))
+        (curr-parent-tag (semantic-current-tag-parent))
+        (class-tag nil))
+    (cond ((and curr-tag
+                (equal (semantic-tag-class curr-tag) 'type)
+                (or (equal (semantic-tag-type curr-tag) "class")
+                    (equal (semantic-tag-type curr-tag) "struct")))
+           (setq class-tag curr-tag))
+
+          ((and curr-parent-tag
+                (equal (semantic-tag-class curr-parent-tag) 'type)
+                (or (equal (semantic-tag-type curr-parent-tag) "class")
+                    (equal (semantic-tag-type curr-parent-tag) "struct")))
+           (setq class-tag curr-parent-tag))
+
+          ((and curr-tag
+                (equal (semantic-tag-class curr-tag) 'function))
+           (setq class-tag (semantic-up-reference curr-tag)))
+
+          ((and curr-parent-tag
+                (equal (semantic-tag-class curr-parent-tag) 'function))
+           (setq class-tag (semantic-up-reference curr-parent-tag)))
+
+          (t
+           (if curr-tag
+               (error "Failed to find parent class of current tag!")
+             (error "Failed to find parent class of current context!"))))
+    (if (and (equal (semantic-tag-class class-tag) 'type)
+             (or (equal (semantic-tag-type class-tag) "class")
+                 (equal (semantic-tag-type class-tag) "struct")))
+        (let* ((find-result (semanticdb-find-tags-subclasses-of-type
+                             (semantic-tag-name class-tag)
+                             (current-buffer)))
+               (tags (semanticdb-strip-find-results find-result t)))
+          (if tags
+              (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
+            (error "Failed to find children of '%s'!"
+                   (semantic-tag-name class-tag))))
+      (error "Failed to find parent class of current tag!"))))
+
 (defun semantic-symref-symbol (sym)
   "Find references to the symbol SYM.
 This command uses the currently configured references tool within the
@@ -1095,6 +1139,19 @@ Display the references in `semantic-symref-results-mode'."
         (progn (semanticdb-save-all-db)
                (custom/semantic/index-directory file selection-regex))))))
 
+
+(defun custom/semantic/index-current-project ()
+  (interactive)
+  (let ((roots (cons (semantic-symref-calculate-rootdir)
+                     (append semantic-dependency-system-include-path
+                             (custom/ede/get-project-dependencies)))))
+    (if roots
+        (progn
+          (message "Indexing: %s" roots)
+          (loop for root in roots
+                do (custom/semantic/index-directory root)))
+      (error "Failed to find roots, are you in project?"))))
+
 (setq custom/semantic/loaded-projects (@dict-new))
 (defun custom/semantic/load-all-project-dbs ()
   (interactive)
@@ -1211,7 +1268,7 @@ BUTTON is the button that was clicked."
 (define-key srecode-field-keymap (kbd "<C-return>") 'srecode-field-exit-ask)
 
 ;; Adds support for multi repository symref searches. Will affect grep
-;; presearch backend too.
+;; search backend too.
 (defun custom/semantic-symref-grep-use-template-around (oldfn
                                                         rootdir
                                                         filepattern
@@ -2066,6 +2123,8 @@ Makes C/C++ language like assumptions."
                                    (if res
                                        (semantic-symref-result-get-tags-as-is
                                         res))))
+                             (setq tags (semantic-find-tags-by-class 'type
+                                                                     tags))
                              (if tags (custom/semantic/choose-tag tags))))))))
 
             ;; Get the data type, and try to find that.
@@ -2171,7 +2230,7 @@ Search occurs in the current buffer between START and END."
                                           prefix)))))
            (point)))))))
 
-;; Overrided because default implementation ignored functional
+;; Overrided because default implementation ignored function
 ;; parameters in function signatures.
 (defun semantic-symref-rename-local-variable ()
   "Fancy way to rename the local variable under point.
@@ -2300,13 +2359,15 @@ buffers that were opened."
                (yes-or-no-p (concat "Potential invalid hit was "
                                     "found, continue or raise exception "
                                     "with report?")))
-      (error (concat "Hit %s:%s does not match to %s (searched for %s), this "
-                     "is with high probability error of symref "
-                     "backend, not semantic!")
-             file
-             line
-             (semantic-tag-name tag)
-             searchtxt))
+      (let ((msg (fromat (concat "Hit %s:%s does not match to %s (searched for %s), this "
+                                 "is with high probability error of symref "
+                                 "backend, not semantic!")
+                         file
+                         line
+                         (semantic-tag-name tag)
+                         searchtxt)))
+        (message msg)
+        (error msg)))
 
     ;; Copy the tag, which adds a :filename property.
     (when tag
@@ -2316,6 +2377,11 @@ buffers that were opened."
     tag))
 
 ;; Walks all for cycles in range and parses variables defined in them.
+;;
+;; WARNING: Does not respect for cycle scope nesting and variable shadowing.
+;;
+;; NOTE: When reworking current hack to correct handling of cycle scopes, dont
+;; forget that some for cycles may by without scope braces.
 (defun custom/semantic/parse-vars-in-fors-in-c/c++ (context-begin context-end)
   (save-excursion
     (goto-char context-begin)
@@ -2347,6 +2413,9 @@ buffers that were opened."
 ;;          variables is catched even though they are in unaccessible
 ;;          scopes.
 ;;
+;; WARNING: Variable shadowing is not implemented yet, its kinda mess
+;; but most of the time working as expected.
+;;
 ;; NOTE: It is not exactly true that variable parser refuses to parse
 ;;       variables in cycles. Actually it is able to parse them when lexer
 ;;       is configured with depth of 2 instead of nil which defaults to 0.
@@ -2358,6 +2427,8 @@ buffers that were opened."
 ;; TODO: Add support for semantically correct parsing of for cycles.
 ;;       Parse all parent for cycles and skip for cycles in neighbor
 ;;       syntactical branches.
+;;
+;; TODO: Add support for variable shadowing.
 (defun custom/semantic/semantic-get-local-variables-in-c/c++ ()
   "Get local values from a specific context.
 Uses the bovinator with the special top-symbol `bovine-inner-scope'
@@ -2429,11 +2500,17 @@ to collect tags, such as local variables or prototypes."
           ;; Return our list.
           vars)))))
 
+;; Override this function for c mode only. We dont want this logic
+;; anywhere else.
 (define-mode-local-override semantic-get-local-variables c-mode
   (&optional point)
   "Get all variables from cycles in c mode"
   (custom/semantic/semantic-get-local-variables-in-c/c++))
 
+;; Override this function for c++ mode only. We dont want this logic
+;; anywhere else.
+;;
+;; Borrowed injecting of this variable from old override.
 (define-mode-local-override semantic-get-local-variables c++-mode
   (&optional point)
   "Get all variables from cycles in c++ mode"
