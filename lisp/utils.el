@@ -1101,3 +1101,30 @@ one is kept."
                 (semantic-tag-end range))))
   (and (>= val (car range))
        (<= val (cdr range))))
+
+(defun custom/is-scratch-empty-p ()
+  (let ((expected (concat ";; This buffer is for text that is not "
+                          "saved, and for Lisp evaluation.\n"
+                          ";; To create a file, visit it with C-o and "
+                          "enter text in its buffer."))
+        (actual (with-current-buffer "*scratch*"
+                  (buffer-substring-no-properties (point-min)
+                                                  (point-max)))))
+    (equal expected actual)))
+
+(setq custom/user-said-exit-emacs nil)
+(defun custom/can-kill-emacs-p ()
+  (or (custom/is-scratch-empty-p)
+      (when (yes-or-no-p "SCRATCH buffer not empty, can exit?")
+        (setq custom/user-said-exit-emacs t)
+        t)))
+
+(add-hook 'kill-emacs-query-functions
+          'custom/can-kill-emacs-p)
+
+(advice-add 'kill-emacs :around
+            (lambda (fn &rest args)
+              (if (and (not (custom/is-scratch-empty-p))
+                       (not custom/user-said-exit-emacs))
+                  (message "SCRATCH buffer not empty, will not exit!")
+                (apply fn args))))

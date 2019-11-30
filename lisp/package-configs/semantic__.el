@@ -14,6 +14,7 @@
 (require 'srecode/fields)
 (require 'semantic/ctxt)
 (require 'semantic/bovine/c)
+(require 'semantic/analyze)
 (require 'mode-local)
 (require 'json)
 (require 'seq)
@@ -639,36 +640,28 @@ This helper manages the mark, buffer switching, and pulsing."
         (curr-parent-tag (semantic-current-tag-parent))
         (class-tag nil))
     (cond ((and curr-tag
-                (equal (semantic-tag-class curr-tag) 'type)
-                (or (equal (semantic-tag-type curr-tag) "class")
-                    (equal (semantic-tag-type curr-tag) "struct")))
+                (semantic-tag-of-class-p curr-tag 'type)
+                (member (semantic-tag-type curr-tag)
+                        '("class" "struct")))
            (setq class-tag curr-tag))
-
           ((and curr-parent-tag
-                (equal (semantic-tag-class curr-parent-tag) 'type)
-                (or (equal (semantic-tag-type curr-parent-tag) "class")
-                    (equal (semantic-tag-type curr-parent-tag) "struct")))
+                (semantic-tag-of-class-p curr-parent-tag 'type)
+                (member (semantic-tag-type curr-parent-tag)
+                        '("class" "struct")))
            (setq class-tag curr-parent-tag))
-
           ((and curr-tag
                 (equal (semantic-tag-class curr-tag) 'function))
            (setq class-tag (semantic-up-reference curr-tag)))
-
           ((and curr-parent-tag
-                (equal (semantic-tag-class curr-parent-tag) 'function))
+                (semantic-tag-of-class-p curr-parent-tag 'function))
            (setq class-tag (semantic-up-reference curr-parent-tag)))
-
           (t
            (if curr-tag
                (error "Failed to find parent class of current tag!")
              (error "Failed to find parent class of current context!"))))
-    (if (and (equal (semantic-tag-class class-tag) 'type)
-             (or (equal (semantic-tag-type class-tag) "class")
-                 (equal (semantic-tag-type class-tag) "struct")))
-        (let* ((find-result (semanticdb-find-tags-subclasses-of-type
-                             (semantic-tag-name class-tag)
-                             (current-buffer)))
-               (tags (semanticdb-strip-find-results find-result t)))
+    (if (and (semantic-tag-of-class-p class-tag 'type)
+             (member (semantic-tag-type class-tag) '("class" "struct")))
+        (let ((tags (custom/semantic/get-subclasses class-tag)))
           (if tags
               (custom/semantic/goto-tag (custom/semantic/choose-tag tags))
             (error "Failed to find children of '%s'!"
@@ -814,6 +807,20 @@ Display the references in `semantic-symref-results-mode'."
 ;;     (semantic-add-system-include include-root-dir symbol-for-mode)
 ;;     (semantic-remove-system-include include-root-dir symbol-for-mode)
 
+;; Overrided because default implementation does not flatten tag
+;; hierarchy (ie deep search). As an result, all classes and struct
+;; inside namespaces were skipped from search. Not good, not at all.
+(cl-defmethod semanticdb-find-tags-subclasses-of-type-method
+  ((table semanticdb-abstract-table) parent &optional tags)
+  "In TABLE, find all occurrences of tags whose parent is the PARENT type.
+Optional argument TAGS is a list of tags to search.
+Returns a table of all matching tags."
+  (require 'semantic/find)
+  (semantic-find-tags-subclasses-of-type parent
+                                         (or tags
+                                             (custom/semantic/flatten-tags-table
+                                              (semanticdb-get-tags table)))))
+
 (defun custom/semantic/get-local-variables (&optional point)
   (interactive "d")
   (let ((tags (semantic-get-all-local-variables)))
@@ -826,6 +833,45 @@ Display the references in `semantic-symref-results-mode'."
                         "\n")))
           (error "Failed to find local variables!"))
       tags)))
+
+(defun custom/semantic/get-superclasses (tag)
+  (when (and (semantic-tag-p tag)
+             (semantic-tag-of-class-p tag 'type)
+             (or (semantic-tag-type-superclasses tag)
+                 (semantic-tag-type-interfaces tag)))
+    (let ((tag-buffer (semantic-tag-buffer tag))
+          (tag-start (if (semantic-tag-with-position-p tag)
+                         (semantic-tag-start tag))))
+      (when (and tag-buffer tag-start)
+        (with-current-buffer tag-buffer
+          (save-excursion
+            (goto-char tag-start)
+            (let ((scope (semantic-calculate-scope tag-start))
+                  (parents (or (semantic-tag-type-superclasses tag)
+                               (semantic-tag-type-interfaces tag))))
+              (loop for parent in parents
+                    collect (custom/semantic/best-tag-user-assist-enabled
+                             (semantic-analyze-find-tag parent
+                                                        'type
+                                                        scope))))))))))
+
+(defun custom/semantic/get-subclasses (tag)
+  (when (and (semantic-tag-p tag)
+             (semantic-tag-of-class-p tag 'type)
+             (member (semantic-tag-type tag) '("class" "struct")))
+    (let* ((tagname (semantic-tag-name tag))
+           ;; Make sure grep backend is enabled.
+           (semantic-symref-tool 'grep)
+           ;; Load all files with mentioned class name into memory
+           ;; and their DBs from persistence.
+           ;;
+           ;; Extremely important step, otherwise only currently
+           ;; loaded databases will be searched.
+           (_ (semantic-symref-find-tags-by-name tagname))
+           (result (semanticdb-find-tags-subclasses-of-type tagname
+                                                            nil
+                                                            t)))
+      (semanticdb-strip-find-results result t))))
 
 (defun custom/semantic/search-db (sym &optional
                                       buffer
@@ -1385,11 +1431,14 @@ BUTTON is the button that was clicked."
   "Perform a search with Grep."
   (when custom/semantic/grep-db-enabled
     ;; Grep doesn't support some types of searches.
-    (let ((st (oref tool searchtype)))
-      (when (not (memq st '(symbol regexp tagname)))
-        (error "Symref impl GREP does not support searchtype of '%s' for '%s'!"
-               st
-               (oref tool searchfor))))
+    (when (not (memq (oref tool searchtype)
+                     '(symbol regexp tagname)))
+      (error "Symref impl GREP does not support searchtype of '%s' for '%s'!"
+             (oref tool searchtype)
+             (oref tool searchfor)))
+    (message "Grepping (%s) for '%s'."
+             (oref tool searchtype)
+             (oref tool searchfor))
     ;; Find the root of the project, and do a find-grep...
     (let* (;; Find the file patterns to use.
            (rootdir (semantic-symref-calculate-rootdir))
@@ -1454,6 +1503,8 @@ BUTTON is the button that was clicked."
       ;; Semantic expect only positions of tags will be provided so we
       ;; must filter raw output from grep using semantic parsing
       ;; infrastructure.
+      (message "Grep found %s hits."
+               (length ans))
       (if (equal (oref tool searchtype) 'tagname)
           (custom/filter-raw-grep-output
            ans
@@ -2527,3 +2578,7 @@ to collect tags, such as local variables or prototypes."
               origvar)
       ;; No parent, just return the usual.
       origvar)))
+
+;; NOTE: semantic-get-local-variables for emacs lisp omit position
+;; information. Thats funcking bad. For what it is if it cant jump to
+;; local variable? Having variable name is good for nothing.
