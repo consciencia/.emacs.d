@@ -1165,11 +1165,13 @@ Returns a table of all matching tags."
 ;;;; INDEX MANAGEMENT CODE
 ;; CODE:
 
-(defun custom/semantic/index-directory (root &optional selection-regex)
+(defun custom/semantic/index-directory (root &optional logger selection-regex)
   (interactive (list (ido-read-directory-name "Select directory: ")))
-  (if (not selection-regex)
-      (setq selection-regex
-            (pcre-to-elisp/cached ".*\\.(?:c|cpp|h|hpp|cxx|hxx)$")))
+  (when (not selection-regex)
+    (setq selection-regex
+          (pcre-to-elisp/cached ".*\\.(?:c|cpp|h|hpp|cxx|hxx)$")))
+  (when (not logger)
+    (setq logger (lambda (_))))
   (let ((root (file-name-as-directory (file-truename root)))
         (files (directory-files root t)))
     (setq files (delete (format "%s." root) files))
@@ -1177,14 +1179,17 @@ Returns a table of all matching tags."
     (setq files (delete (format "%s.git" root) files))
     (setq files (delete (format "%s.hg" root) files))
     (semanticdb-save-all-db)
-    (while files
-      (setq file (pop files))
-      (if (not (file-accessible-directory-p file))
-          (when (string-match-p selection-regex file)
-            (ignore-errors (semanticdb-file-table-object file)))
-        (progn (semanticdb-save-all-db)
-               (custom/semantic/index-directory file selection-regex))))))
-
+    (loop for file in files
+          do (if (not (file-accessible-directory-p file))
+                 (when (string-match-p selection-regex file)
+                   (if (ignore-errors
+                         (semanticdb-file-table-object file))
+                       (funcall logger (format "Parsing %s [OK]" file))
+                     (funcall logger (format "Parsing %s [ERROR]" file))))
+               (progn (semanticdb-save-all-db)
+                      (custom/semantic/index-directory file
+                                                       logger
+                                                       selection-regex))))))
 
 (defun custom/semantic/index-current-project ()
   (interactive)
@@ -1194,8 +1199,19 @@ Returns a table of all matching tags."
     (if roots
         (progn
           (message "Indexing: %s" roots)
-          (loop for root in roots
-                do (custom/semantic/index-directory root)))
+          (let* ((buffname "*Semantic Indexer Log*")
+                 (buff (or (custom/get-buffer buffname)
+                           (generate-new-buffer buffname)))
+                 (logger (lambda (msg)
+                           (insert msg "\n")
+                           (goto-char (point-max))
+                           (redisplay t))))
+            (switch-to-buffer buff)
+            (erase-buffer)
+            (redisplay t)
+            (loop for root in roots
+                  do (custom/semantic/index-directory root logger))
+            (read-only-mode t)))
       (error "Failed to find roots, are you in project?"))))
 
 (setq custom/semantic/loaded-projects (@dict-new))
@@ -2429,7 +2445,7 @@ buffers that were opened."
 
 ;; Walks all for cycles in range and parses variables defined in them.
 ;;
-;; WARNING: Does not respect for cycle scope nesting and variable shadowing.
+;; WARNING: Does not respect for cycle scope nesting.
 ;;
 ;; NOTE: When reworking current hack to correct handling of cycle scopes, dont
 ;; forget that some for cycles may by without scope braces.
@@ -2450,22 +2466,29 @@ buffers that were opened."
                                      t)
               vars)
         (semantic-end-of-context))
-      (apply #'append vars))))
+      ;; Reverse the tags so that first tag is the most far away one.
+      ;; This is important for handling variable shadowing.
+      (setq vars (nreverse (apply #'append vars)))
+      ;; And here we have implemented variable shadowing using hash map.
+      (let ((map (@dict-new)))
+        (loop for var in vars
+              for varname = (semantic-tag-name var)
+              do (@dict-set varname var map))
+        (setq vars nil)
+        (@map (lambda (key val) (push val vars)) map))
+      vars)))
 
 ;; Enhanced version of function semantic-get-local-variables-default.
 ;; In C/C++, local variables in for cycles are not parsed because
 ;; variable parser just refuses to parse stuff inside statements.
-;; As an workaround, we walk all seen for cycles and release our
-;; parser only on its internals which are parsed just fine.
+;; As an workaround, we walk all seen for cycles and release semantic
+;; variable parser only on its internals which are parsed just fine.
 ;;
 ;; WARNING: This hack does not respect nesting of cycle contextes, it
 ;;          will just parse all variables in for cycles located in
 ;;          <start-of-toplevel-context,starting-point>. As an result, more
-;;          variables is catched even though they are in unaccessible
+;;          variables is catched even though they are in inaccessible
 ;;          scopes.
-;;
-;; WARNING: Variable shadowing is not implemented yet, its kinda mess
-;; but most of the time working as expected.
 ;;
 ;; NOTE: It is not exactly true that variable parser refuses to parse
 ;;       variables in cycles. Actually it is able to parse them when lexer
@@ -2478,8 +2501,6 @@ buffers that were opened."
 ;; TODO: Add support for semantically correct parsing of for cycles.
 ;;       Parse all parent for cycles and skip for cycles in neighbor
 ;;       syntactical branches.
-;;
-;; TODO: Add support for variable shadowing.
 (defun custom/semantic/semantic-get-local-variables-in-c/c++ ()
   "Get local values from a specific context.
 Uses the bovinator with the special top-symbol `bovine-inner-scope'

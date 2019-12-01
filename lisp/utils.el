@@ -768,9 +768,9 @@ POS is optional position in file where to search for comment."
        (with-current-buffer ,buffsym
          (read-only-mode -1)
          (erase-buffer)
+         (switch-to-buffer-other-window ,name)
          ,@content
          (read-only-mode t))
-       (switch-to-buffer-other-window ,name)
        (shrink-window-if-larger-than-buffer)
        (goto-char (point-min))
        (if kill-on-quit
@@ -1106,7 +1106,7 @@ one is kept."
   (let ((expected (concat ";; This buffer is for text that is not "
                           "saved, and for Lisp evaluation.\n"
                           ";; To create a file, visit it with C-o and "
-                          "enter text in its buffer."))
+                          "enter text in its buffer.\n\n"))
         (actual (with-current-buffer "*scratch*"
                   (buffer-substring-no-properties (point-min)
                                                   (point-max)))))
