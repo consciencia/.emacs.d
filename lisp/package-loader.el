@@ -48,3 +48,4 @@
 (load "multi-term__.el")
 (load "elisp-refs__.el")
 (load "helpful__.el")
+(load "fast-scroll__.el")
