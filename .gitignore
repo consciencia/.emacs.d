@@ -22,4 +22,5 @@ company-statistics-cache.el
 undo/
 transient/
 version.cache
+elpy/
 *.pyc

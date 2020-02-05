@@ -383,6 +383,23 @@
             (when (not (eq system-type 'windows-nt))
               (flyspell-prog-mode))))
 
+;; CMAKE BINDS
+(add-hook 'cmake-mode-hook
+          (lambda ()
+            (local-set-key (kbd "C-d") 'custom/mark-whole-word)
+            (local-set-key (kbd "M-*") 'cmake-help)
+            (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
+            (set (make-local-variable 'company-backends)
+                 '((company-cmake
+                    company-files)))
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 (lambda ()
+                   (not (eq (get-text-property (point) 'face)
+                            'font-lock-comment-face))))
+            (when (not (eq system-type 'windows-nt))
+              (flyspell-prog-mode))))
+
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook
           (lambda ()
