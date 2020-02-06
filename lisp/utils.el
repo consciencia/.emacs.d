@@ -768,9 +768,9 @@ POS is optional position in file where to search for comment."
        (with-current-buffer ,buffsym
          (read-only-mode -1)
          (erase-buffer)
-         (switch-to-buffer-other-window ,name)
          ,@content
          (read-only-mode t))
+       (switch-to-buffer-other-window ,name)
        (shrink-window-if-larger-than-buffer)
        (goto-char (point-min))
        (if kill-on-quit

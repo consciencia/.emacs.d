@@ -315,17 +315,22 @@ smallest tag.  Return nil if there is no tag here."
           (save-excursion
             (let* ((old-pos (point))
                    (tag (or (car (nreverse (semantic-find-tag-by-overlay)))
-                            (semantic-find-tag-by-overlay-prev))))
+                            (semantic-find-tag-by-overlay-prev)))
+                   (real-start nil))
               (when (semantic-tag-variable-constant-p tag)
                 (goto-char (semantic-tag-start tag))
                 (beginning-of-visual-line)
+                (setq real-start (point))
                 (save-match-data
-                  (when (looking-at (pcre-to-elisp
-                                     "\\s*#define\\s(?:[^\\\n]+\\\n)*[^\n]+\n"))
+                  (when (looking-at
+                         (pcre-to-elisp
+                          "\\s*#define\\s(?:[^\\\n]+\\\n)*[^\n]+\n"))
                     (goto-char (match-end 0))))
                 (when (>= (1- (point)) old-pos)
-                  ;; Real macro range
-                  ;; (cons (semantic-tag-start tag) (1- (point)))
+                  ;; Readjust the tag overlay to reflect real size.
+                  (semantic-tag-set-bounds tag
+                                           real-start
+                                           (1- (point)))
                   tag)))))
     (car (nreverse (semantic-find-tag-by-overlay)))))
 
@@ -2423,10 +2428,17 @@ buffers that were opened."
     (when (and (eq searchtype 'tagname)
                (not (string= (semantic-tag-name tag)
                              searchtxt))
+               (not (string= (semantic-tag-name
+                              ;; Hack for potential nil return value.
+                              ;; Dont want to create special var for
+                              ;; it and dont want to call it twice.
+                              (or (semantic-current-tag-parent)
+                                  tag))
+                             searchtxt))
                (yes-or-no-p (concat "Potential invalid hit was "
                                     "found, continue or raise exception "
                                     "with report?")))
-      (let ((msg (fromat (concat "Hit %s:%s does not match to %s (searched for %s), this "
+      (let ((msg (format (concat "Hit %s:%s does not match to %s (searched for %s), this "
                                  "is with high probability error of symref "
                                  "backend, not semantic!")
                          file

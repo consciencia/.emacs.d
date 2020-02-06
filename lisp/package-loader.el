@@ -49,3 +49,4 @@
 (load "elisp-refs__.el")
 (load "helpful__.el")
 (load "cmake-mode__.el")
+(load "fast-scroll__.el")
