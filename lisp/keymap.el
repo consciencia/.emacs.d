@@ -218,9 +218,7 @@
     (interactive)
     (if magit-blame-mode
         (magit-blame-quit)
-      (magit-blame nil
-                   (buffer-file-name
-                    (current-buffer))))))
+      (magit-blame-addition "-w"))))
 (global-set-key (kbd "C-<prior>") nil)
 (global-set-key (kbd "C-<next>") nil)
 

@@ -1128,3 +1128,13 @@ one is kept."
                        (not custom/user-said-exit-emacs))
                   (message "SCRATCH buffer not empty, will not exit!")
                 (apply fn args))))
+
+(defun custom/enable-reader-mode ()
+  (interactive)
+  (visual-line-mode -1)
+  (whitespace-mode -1))
+
+(defun custom/disable-reader-mode ()
+  (interactive)
+  (visual-line-mode 1)
+  (whitespace-mode 1))
