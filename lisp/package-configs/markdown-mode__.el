@@ -18,13 +18,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Link auto hide
+;;
+;; TODO:
+;; turn overlayed text to be read only
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun custom/find-all-link-ranges ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
-    (let ((regexp (pcre-to-elisp/cached "https?:\\/\\/[^\\s]+"))
+    (let ((regexp (pcre-to-elisp/cached "https?:\\/\\/[^\\s\\]]+"))
           (matches nil)
           (match nil))
       (while (search-forward-regexp regexp nil t)
@@ -74,6 +77,7 @@
                                    link-end
                                    (current-buffer))))
              (overlay-put ov 'hidden-link-marker t)
+             (overlay-put ov 'evaporate t)
              (overlay-put ov 'display
                           (concat "<link: "
                                   (custom/get-link-domain link-start
