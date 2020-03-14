@@ -36,7 +36,10 @@
 (setq inhibit-default-init t)
 (setq-default frame-title-format "%b (%f)")
 (setq whitespace-line-column 80)
-(setq whitespace-style '(face lines-tail))
+(setq whitespace-style
+      '(face
+        lines-tail
+        space-before-tab))
 (global-whitespace-mode t)
 
 (setq fill-column whitespace-line-column)
@@ -70,6 +73,7 @@
                                              :underline (:color "lightblue"
                                                                 :style wave)))))
  '(whitespace-line ((t (:foreground "red"))))
+ '(whitespace-space-before-tab ((t (:background "red"))))
  '(avy-lead-face ((t (:background "red"
                                   :foreground "white"
                                   :underline (:color "lightblue"

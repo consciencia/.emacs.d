@@ -50,3 +50,16 @@
 (load "helpful__.el")
 (load "cmake-mode__.el")
 (load "fast-scroll__.el")
+
+(require 'font-lock+)
+(dolist (symbol '(put-text-property-unless-ignore
+                  font-lock-default-unfontify-region
+                  font-lock-prepend-text-property
+                  font-lock-append-text-property
+                  font-lock-fillin-text-property
+                  font-lock-apply-syntactic-highlight
+                  font-lock-fontify-syntactically-region
+                  font-lock-apply-highlight
+                  font-lock-fontify-anchored-keywords
+                  font-lock-fontify-keywords-region))
+  (byte-compile symbol))

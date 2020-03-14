@@ -11,8 +11,11 @@
 
 (add-hook 'markdown-mode-hook
           (lambda ()
-            (turn-on-auto-fill)
-            (flyspell-mode)))
+            (auto-fill-mode 1)
+            (set (make-local-variable 'fill-nobreak-predicate)
+                 'custom/line-has-hidden-link)
+            (flyspell-mode)
+            (custom/hide-all-links)))
 
 
 
@@ -20,7 +23,16 @@
 ;; Link auto hide
 ;;
 ;; TODO:
-;; turn overlayed text to be read only
+;; 1) turn overlayed text to be read only
+;; 2) disable too long line coloring
+;;    https://lists.gnu.org/archive/html/emacs-devel/2014-08/msg00540.html
+;;    It will be harder because whitespace-mode uses font lock for
+;;    this thus I must somehow manage to force font lock to ignore some
+;;    regions of text. Hard...
+;;    -------------------------------------
+;;    font-lock+ is handling this
+;;    add `font-lock-ignore as an text property to text which you want
+;;    to be skipped
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun custom/find-all-link-ranges ()
@@ -108,6 +120,21 @@
     (when (not (and (not overlay)
                     (not content)))
       (cons overlay content))))
+
+(defun custom/line-has-hidden-link ()
+  (interactive)
+  (let ((start nil)
+        (end nil)
+        (has-link nil))
+    (save-excursion
+      (beginning-of-line)
+      (setq start (point))
+      (end-of-line)
+      (setq end (point)))
+    (dolist (ov (overlays-in start end))
+      (when (overlay-get ov 'hidden-link-marker)
+        (setq has-link t)))
+    has-link))
 
 (defun custom/show-link-on-hover ()
   (when (equal major-mode 'markdown-mode)
