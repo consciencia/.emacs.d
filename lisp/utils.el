@@ -1138,3 +1138,7 @@ one is kept."
   (interactive)
   (visual-line-mode 1)
   (whitespace-mode 1))
+
+(defun custom/face-at-point ()
+  (interactive)
+  (call-interactively 'describe-face))
