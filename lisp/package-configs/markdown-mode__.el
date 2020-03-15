@@ -59,11 +59,16 @@
       (while (search-forward-regexp regexp nil t)
         (setq match (cons (match-beginning 0)
                           (match-end 0)))
-        (when (save-excursion
-                (goto-char (1- (cdr match)))
-                (looking-at (pcre-to-elisp/cached "\\.|\\)")))
-          (setf (cdr match)
-                (1- (cdr match))))
+        (if (save-excursion
+              (goto-char (- (cdr match) 2))
+              (looking-at (pcre-to-elisp/cached "\\)[\\.,]")))
+            (setf (cdr match)
+                  (- (cdr match) 2))
+          (when (save-excursion
+                  (goto-char (1- (cdr match)))
+                  (looking-at (pcre-to-elisp/cached "\\.|\\)")))
+            (setf (cdr match)
+                  (1- (cdr match)))))
         (push match matches))
       (when (interactive-p)
         (let ((links nil)
