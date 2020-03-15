@@ -9,13 +9,14 @@
 
 
 
-(add-hook 'markdown-mode-hook
-          (lambda ()
-            (auto-fill-mode 1)
-            (set (make-local-variable 'fill-nobreak-predicate)
-                 'custom/line-has-hidden-link)
-            (flyspell-mode)
-            (custom/hide-all-links)))
+(defun custom/markdown-file-opened ()
+  (auto-fill-mode 1)
+  (set (make-local-variable 'fill-nobreak-predicate)
+       'custom/line-has-hidden-link)
+  (flyspell-mode)
+  (custom/hide-all-links)
+  (local-set-key (kbd "M-l") 'custom/find-all-link-ranges))
+(add-hook 'markdown-mode-hook 'custom/markdown-file-opened)
 
 
 
@@ -24,15 +25,28 @@
 ;;
 ;; TODO:
 ;; 1) turn overlayed text to be read only
-;; 2) disable too long line coloring
-;;    https://lists.gnu.org/archive/html/emacs-devel/2014-08/msg00540.html
-;;    It will be harder because whitespace-mode uses font lock for
-;;    this thus I must somehow manage to force font lock to ignore some
-;;    regions of text. Hard...
-;;    -------------------------------------
-;;    font-lock+ is handling this
-;;    add `font-lock-ignore as an text property to text which you want
-;;    to be skipped
+;;    there will be need to override <backspace> handler in order for
+;;    it to work.
+;; 2) develop customized too long line colorer
+;;    font-lock-add-keywords
+;;    (font-lock-add-keywords nil
+;;                            '(("\\<\\(FIXME\\):"
+;;                               1
+;;                               font-lock-warning-face
+;;                               t)))
+;;
+;;    Find text by calling function, and highlight the matches it finds
+;;    using font-lock-keyword-face.
+;;
+;;    When function is called, it receives one argument, the limit of the
+;;    search; it should begin searching at point, and not search beyond the
+;;    limit. It should return non-nil if it succeeds, and set the match data
+;;    to describe the match that was found. Returning nil indicates
+;;    failure of the search.
+;;
+;;    Fontification will call function repeatedly with the same limit, and with
+;;    point where the previous invocation left it, until function fails.
+;;    On failure, function need not reset point in any particular way.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun custom/find-all-link-ranges ()
@@ -52,15 +66,45 @@
                 (1- (cdr match))))
         (push match matches))
       (when (interactive-p)
-        (let ((links nil))
+        (let ((links nil)
+              (old-buffer (current-buffer)))
           (setq links
                 (loop for (start . end) in matches
-                      collect (buffer-substring-no-properties start
-                                                              end)))
+                      collect (cons (cons (current-buffer) start)
+                                    (buffer-substring-no-properties start
+                                                                    end))))
           (custom/with-simple-pop-up "*links*"
-            (loop for link in links
-                  do (insert link "\n")))))
+            (setq kill-on-quit t)
+            (insert "Found links in "
+                    (buffer-file-name old-buffer)
+                    ":\n")
+            (loop for link in (nreverse links)
+                  for linenum = (with-current-buffer (caar link)
+                                  (count-lines (point-min) (cdar link)))
+                  for real-link = (cadr (s-match (pcre-to-elisp/cached
+                                                  "([^#?]*)")
+                                                 (cdr link)))
+                  do (let ((start-b nil)
+                           (end-b nil))
+                       (setq start-b (point))
+                       (insert "    " (number-to-string linenum) ": ")
+                       (insert real-link)
+                       (setq end-b (point))
+                       (insert "\n")
+                       (make-button start-b end-b
+                                    'mouse-face 'custom-button-pressed-face
+                                    'face nil
+                                    'action 'custom/link-button-handler
+                                    'linkpos (car link))
+                       ;; (add-face-text-property start-b end-b 'underline)
+                       (add-face-text-property start-b end-b 'bold))))))
       matches)))
+
+(defun custom/link-button-handler (&optional button)
+  (interactive)
+  (let ((linkpos (button-get button 'linkpos)))
+    (switch-to-buffer-other-window (car linkpos))
+    (goto-char (cdr linkpos))))
 
 (defun custom/get-link-domain (start end)
   (save-excursion
@@ -90,6 +134,11 @@
                                    (current-buffer))))
              (overlay-put ov 'hidden-link-marker t)
              (overlay-put ov 'evaporate t)
+             (overlay-put ov 'keymap
+                          (let ((map (make-sparse-keymap)))
+                            (define-key map (kbd "<return>")
+                              'custom/show-link-on-hover)
+                            map))
              (overlay-put ov 'display
                           (concat "<link: "
                                   (custom/get-link-domain link-start
@@ -137,12 +186,17 @@
     has-link))
 
 (defun custom/show-link-on-hover ()
+  (interactive)
   (when (equal major-mode 'markdown-mode)
     (let ((link (custom/link-overlay-at-point)))
       (when link
         (delete-overlay (car link))))))
 
 (defun custom/idle-hide-all-links ()
+  (when (equal major-mode 'markdown-mode)
+    ;; whitespace mode uses font lock regexes to fontify too long
+    ;; lines. We cant use it for buffers with hidden links.
+    (whitespace-mode -1))
   (when (and (equal major-mode 'markdown-mode)
              (not (region-active-p)))
     (custom/hide-all-links)))
