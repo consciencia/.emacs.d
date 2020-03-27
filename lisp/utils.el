@@ -1142,3 +1142,48 @@ one is kept."
 (defun custom/face-at-point ()
   (interactive)
   (call-interactively 'describe-face))
+
+(defun custom/univeral-defun-name ()
+  (interactive)
+  (imenu-list-update-safe)
+  (let ((entry (imenu-list--current-entry))
+        (raw-name nil)
+        (capture nil))
+    (when entry
+      (setq raw-name (car entry)))
+    (when raw-name
+      (setq capture (or (s-match (pcre-to-elisp/cached
+                                  "(.*)\\s\\(def\\)")
+                                 raw-name)
+                        (s-match (pcre-to-elisp/cached
+                                  "\\((.*)\\)")
+                                 raw-name))))
+    (when capture
+      (setq capture (cadr capture)))
+    capture))
+
+(defun custom/isearch-forward-defun-name ()
+  (interactive)
+  (isearch-forward-symbol nil 1)
+  (let ((symbol (or (custom/semantic/get-current-function-name)
+                    (custom/univeral-defun-name))))
+    (cond
+     (symbol
+      (custom/universal-push-mark)
+      (isearch-yank-string symbol))
+     (t
+      (setq isearch-error "Not in function")
+      (isearch-push-state)
+      (isearch-update)))))
+
+(defun custom/isearch-to-occur ()
+  (interactive)
+  (call-interactively 'occur)
+  (switch-to-buffer-other-window "*Occur*")
+  (shrink-window-if-larger-than-buffer))
+
+(defun custom/fontify-whole-buffer ()
+  (interactive)
+  (save-excursion
+    (font-lock-fontify-region (point-min)
+                              (point-max))))
