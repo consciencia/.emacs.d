@@ -1075,6 +1075,7 @@ Returns a table of all matching tags."
   (semantic-go-to-tag tag)
   (if (not semantic-idle-scheduler-mode)
       (semantic-idle-scheduler-mode))
+  (semantic-refresh-tags-safe)
   ;; Maybe database was from some reason outdated, we need to somehow
   ;; hide that from user and land exactly where he wants.
   (let* ((curr-pos (point))

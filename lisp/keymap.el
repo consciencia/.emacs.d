@@ -274,6 +274,10 @@
             (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>")
                            'company-indent-or-complete-common)
+            (local-set-key (kbd "C-x C-<right>") 'forward-list)
+            (local-set-key (kbd "C-x C-<left>") 'backward-list)
+            (local-set-key (kbd "C-x C-<up>") 'up-list)
+            (local-set-key (kbd "C-x C-<down>") 'down-list)
             (set (make-local-variable 'company-backends)
                  '((company-capf
                     company-dabbrev-code
@@ -321,6 +325,10 @@
             (local-set-key (kbd "M-d") 'custom/mark-defun)
             (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
+            (local-set-key (kbd "C-x C-<right>") 'forward-list)
+            (local-set-key (kbd "C-x C-<left>") 'backward-list)
+            (local-set-key (kbd "C-x C-<up>") 'up-list)
+            (local-set-key (kbd "C-x C-<down>") 'down-list)
             (set (make-local-variable 'company-backends)
                  '((company-c-headers
                     company-semantic)))
@@ -365,6 +373,10 @@
             (local-set-key (kbd "M-d") 'custom/mark-defun)
             (local-set-key (kbd "M-g") 'semantic-force-refresh)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
+            (local-set-key (kbd "C-x C-<right>") 'forward-list)
+            (local-set-key (kbd "C-x C-<left>") 'backward-list)
+            (local-set-key (kbd "C-x C-<up>") 'up-list)
+            (local-set-key (kbd "C-x C-<down>") 'down-list)
             (set (make-local-variable 'company-backends)
                  '((company-c-headers
                     company-semantic)))
