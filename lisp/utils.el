@@ -1253,3 +1253,10 @@ This function is used by the `interactive' code letter `n'."
             ;; Otherwise normal occur takes numerical prefix argument.
             (when current-prefix-arg
               (prefix-numeric-value current-prefix-arg))))))
+
+(defun cwt (&rest vals)
+  (let ((days (loop for val in vals sum val)))
+    (insert " "
+            (format "%sd/%.0fm"
+                    days
+                    (* days 8 60)))))
