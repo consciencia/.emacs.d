@@ -1220,6 +1220,16 @@ Returns a table of all matching tags."
             (read-only-mode t)))
       (error "Failed to find roots, are you in project?"))))
 
+(setq *custom/semantic/parse-table-queue* nil)
+(defun custom/semantic/parser-executor ()
+  (when *custom/semantic/parse-table-queue*
+    (semanticdb-refresh-table
+     (pop *custom/semantic/parse-table-queue*) t)))
+
+(defun custom/semantic/refresh-table-in-future (table)
+  (push table *custom/semantic/parse-table-queue*)
+  (semantic-idle-scheduler-add #'custom/semantic/parser-executor))
+
 (setq custom/semantic/loaded-projects (@dict-new))
 (defun custom/semantic/load-all-project-dbs ()
   (interactive)
@@ -1261,10 +1271,32 @@ Returns a table of all matching tags."
                                   (concat (oref db reference-directory)
                                           (oref table file)))
                                  (semanticdb-needs-refresh-p table))
-                         do (semanticdb-refresh-table table t))))))
+                         do (custom/semantic/refresh-table-in-future table))))))
     (@dict-set (semantic-symref-calculate-rootdir)
                t
                custom/semantic/loaded-projects)))
+
+(defun custom/semantic/get-current-db ()
+  (semanticdb-directory-loaded-p
+   (file-name-directory buffer-file-name)))
+
+(defun custom/semantic/get-current-table ()
+  (let ((db (custom/semantic/get-current-db)))
+    (when db
+      (semanticdb-file-table db buffer-file-name))))
+
+(defun custom/semantic/dump-db-refpaths ()
+  (interactive)
+  (custom/with-simple-pop-up "*Semantic Db Ref Paths*"
+    (setq kill-on-quit t)
+    (loop for db in semanticdb-database-list
+          collect (insert (or (ignore-errors
+                                (format " PATH: %s"
+                                        (oref db
+                                              reference-directory)))
+                              (format "CLASS: %s"
+                                      (eieio-object-class-name db)))
+                          "\n"))))
 
 ;;;; SYMREF HACKS
 ;; CODE:

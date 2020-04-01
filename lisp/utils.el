@@ -1187,3 +1187,69 @@ one is kept."
   (save-excursion
     (font-lock-fontify-region (point-min)
                               (point-max))))
+
+;; Override because I want to be able to parse number from input with noise.
+(defun read-number (prompt &optional default)
+  "Read a numeric value in the minibuffer, prompting with PROMPT.
+DEFAULT specifies a default value to return if the user just types RET.
+The value of DEFAULT is inserted into PROMPT.
+This function is used by the `interactive' code letter `n'."
+  (let ((n nil)
+        (default1 (if (consp default) (car default) default)))
+    (when default1
+      (setq prompt
+            (if (string-match "\\(\\):[ \t]*\\'" prompt)
+                (replace-match (format " (default %s)" default1) t t prompt 1)
+              (replace-regexp-in-string "[ \t]*\\'"
+                                        (format " (default %s) " default1)
+                                        prompt t t))))
+    (while
+        (progn
+          (let ((str (read-from-minibuffer
+                      prompt nil nil nil nil
+                      (when default
+                        (if (consp default)
+                            (mapcar 'number-to-string (delq nil default))
+                          (number-to-string default))))))
+            (condition-case nil
+                (setq n (cond
+                         ((zerop (length str)) default1)
+                         ((stringp str)
+                          (or (let* ((parser (pcre-to-elisp/cached
+                                              "[^\\d]*(\\d+(?:\\.\\d+)?)[^\\d]*"))
+                                     (capture (s-match parser str)))
+                                (when capture
+                                  (read (cadr capture))))
+                              (read str)))))
+              (error nil)))
+          (unless (numberp n)
+            (message "Please enter a number.")
+            (sit-for 1)
+            t)))
+    n))
+
+;; Override because I want to be able to execute elisp in regexp input
+;; and use its result value as an final input.
+(defun occur-read-primary-args ()
+  (let* ((perform-collect (consp current-prefix-arg))
+         (regexp (read-regexp (if perform-collect
+                                  "Collect strings matching regexp"
+                                "List lines matching regexp")
+                              'regexp-history-last))
+         (code (ignore-errors (read regexp))))
+    (when (consp code)
+      (setq regexp (format "%s" (eval code))))
+    (list regexp
+          (if perform-collect
+              ;; Perform collect operation
+              (if (zerop (regexp-opt-depth regexp))
+                  ;; No subexpression so collect the entire match.
+                  "\\&"
+                ;; Get the regexp for collection pattern.
+                (let ((default (car occur-collect-regexp-history)))
+                  (read-regexp
+                   (format "Regexp to collect (default %s): " default)
+                   default 'occur-collect-regexp-history)))
+            ;; Otherwise normal occur takes numerical prefix argument.
+            (when current-prefix-arg
+              (prefix-numeric-value current-prefix-arg))))))
