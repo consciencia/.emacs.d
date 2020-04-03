@@ -1260,3 +1260,12 @@ This function is used by the `interactive' code letter `n'."
             (format "%sd/%.0fm"
                     days
                     (* days 8 60)))))
+
+(defmacro custom/regex-generator (type &rest args)
+  (cond
+   ((equal type 'many)
+    `(regexp-opt ',args))
+   ((equal type 'this)
+    '(custom/univeral-defun-name))
+   (t (error "Unknown type '%s'!" type))))
+(defalias 're 'custom/regex-generator)

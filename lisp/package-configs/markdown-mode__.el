@@ -49,14 +49,16 @@
 ;;    On failure, function need not reset point in any particular way.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun custom/find-all-link-ranges ()
+(defun custom/find-all-link-ranges (&optional from-pos to-pos)
   (interactive)
+  (setq from-pos (or from-pos (point-min))
+        to-pos (or to-pos (point-max)))
   (save-excursion
-    (goto-char (point-min))
+    (goto-char from-pos)
     (let ((regexp (pcre-to-elisp/cached "https?:\\/\\/[^\\s\\]]+"))
           (matches nil)
           (match nil))
-      (while (search-forward-regexp regexp nil t)
+      (while (search-forward-regexp regexp to-pos t)
         (setq match (cons (match-beginning 0)
                           (match-end 0)))
         (if (save-excursion
@@ -123,9 +125,11 @@
             "error"))
       "error")))
 
-(defun custom/hide-all-links ()
+(defun custom/hide-all-links (&optional from-pos to-pos)
   (interactive)
-  (loop for (link-start . link-end) in (custom/find-all-link-ranges)
+  (loop for (link-start . link-end) in (custom/find-all-link-ranges
+                                        from-pos
+                                        to-pos)
         if (let ((already-hidden nil))
              (dolist (ov (overlays-in link-start link-end))
                (when (overlay-get ov 'hidden-link-marker)
@@ -204,7 +208,9 @@
     (whitespace-mode -1))
   (when (and (equal major-mode 'markdown-mode)
              (not (region-active-p)))
-    (custom/hide-all-links)))
+    (let ((win (selected-window)))
+      (custom/hide-all-links (window-start win)
+                             (window-end win t)))))
 
 ;; (cancel-function-timers 'custom/show-link-on-hover)
 (run-with-idle-timer 0.1 t 'custom/show-link-on-hover)
