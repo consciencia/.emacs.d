@@ -2494,6 +2494,11 @@ buffers that were opened."
 ;;
 ;; NOTE: When reworking current hack to correct handling of cycle scopes, dont
 ;; forget that some for cycles may by without scope braces.
+;;
+;; Following functions will be very handy when dealing with cycle
+;; context analysis:
+;;     semantic-beginning-of-context
+;;     semantic-end-of-context
 (defun custom/semantic/parse-vars-in-fors-in-c/c++ (context-begin context-end)
   (save-excursion
     (goto-char context-begin)

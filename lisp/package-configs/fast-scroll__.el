@@ -1,6 +1,6 @@
 ;; A LOT faster solution than here:
 ;;     https://github.com/ahungry/fast-scroll
-;; TODO: Report it and try to get it to master,
+;; TODO: Report it and try to get it to master
 
 (setq custom/scrolling-flag nil)
 
@@ -14,7 +14,11 @@
 (byte-compile 'custom/stopped-scrolling)
 
 (defun custom/around-jit-lock-function (old-fn &rest args)
-  (when (not custom/scrolling-flag)
+  (when (or (not custom/scrolling-flag)
+            (equal major-mode 'dired-mode)
+            (equal major-mode 'magit-status-mode)
+            (equal major-mode 'magit-log-mode)
+            (equal major-mode 'magit-revision-mode))
     (apply old-fn args)))
 (byte-compile 'custom/around-jit-lock-function)
 

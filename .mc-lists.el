@@ -3,6 +3,7 @@
 
 (setq mc/cmds-to-run-for-all
       '(
+        autopair-extra-skip-close-maybe
         autopair-insert-opening
         autopair-insert-or-skip-quote
         autopair-skip-close-maybe
@@ -23,7 +24,9 @@
 (setq mc/cmds-to-run-once
       '(
         cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
+        custom/copy-across-cursors
         custom/copy-across-cursors
         custom/mc/mark-next-like-this
         custom/mc/mark-prev-like-this
