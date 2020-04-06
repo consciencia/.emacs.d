@@ -71,8 +71,13 @@
 (defun sysdef/init-external-system-manager ()
   (setq package-check-signature nil)
   (package-initialize)
-  (add-to-list 'package-archives
-               '("melpa" . "http://melpa.org/packages/")))
+  (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
+                      (not (gnutls-available-p))))
+         (proto (if no-ssl "http" "https")))
+    (when no-ssl
+      (error "SSL not supported!"))
+    (add-to-list 'package-archives
+                 `("melpa" . ,(concat proto "://melpa.org/packages/")))))
 
 (defun sysdef/load-external-system (system-name)
   (unless (package-installed-p system-name)

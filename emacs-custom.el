@@ -45,4 +45,5 @@
  '(ace-jump-face-foreground ((t (:foreground "white" :underline (:color "lightblue" :style wave)))))
  '(avy-lead-face ((t (:background "red" :foreground "white" :underline (:color "lightblue" :style wave)))))
  '(avy-lead-face-0 ((t (:background "red" :foreground "white" :underline (:color "lightblue" :style wave)))))
- '(whitespace-line ((t (:foreground "red")))))
+ '(whitespace-line ((t (:foreground "red"))))
+ '(whitespace-space-before-tab ((t (:background "red")))))
