@@ -69,7 +69,7 @@
     (normal-top-level-add-subdirs-to-load-path)))
 
 (defun sysdef/init-external-system-manager ()
-  (setq package-check-signature nil)
+  ;; (setq package-check-signature t)
   (package-initialize)
   (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                       (not (gnutls-available-p))))
