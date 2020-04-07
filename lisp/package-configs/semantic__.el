@@ -741,6 +741,7 @@ Display the references in `semantic-symref-results-mode'."
   (if (not point)
       (setq point (point)))
   (when (and (not (custom/pos-is-in-comment point))
+             (not (custom/pos-is-in-string point))
              (semantic-current-tag)
              (equal (semantic-tag-class (semantic-current-tag))
                     'function)
@@ -761,12 +762,14 @@ Display the references in `semantic-symref-results-mode'."
            (ctx-with-time
             (custom/with-measure-time
                 (if decision
-                    (ignore-errors (semantic-analyze-current-context point)))))
+                    (ignore-errors
+                      (custom/semantic/with-disabled-grep-db
+                          (semantic-analyze-current-context point))))))
            (ctx (car ctx-with-time))
            (run-time (cdr ctx-with-time))
            (prefix (if ctx (oref ctx prefix) nil))
            (last-pref (car (last prefix))))
-      (when (> run-time 2)
+      (when (> run-time 20)
         (setq custom/semantic/is-prefix-pointer-state
               (cons curr-fun-name 'no-ctx-fetch))
         (when (yes-or-no-p

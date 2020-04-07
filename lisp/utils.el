@@ -299,8 +299,11 @@
     (let ((ido-mode ido-mode)
           (ido-enable-flex-matching
            (if (boundp 'ido-enable-flex-matching)
-               ido-enable-flex-matching t))
-          name-and-pos symbol-names position)
+               ido-enable-flex-matching
+             t))
+          name-and-pos
+          symbol-names
+          position)
       (unless ido-mode
         (ido-mode 1)
         (setq ido-enable-flex-matching t))
@@ -614,6 +617,12 @@ POS is optional position in file where to search for comment."
     (if (called-interactively-p 'any)
         (message "Comment state: %s" result)
       result)))
+
+(defun custom/pos-is-in-string (&optional pos)
+  (if (not pos)
+      (setq pos (point)))
+  (eq (get-text-property pos 'face)
+      'font-lock-string-face))
 
 (defun custom/extract-comments-from-region (start stop)
   (when font-lock-mode
@@ -1269,3 +1278,10 @@ This function is used by the `interactive' code letter `n'."
     '(custom/univeral-defun-name))
    (t (error "Unknown type '%s'!" type))))
 (defalias 're 'custom/regex-generator)
+
+;; (setq TEMP (funcall imenu-create-index-function))
+;; ;; Returns list of top level symbols in the file.
+;; (funcall imenu-create-index-function)
+;; ;; Check that it is sub list, otherwise it is pair
+;; ;; (name . overlay|marker)
+;; (imenu--subalist-p itemp)
