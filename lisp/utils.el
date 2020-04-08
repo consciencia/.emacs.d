@@ -1276,6 +1276,8 @@ This function is used by the `interactive' code letter `n'."
     `(regexp-opt ',args))
    ((equal type 'this)
     '(custom/univeral-defun-name))
+   ((equal type 'pcre)
+    `(pcre-to-elisp ,(car args)))
    (t (error "Unknown type '%s'!" type))))
 (defalias 're 'custom/regex-generator)
 
