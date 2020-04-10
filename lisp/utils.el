@@ -285,8 +285,50 @@
               (er/mark-defun))))))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
+(defun custom/flatten-imenu-root (prefix root)
+  (if (and (consp root)
+           (not (consp (cdr root))))
+      `(,(cons (concat prefix
+                       (if (> (length prefix) 0) "::" "")
+                       (car root))
+               (cdr root)))
+    (loop for sub-root in (cdr root)
+          for new-prefix = (concat prefix
+                                   (if (> (length prefix) 0) "::" "")
+                                   (car root))
+          append (custom/flatten-imenu-root new-prefix
+                                            sub-root))))
+
+
+(defun custom/imenu-records ()
+  (interactive)
+  (let* ((tree (save-excursion
+                 (funcall imenu-create-index-function)))
+         (records (loop for root in tree
+                        append (if (and (consp root)
+                                        (not (consp (cdr root))))
+                                   `(,root)
+                                 (custom/flatten-imenu-root ""
+                                                            root)))))
+    (if (interactive-p)
+        (custom/with-simple-pop-up "*Flat Imenu Dump*"
+          (setq kill-on-quit t)
+          (loop for (name . _) in records
+                do (insert name "\n")))
+      records)))
+
+(defun custom/goto-imenu-record (record)
+  (let ((target (cdr record)))
+    (custom/universal-push-mark)
+    (cond ((overlayp target)
+           (goto-char (overlay-start target)))
+          ((markerp target)
+           (goto-char (marker-position target)))
+          (t (goto-char target)))
+    (recenter)
+    (pulse-momentary-highlight-one-line (point))))
+
 (defun ido-goto-symbol (&optional symbol-list)
-  "Refresh imenu and jump to a place in the buffer using Ido."
   (interactive)
   (unless (featurep 'imenu)
     (require 'imenu nil t))
@@ -294,57 +336,17 @@
             (equal major-mode 'c++-mode)
             (equal major-mode 'emacs-lisp-mode))
     (semantic-fetch-tags))
-  (cond
-   ((not symbol-list)
-    (let ((ido-mode ido-mode)
-          (ido-enable-flex-matching
-           (if (boundp 'ido-enable-flex-matching)
-               ido-enable-flex-matching
-             t))
-          name-and-pos
-          symbol-names
-          position)
-      (unless ido-mode
-        (ido-mode 1)
-        (setq ido-enable-flex-matching t))
-      (while (progn
-               (imenu--cleanup)
-               (setq imenu--index-alist nil)
-               (ido-goto-symbol (imenu--make-index-alist))
-               (setq selected-symbol
-                     (ido-completing-read "Symbol? " symbol-names))
-               (string= (car imenu--rescan-item) selected-symbol)))
-      (unless (and (boundp 'mark-active) mark-active)
-        (push-mark nil t nil))
-      (setq position (cdr (assoc selected-symbol name-and-pos)))
-      (cond
-       ((overlayp position)
-        (custom/universal-push-mark)
-        (goto-char (overlay-start position))
-        (recenter)
-        (pulse-momentary-highlight-one-line position))
-       (t
-        (custom/universal-push-mark)
-        (goto-char position)
-        (recenter)
-        (pulse-momentary-highlight-one-line position)))))
-   ((listp symbol-list)
-    (dolist (symbol symbol-list)
-      (let (name position)
-        (cond
-         ((and (listp symbol) (imenu--subalist-p symbol))
-          (ido-goto-symbol symbol))
-         ((listp symbol)
-          (setq name (car symbol))
-          (setq position (cdr symbol)))
-         ((stringp symbol)
-          (setq name symbol)
-          (setq position
-                (get-text-property 1 'org-imenu-marker symbol))))
-        (unless (or (null position) (null name)
-                    (string= (car imenu--rescan-item) name))
-          (add-to-list 'symbol-names name)
-          (add-to-list 'name-and-pos (cons name position))))))))
+  (let* ((index (custom/map/create))
+         (records (custom/imenu-records))
+         labels
+         label)
+    (loop for record in records
+          do (progn (custom/map/set (car record)
+                                    record
+                                    index)
+                    (push (car record) labels)))
+    (setq label (ido-completing-read "Symbol? " labels))
+    (custom/goto-imenu-record (custom/map/get label index))))
 
 (defun custom/scroll-up ()
   (interactive)
@@ -1280,10 +1282,3 @@ This function is used by the `interactive' code letter `n'."
     `(pcre-to-elisp ,(car args)))
    (t (error "Unknown type '%s'!" type))))
 (defalias 're 'custom/regex-generator)
-
-;; (setq TEMP (funcall imenu-create-index-function))
-;; ;; Returns list of top level symbols in the file.
-;; (funcall imenu-create-index-function)
-;; ;; Check that it is sub list, otherwise it is pair
-;; ;; (name . overlay|marker)
-;; (imenu--subalist-p itemp)
