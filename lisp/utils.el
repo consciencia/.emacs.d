@@ -668,11 +668,19 @@ POS is optional position in file where to search for comment."
   (flycheck-list-errors)
   (switch-to-buffer-other-window "*Flycheck errors*"))
 
+(defun custom/avy-goto-char-n (&optional arg beg end)
+  (interactive (list current-prefix-arg nil nil))
+  (avy-with custom/avy-goto-char-n
+    (avy-jump (regexp-quote (read-string "Chars: "))
+              :window-flip arg
+              :beg beg
+              :end end)))
+
 (defun custom/ace-jump-char-mode ()
   (interactive)
   (deactivate-mark t)
   (custom/universal-push-mark)
-  (call-interactively 'avy-goto-char-timer))
+  (call-interactively 'custom/avy-goto-char-n))
 
 (defun custom/universal-push-mark ()
   (if (or (equal major-mode 'python-mode)
@@ -859,8 +867,10 @@ POS is optional position in file where to search for comment."
           (custom/flyspell-at-point))
       (progn (flyspell-auto-correct-word)
              (setq *custom/flyspell-last-pos* (point)))
-    (progn (hi-lock-face-symbol-at-point)
-           (setq *custom/flyspell-last-pos* nil))))
+    (progn
+      (highlight-regexp (find-tag-default-as-symbol-regexp)
+                        (hi-lock-read-face-name))
+      (setq *custom/flyspell-last-pos* nil))))
 
 (defun custom/unhiglight-this ()
   (interactive)
