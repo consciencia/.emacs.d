@@ -18,7 +18,8 @@
             (equal major-mode 'dired-mode)
             (equal major-mode 'magit-status-mode)
             (equal major-mode 'magit-log-mode)
-            (equal major-mode 'magit-revision-mode))
+            (equal major-mode 'magit-revision-mode)
+            (not (null hi-lock-interactive-patterns)))
     (apply old-fn args)))
 (byte-compile 'custom/around-jit-lock-function)
 

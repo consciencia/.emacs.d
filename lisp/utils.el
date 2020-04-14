@@ -868,21 +868,25 @@ POS is optional position in file where to search for comment."
       (progn (flyspell-auto-correct-word)
              (setq *custom/flyspell-last-pos* (point)))
     (progn
-      (highlight-regexp (find-tag-default-as-symbol-regexp)
+      (highlight-regexp (or (find-tag-default-as-symbol-regexp)
+                            (regexp-quote (read-string "Highlight: ")))
                         (hi-lock-read-face-name))
       (setq *custom/flyspell-last-pos* nil))))
 
 (defun custom/unhiglight-this ()
   (interactive)
   (let ((sym (thing-at-point 'symbol)))
-    (setq sym (s-replace "+" "\\+" sym))
-    (dolist (r (loop for y
-                     in (loop for x
-                              in hi-lock-interactive-patterns
-                              collect (car x))
-                     if (s-contains-p sym y)
-                     collect y))
-      (hi-lock-unface-buffer r))))
+    (when (null sym)
+      (setq sym (read-string "Unhighlight: ")))
+    (setq sym (regexp-quote sym))
+    (loop for r
+          in (loop for y
+                   in (loop for x
+                            in hi-lock-interactive-patterns
+                            collect (car x))
+                   if (s-contains-p sym y)
+                   collect y)
+          do (hi-lock-unface-buffer r))))
 
 (defun custom/open-kekel ()
   (interactive)
