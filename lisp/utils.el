@@ -1,4 +1,5 @@
 (require 'pp)
+(load "monkey.el")
 
 (defun custom/map/create ()
   (make-hash-table :test 'equal))
@@ -922,41 +923,6 @@ POS is optional position in file where to search for comment."
                                 read-string
                                 read-regexp
                                 save-some-buffers)
-
-(load "monkey.el")
-
-;; (defun custom/python/regex-parser (regex)
-;;   (let ((cur 1)
-;;         (temp nil)
-;;         (res nil))
-;;     (dolist (line (s-lines (buffer-substring-no-properties
-;;                             (point-min)
-;;                             (point-max))))
-;;       (setq temp (s-match
-;;                   (pcre-to-elisp/cached regex)
-;;                   line))
-;;       (if temp
-;;           (setq res (cons (list (cadr temp) cur) res)))
-;;       (setq cur (+ cur 1)))
-;;     res))
-
-;; (defun custom/python/parse-tags ()
-;;   (interactive)
-;;   (append (custom/python/regex-parser "^\\s*def\\s+(\\w+)")
-;;           (custom/python/regex-parser "^\\s*class\\s+(\\w+)")
-;;           (custom/python/regex-parser "^\\s*import\\s+([\\w\\.]+)")))
-
-
-;; (defun custom/python/go-to-tag ()
-;;   (interactive)
-;;   (let ((tags (custom/python/parse-tags))
-;;         (res nil))
-;;     (setq res (ido-completing-read "Symbol?"
-;;                                    (mapcar #'car tags)))
-;;     (xref-push-marker-stack)
-;;     (goto-line (cadar (seq-filter (lambda (x) (equal res (car x)))
-;;                                   tags)))
-;;     (pulse-momentary-highlight-one-line (point))))
 
 (defun custom/locate-key-binding (key)
   "Determine in which keymap KEY is defined."

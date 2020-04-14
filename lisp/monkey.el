@@ -4,6 +4,10 @@
 ;;; EMACS.                                                                   ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Overrided because of some invalid usage of this function in CEDET.
+;;
+;; TODO: Find where it is used in CEDET and do fix there instead of monkey
+;;       patching emacs internals.
 (advice-add #'file-exists-p
             :around (lambda (oldfn filename)
                       (if filename
