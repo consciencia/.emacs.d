@@ -1,6 +1,7 @@
 ;; A LOT faster solution than here:
 ;;     https://github.com/ahungry/fast-scroll
 ;; TODO: Report it and try to get it to master
+(require 'hi-lock)
 
 (setq custom/scrolling-flag nil)
 
