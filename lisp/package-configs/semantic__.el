@@ -522,7 +522,7 @@ Return a table of all matching tags."
                               (custom/semantic/flatten-tags-table
                                (or tags (semanticdb-get-tags table)))))
 
-(defun semantic-ia-fast-jump (point)
+(defun semantic-ia-fast-jump (point &optional ext-ctx)
   "Jump to the tag referred to by the code at POINT.
 Uses `semantic-analyze-current-context' output to identify an accurate
 origin of the code at point."
@@ -531,7 +531,8 @@ origin of the code at point."
   (semantic-fetch-tags)
   (custom/semantic/load-all-project-dbs)
   (custom/semantic/with-disabled-grep-db
-      (let* ((ctxt (semantic-analyze-current-context point))
+      (let* ((ctxt (or ext-ctx
+                       (semantic-analyze-current-context point)))
              (pf (and ctxt (reverse (oref ctxt prefix))))
              ;; In the analyzer context, the PREFIX is the list of items
              ;; that makes up the code context at point.  Thus the c++ code
@@ -714,7 +715,65 @@ Display the references in `semantic-symref-results-mode'."
           (add-hook 'post-command-hook 'semantic-symref-cleanup-recent-buffers-fcn)
         ;; Else, just clear the saved buffers so they aren't deleted later.
         (setq semantic-symref-recently-opened-buffers nil))
-      ans)))
+      (loop for T in ans if T collect T))))
+
+(defun custom/semantic/ctxt-current-symbol-and-bounds-detached (expr)
+  (let ((parent-s-table semantic-lex-syntax-table))
+    (with-temp-buffer
+      (setq semantic-lex-syntax-table parent-s-table)
+      (insert expr)
+      (semantic-ctxt-current-symbol-and-bounds))))
+
+(defun custom/semantic/analyze-current-context-detached (expr
+                                                         &optional position)
+  (when (null position)
+    (setq position (point)))
+  (let* ((semantic-analyze-error-stack nil)
+         (prefixandbounds
+          (custom/semantic/ctxt-current-symbol-and-bounds-detached
+           expr))
+         (prefix (car prefixandbounds))
+         (bounds (nth 2 prefixandbounds))
+         ;; @todo - vv too early to really know this answer! vv
+         (prefixclass '(function variable type))
+         (prefixtypes nil)
+         (scope (semantic-calculate-scope position))
+         newseq)
+    ;; Only do work if we have bounds (meaning a prefix to complete)
+    (when bounds
+      (if debug-on-error
+          (catch 'unfindable
+            (setq prefix (semantic-analyze-find-tag-sequence
+                          prefix scope 'prefixtypes 'unfindable))
+            ;; If there's an alias, dereference it and analyze
+            ;; sequence again.
+            (when (setq newseq
+                        (semantic-analyze-dereference-alias prefix))
+              (setq prefix (semantic-analyze-find-tag-sequence
+                            newseq scope 'prefixtypes 'unfindable))))
+        ;; Debug on error is off.  Capture errors and move on
+        (condition-case err
+            ;; NOTE: This line is duplicated in
+            ;;       semantic-analyzer-debug-global-symbol
+            ;;       You will need to update both places.
+            (progn
+              (setq prefix (semantic-analyze-find-tag-sequence
+                            prefix scope 'prefixtypes))
+              (when (setq newseq
+                          (semantic-analyze-dereference-alias prefix))
+                (setq prefix
+                      (semantic-analyze-find-tag-sequence newseq
+                                                          scope
+                                                          'prefixtypes))))
+          (error (semantic-analyze-push-error err))))
+      (semantic-analyze-context "context"
+                                :buffer (current-buffer)
+                                :scope scope
+                                :bounds bounds
+                                :prefix prefix
+                                :prefixclass prefixclass
+                                :prefixtypes prefixtypes
+                                :errors semantic-analyze-error-stack))))
 
 (defun custom/semantic/complete-jump (sym)
   (interactive (list (custom/semantic/with-disabled-grep-db
@@ -722,18 +781,27 @@ Display the references in `semantic-symref-results-mode'."
                           "Look for symbol: "
                           nil
                           (thing-at-point 'symbol)))))
-  ;; Use modified symref module for getting all tags with target name in
-  ;; current project and all its dependencies.
-  ;; Bypasses bug when brute deep searching all tables in project
-  ;; using standard semantic find routines.
-  (custom/semantic/with-enabled-grep-db
-      (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
-                    (if res
-                        (semantic-symref-result-get-tags-as-is res)))))
-        (if tags
-            (let* ((chosen-tag (custom/semantic/choose-tag tags)))
-              (custom/semantic/goto-tag chosen-tag))
-          (message "No tags found for %s" sym)))))
+  (if (> (length
+          (car
+           (custom/semantic/ctxt-current-symbol-and-bounds-detached
+            sym)))
+         1)
+      (let ((ctx (custom/semantic/analyze-current-context-detached sym)))
+        (if ctx
+            (semantic-ia-fast-jump (point) ctx)
+          (error "Failed to construct detached context")))
+    ;; Use modified symref module for getting all tags with target name in
+    ;; current project and all its dependencies.
+    ;; Bypasses bug when brute deep searching all tables in project
+    ;; using standard semantic find routines.
+    (custom/semantic/with-enabled-grep-db
+        (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
+                      (if res
+                          (semantic-symref-result-get-tags-as-is res)))))
+          (if tags
+              (let* ((chosen-tag (custom/semantic/choose-tag tags)))
+                (custom/semantic/goto-tag chosen-tag))
+            (message "No tags found for %s" sym))))))
 
 (defvar-local custom/semantic/is-prefix-pointer-state (cons nil 'allow))
 (defun custom/semantic/is-prefix-pointer-p (&optional point)
@@ -2074,16 +2142,17 @@ HISTORY is a symbol representing a variable to store the history in."
   ;; to provide autocompletion for all project symbols. Of course,
   ;; unparsed files which are logically missing in DB are not loaded
   ;; and symbols from them are invisible for autocompletion.
-  (custom/semantic/load-all-project-dbs)
-  (custom/semantic-complete-read-tag-engine
-   (semantic-collector-project-brutish prompt
-                                       :buffer (current-buffer)
-                                       :path (current-buffer))
-   (semantic-displayor-traditional)
-   prompt
-   default-tag
-   initial-input
-   history))
+  (save-excursion
+    (custom/semantic/load-all-project-dbs)
+    (custom/semantic-complete-read-tag-engine
+     (semantic-collector-project-brutish prompt
+                                         :buffer (current-buffer)
+                                         :path (current-buffer))
+     (semantic-displayor-traditional)
+     prompt
+     default-tag
+     initial-input
+     history)))
 
 ;;;; GOTO PARENT
 ;; CODE:
@@ -2470,19 +2539,17 @@ buffers that were opened."
                               ;; it and dont want to call it twice.
                               (or (semantic-current-tag-parent)
                                   tag))
-                             searchtxt))
-               (yes-or-no-p (concat "Potential invalid hit was "
-                                    "found, continue or raise exception "
-                                    "with report?")))
-      (let ((msg (format (concat "Hit %s:%s does not match to %s (searched for %s), this "
-                                 "is with high probability error of symref "
-                                 "backend, not semantic!")
+                             searchtxt)))
+      (let ((msg (format (concat "Hit %s:%s does not match to %s "
+                                 "(searched for %s), this is with high "
+                                 "probability error of symref backend, not "
+                                 "semantic!")
                          file
                          line
                          (semantic-tag-name tag)
                          searchtxt)))
         (message msg)
-        (error msg)))
+        (setq tag nil)))
 
     ;; Copy the tag, which adds a :filename property.
     (when tag

@@ -286,17 +286,35 @@
               (er/mark-defun))))))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
+(defun custom/cleanse-imenu-node-name (name)
+  (custom/chain-forms
+   (s-replace-regexp (pcre-to-elisp/cached
+                      "(.*?)\\s+\\(def\\)")
+                     "\\1"
+                     name)
+   (s-replace-regexp (pcre-to-elisp/cached
+                      "(.*?)\\s+\\(class\\)")
+                     "\\1")
+   (s-replace-regexp (pcre-to-elisp/cached
+                      "From: (.*)")
+                     "")
+   (s-replace-regexp (pcre-to-elisp/cached
+                      "[\\(\\{]([^\\{]+)[\\)\\}]")
+                     "\\1")))
+
 (defun custom/flatten-imenu-root (prefix root)
   (if (and (consp root)
            (not (consp (cdr root))))
       `(,(cons (concat prefix
-                       (if (> (length prefix) 0) "::" "")
-                       (car root))
+                       (if (> (length prefix) 0) "." "")
+                       (custom/cleanse-imenu-node-name
+                        (car root)))
                (cdr root)))
     (loop for sub-root in (cdr root)
           for new-prefix = (concat prefix
-                                   (if (> (length prefix) 0) "::" "")
-                                   (car root))
+                                   (if (> (length prefix) 0) "." "")
+                                   (custom/cleanse-imenu-node-name
+                                    (car root)))
           append (custom/flatten-imenu-root new-prefix
                                             sub-root))))
 
@@ -308,7 +326,9 @@
          (records (loop for root in tree
                         append (if (and (consp root)
                                         (not (consp (cdr root))))
-                                   `(,root)
+                                   `(,(cons (custom/cleanse-imenu-node-name
+                                             (car root))
+                                            (cdr root)))
                                  (custom/flatten-imenu-root ""
                                                             root)))))
     (if (interactive-p)
