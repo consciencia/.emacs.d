@@ -132,7 +132,8 @@
                 (apply oldfn args))))
 
 ;; Speed hack, semanticdb-fast-strip-find-results is a lot faster than
-;; semanticdb-strip-find-results which caused company to lag.
+;; semanticdb-strip-find-results which caused company to lag for large
+;; number of symbols.
 (defun custom/company-semantic-completions-raw (prefix)
   (setq company-semantic--current-tags nil)
   (dolist (tag (if (and (fboundp 'semanticdb-minor-mode-p)
@@ -730,8 +731,7 @@ Display the references in `semantic-symref-results-mode'."
     (setq position (point)))
   (let* ((semantic-analyze-error-stack nil)
          (prefixandbounds
-          (custom/semantic/ctxt-current-symbol-and-bounds-detached
-           expr))
+          (custom/semantic/ctxt-current-symbol-and-bounds-detached expr))
          (prefix (car prefixandbounds))
          (bounds (nth 2 prefixandbounds))
          ;; @todo - vv too early to really know this answer! vv
@@ -783,10 +783,11 @@ Display the references in `semantic-symref-results-mode'."
                           (thing-at-point 'symbol)))))
   (if (> (length
           (car
-           (custom/semantic/ctxt-current-symbol-and-bounds-detached
-            sym)))
+           (custom/semantic/ctxt-current-symbol-and-bounds-detached sym)))
          1)
-      (let ((ctx (custom/semantic/analyze-current-context-detached sym)))
+      (let ((ctx (custom/semantic/best-tag-user-assist-enabled type+user
+                     (custom/semantic/analyze-current-context-detached
+                      sym))))
         (if ctx
             (semantic-ia-fast-jump (point) ctx)
           (error "Failed to construct detached context")))
@@ -794,10 +795,23 @@ Display the references in `semantic-symref-results-mode'."
     ;; current project and all its dependencies.
     ;; Bypasses bug when brute deep searching all tables in project
     ;; using standard semantic find routines.
+    ;;
+    ;; NOTE: That bug was probably caused by GNU Global which was fired
+    ;; because it SUCKED.
     (custom/semantic/with-enabled-grep-db
-        (let ((tags (let ((res (semantic-symref-find-tags-by-name sym)))
-                      (if res
-                          (semantic-symref-result-get-tags-as-is res)))))
+        (let ((tags (or (let ((res (semantic-symref-find-tags-by-name sym)))
+                          (if res
+                              (semantic-symref-result-get-tags-as-is res)))
+                        ;; When symrefing fails, it means it might be in system
+                        ;; dependencies, use full scope search then.
+                        (custom/semantic/best-tag-user-assist-enabled user
+                            (semantic-analyze-find-tag sym))
+                        ;; Still nothing? Maybe it is in local variables.
+                        (semantic-find-tags-by-name
+                         sym
+                         (custom/semantic/get-local-variables)))))
+          (when (semantic-tag-p tags)
+            (setq tags (list tags)))
           (if tags
               (let* ((chosen-tag (custom/semantic/choose-tag tags)))
                 (custom/semantic/goto-tag chosen-tag))
@@ -884,8 +898,8 @@ Display the references in `semantic-symref-results-mode'."
 ;;     (semantic-remove-system-include include-root-dir symbol-for-mode)
 
 ;; Overrided because default implementation does not flatten tag
-;; hierarchy (ie deep search). As an result, all classes and struct
-;; inside namespaces were skipped from search. Not good, not at all.
+;; hierarchy (ie. deep search). As an result, all classes and struct
+;; inside namespaces were skipped from search. That sucked.
 (cl-defmethod semanticdb-find-tags-subclasses-of-type-method
   ((table semanticdb-abstract-table) parent &optional tags)
   "In TABLE, find all occurrences of tags whose parent is the PARENT type.
@@ -926,10 +940,10 @@ Returns a table of all matching tags."
                   (parents (or (semantic-tag-type-superclasses tag)
                                (semantic-tag-type-interfaces tag))))
               (loop for parent in parents
-                    collect (custom/semantic/best-tag-user-assist-enabled
-                             (semantic-analyze-find-tag parent
-                                                        'type
-                                                        scope))))))))))
+                    collect (custom/semantic/best-tag-user-assist-enabled type+user
+                                (semantic-analyze-find-tag parent
+                                                           'type
+                                                           scope))))))))))
 
 (defun custom/semantic/get-subclasses (tag)
   (when (and (semantic-tag-p tag)
@@ -1165,7 +1179,6 @@ Returns a table of all matching tags."
                 (equal curr-name enclosing-tag-name))
            ;; All is ok.
            )
-
           ;; Local variables have no overlays thus no enclosing tag can
           ;; be found for them. In order to correctly detect valid
           ;; landing for local variables, we must iterate through all local
@@ -1177,13 +1190,11 @@ Returns a table of all matching tags."
                  return t)
            ;; All is ok.
            )
-
           ((equal curr-name enclosing-tag-name)
            ;; We are not exactly ok, but we landed somehow somewhere
            ;; in correct tag, just readjust.
            (goto-char expected-pos)
            (setq tag enclosing-tag))
-
           (t
            ;; All is wrong, we landed completely somewhere else.
            ;; As an fix, list all tags with same name and jump to
@@ -1223,13 +1234,10 @@ Returns a table of all matching tags."
                              (abs (- curr-pos b-pos)))
                           (goto-char f-pos)
                         (goto-char b-pos)))
-
                      (f-pos
                       (goto-char f-pos))
-
                      (b-pos
                       (goto-char b-pos))
-
                      (t
                       ;; Sorry, DB had really shitty data.
                       (error (concat "Invalid DB record was "
@@ -1271,7 +1279,11 @@ Returns a table of all matching tags."
 (defun custom/semantic/index-current-project ()
   (interactive)
   (let ((roots (cons (semantic-symref-calculate-rootdir)
-                     (append semantic-dependency-system-include-path
+                     (append (if (yes-or-no-p (concat "Do you want to index "
+                                                      "global system include "
+                                                      "paths (on linux it would"
+                                                      " be a loooot paths...)?"))
+                                 semantic-dependency-system-include-path)
                              (custom/ede/get-project-dependencies)))))
     (if roots
         (progn
@@ -1288,17 +1300,18 @@ Returns a table of all matching tags."
             (redisplay t)
             (loop for root in roots
                   do (custom/semantic/index-directory root logger))
+            (insert "\n" "DONE")
             (read-only-mode t)))
       (error "Failed to find roots, are you in project?"))))
 
-(setq *custom/semantic/parse-table-queue* nil)
+(setq custom/semantic/parse-table-queue nil)
 (defun custom/semantic/parser-executor ()
-  (when *custom/semantic/parse-table-queue*
+  (when custom/semantic/parse-table-queue
     (semanticdb-refresh-table
-     (pop *custom/semantic/parse-table-queue*) t)))
+     (pop custom/semantic/parse-table-queue) t)))
 
 (defun custom/semantic/refresh-table-in-future (table)
-  (push table *custom/semantic/parse-table-queue*)
+  (push table custom/semantic/parse-table-queue)
   (semantic-idle-scheduler-add #'custom/semantic/parser-executor))
 
 (setq custom/semantic/loaded-projects (@dict-new))
@@ -1543,12 +1556,12 @@ BUTTON is the button that was clicked."
 (setq custom/semantic/grep-db-enabled t)
 
 (defmacro custom/semantic/with-disabled-grep-db (&rest forms)
-  (declare (indent 99))
+  (declare (indent 99) (debug t))
   `(let ((custom/semantic/grep-db-enabled nil))
      ,@forms))
 
 (defmacro custom/semantic/with-enabled-grep-db (&rest forms)
-  (declare (indent 99))
+  (declare (indent 99) (debug t))
   `(let ((custom/semantic/grep-db-enabled t))
      ,@forms))
 
@@ -1842,10 +1855,30 @@ If NOSNARF is `lex', then only return the lex token."
 ;;;; MINIBUFFER TAG AUTOCOMPLETION
 ;; CODE:
 
+(defclass custom/semantic/collector-project-chained
+  (semantic-collector-project-abstract)
+  ()
+  "Context aware completion engine for tags in a project.")
+
+(cl-defmethod semantic-collector-calculate-completions-raw
+  ((obj custom/semantic/collector-project-chained) prefix completionlist)
+  "Calculate the completions for prefix from completionlist."
+  (with-current-buffer (oref obj buffer)
+    (let* ((table semanticdb-current-table)
+           (ctx (custom/semantic/with-disabled-grep-db
+                    (custom/semantic/best-tag-user-assist-enabled type+user
+                        (custom/semantic/analyze-current-context-detached
+                         prefix))))
+           (result (semantic-analyze-possible-completions ctx 'no-unique)))
+      (if result
+          (list (cons table result))))))
+
 ;; Fixed invalid usage of semantic-analyze-current-context which
 ;; happened to be outside of semantic buffer.
 ;; Also it was wrapped in error catcher because abstract class has no
 ;; context slot.
+;; Added check if slot 'first-pass-completions' exists before usage.
+;; Reworked usage of 'try-completion' in order to support dot chains.
 (cl-defmethod semantic-collector-calculate-completions
   ((obj semantic-collector-abstract) prefix partial)
   "Calculate completions for prefix as setup for other queries."
@@ -1878,7 +1911,8 @@ If NOSNARF is `lex', then only return the lex token."
                          ;; unbound so that they are newly calculated.
                          (when (slot-exists-p obj context)
                            (oset obj context context))
-                         (when (slot-boundp obj 'first-pass-completions)
+                         (when (and (slot-exists-p obj 'first-pass-completions)
+                                    (slot-boundp obj 'first-pass-completions))
                            (slot-makeunbound obj 'first-pass-completions)))))
                  nil)))
          ;; Get the result
@@ -1894,9 +1928,21 @@ If NOSNARF is `lex', then only return the lex token."
       (oset obj last-prefix prefix)
       (oset obj last-all-completions answer))
     ;; Now calculate the completion.
-    (setq completion (try-completion
-                      prefix
-                      (semanticdb-strip-find-results answer)))
+    (let ((prefix-segments
+           (car
+            (with-current-buffer (oref obj buffer)
+              (custom/semantic/ctxt-current-symbol-and-bounds-detached
+               prefix))))
+          (candidates (loop for tag in (semanticdb-strip-find-results answer)
+                            collect (semantic-tag-name tag)))
+          short-prefix)
+      (when (> (length prefix-segments) 1)
+        (setq short-prefix
+              (s-join "." (@init prefix-segments)))
+        (setq candidates
+              (loop for c in candidates
+                    collect (concat short-prefix "." c))))
+      (setq completion (try-completion prefix candidates)))
     (oset obj last-whitespace-completion nil)
     (oset obj current-exact-match nil)
     ;; Only do this if a completion was found.  Letting a nil in
@@ -2145,9 +2191,11 @@ HISTORY is a symbol representing a variable to store the history in."
   (save-excursion
     (custom/semantic/load-all-project-dbs)
     (custom/semantic-complete-read-tag-engine
-     (semantic-collector-project-brutish prompt
-                                         :buffer (current-buffer)
-                                         :path (current-buffer))
+     ;; I used semantic-collector-project-brutish in past but my new
+     ;; collector is able to complete even dot chains.
+     (custom/semantic/collector-project-chained prompt
+                                                :buffer (current-buffer)
+                                                :path (current-buffer))
      (semantic-displayor-traditional)
      prompt
      default-tag
@@ -2159,8 +2207,9 @@ HISTORY is a symbol representing a variable to store the history in."
 
 (setq custom/semantic/select-best-tag-by-user nil)
 
-(defmacro custom/semantic/best-tag-user-assist-enabled (&rest forms)
-  `(let ((custom/semantic/select-best-tag-by-user t))
+(defmacro custom/semantic/best-tag-user-assist-enabled (method &rest forms)
+  (declare (indent 2) (debug t))
+  `(let ((custom/semantic/select-best-tag-by-user ',method))
      ,@forms))
 
 (defmacro custom/semantic/best-tag-user-assist-disabled (&rest forms)
@@ -2203,7 +2252,18 @@ tags of TAGCLASS."
       (let ((best nil)
             (notypeinfo nil))
         (if custom/semantic/select-best-tag-by-user
-            (custom/semantic/choose-tag sequence)
+            (cond
+             ((equal custom/semantic/select-best-tag-by-user
+                     'user)
+              (setq best (custom/semantic/choose-tag sequence)))
+             ((equal custom/semantic/select-best-tag-by-user
+                     'type+user)
+              (setq best (semantic-find-tags-by-class 'type sequence))
+              (if (> (length best) 1)
+                  (setq best (custom/semantic/choose-tag best))
+                (setq best (car-safe best))))
+             (t (error "Unknown selector %s"
+                       custom/semantic/select-best-tag-by-user)))
           (while (and (not best) sequence)
             ;; 3) select a non-prototype.
             (if (not (semantic-tag-type (car sequence)))
@@ -2287,8 +2347,8 @@ Makes C/C++ language like assumptions."
                                 (car-safe parents)
                               (ido-completing-read "Choose parent: "
                                                    parents))))
-               (or (custom/semantic/best-tag-user-assist-enabled
-                    (semantic-analyze-find-tag parent 'type scope))
+               (or (custom/semantic/best-tag-user-assist-enabled type+user
+                       (semantic-analyze-find-tag parent 'type scope))
                    (if (y-or-n-p (format (concat "Failed to find '%s' "
                                                  "intelligently, try "
                                                  "brute force?")
