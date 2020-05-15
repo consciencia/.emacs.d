@@ -1,7 +1,10 @@
 (custom/install-package-when-needed 'elpy)
 (require 'elpy)
 
-(setq elpy-modules (delq 'elpy-module-company elpy-modules))
+
+(setq elpy-modules
+      (delq 'elpy-module-company
+            elpy-modules))
 (setq elpy-rpc-backend "jedi")
 
 (advice-add #'elpy-goto-location
@@ -24,6 +27,28 @@
 (elpy-enable)
 
 
+(defun custom/python/indent-or-complete (arg)
+  (interactive "P")
+  (cond
+   ((use-region-p)
+    (indent-region (region-beginning) (region-end)))
+   ((memq indent-line-function
+          '(indent-relative indent-relative-maybe))
+    (company-complete-common))
+   ((let ((tab-always-indent t)
+          (candidates nil))
+      (ignore-errors
+        (when (company-manual-begin)
+          (setq candidates company-candidates)
+          (company-abort)))
+      (if (save-excursion
+            (backward-char)
+            (looking-at-p (pcre-to-elisp/cached "\\s+")))
+          (indent-for-tab-command arg)
+        (if (> (length candidates) 0)
+            (company-complete-common)
+          (indent-for-tab-command arg)))))))
+
 
 ;; elpy-mode-map
 (define-key elpy-mode-map (kbd "<C-down>")
@@ -35,7 +60,7 @@
 (define-key elpy-mode-map (kbd "<C-right>")
   'elpy-nav-forward-indent)
 (define-key elpy-mode-map (kbd "<tab>")
-  'company-indent-or-complete-common)
+  'custom/python/indent-or-complete)
 (define-key elpy-mode-map (kbd "<M-down>") nil)
 (define-key elpy-mode-map (kbd "<M-up>") nil)
 (define-key elpy-mode-map (kbd "<M-left>") nil)
