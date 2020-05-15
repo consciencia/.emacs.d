@@ -41,9 +41,21 @@
         (when (company-manual-begin)
           (setq candidates company-candidates)
           (company-abort)))
-      (if (save-excursion
-            (backward-char)
-            (looking-at-p (pcre-to-elisp/cached "\\s+")))
+      (if (and (save-excursion
+                 (backward-char)
+                 (looking-at-p
+                  (pcre-to-elisp/cached
+                   "\\s+")))
+               (save-excursion
+                 (backward-char 3)
+                 (not (looking-at-p
+                       (pcre-to-elisp/cached
+                        "(?:if|in|as)\\s"))))
+               (save-excursion
+                 (backward-char 5)
+                 (not (looking-at-p
+                       (pcre-to-elisp/cached
+                        "with\\s")))))
           (indent-for-tab-command arg)
         (if (> (length candidates) 0)
             (company-complete-common)
