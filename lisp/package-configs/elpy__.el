@@ -37,29 +37,21 @@
     (company-complete-common))
    ((let ((tab-always-indent t)
           (candidates nil))
-      (ignore-errors
-        (when (company-manual-begin)
-          (setq candidates company-candidates)
-          (company-abort)))
-      (if (and (save-excursion
-                 (backward-char)
-                 (looking-at-p
-                  (pcre-to-elisp/cached
-                   "\\s+")))
-               (save-excursion
-                 (backward-char 3)
-                 (not (looking-at-p
-                       (pcre-to-elisp/cached
-                        "(?:if|in|as)\\s"))))
-               (save-excursion
-                 (backward-char 5)
-                 (not (looking-at-p
-                       (pcre-to-elisp/cached
-                        "with\\s")))))
+      (if (and (looking-back (pcre-to-elisp/cached
+                              "\\s+")
+                             nil)
+               (not (looking-back (pcre-to-elisp/cached
+                                   "(?:if|in|as|with)\\s")
+                                  nil)))
           (indent-for-tab-command arg)
-        (if (> (length candidates) 0)
-            (company-complete-common)
-          (indent-for-tab-command arg)))))))
+        (progn
+          (ignore-errors
+            (when (company-manual-begin)
+              (setq candidates company-candidates)
+              (company-abort)))
+          (if (> (length candidates) 0)
+              (company-complete-common)
+            (indent-for-tab-command arg))))))))
 
 
 ;; elpy-mode-map
