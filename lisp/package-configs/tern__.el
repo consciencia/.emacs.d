@@ -1,5 +1,9 @@
 (custom/install-package-when-needed 'tern)
-(custom/install-package-when-needed 'company-tern)
+;; It got pulled from MELPA...
+;;
+;; (custom/install-package-when-needed 'company-tern)
+(custom/install-package-when-needed 'dash)
+(custom/install-package-when-needed 'dash-functional)
 (require 'tern)
 (require 'company-tern)
 

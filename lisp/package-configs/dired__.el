@@ -3,6 +3,7 @@
 ;;
 ;; (custom/install-package-when-needed 'dired-imenu)
 ;; (custom/install-package-when-needed 'dired-subtree)
+(custom/install-package-when-needed 'dash)
 (require 'dired-aux)
 (require 'dired-x)
 (require 'wdired)

@@ -4,7 +4,7 @@ import os
 import shutil
 import zipfile
 import re
-import urllib
+import urllib.request
 import tarfile
 import argparse
 import subprocess
@@ -86,8 +86,8 @@ def donwloadEmacsSrc():
               getEmacsVersion() + ".tar.gz"
     targetPath = ".".join(srcArch.split(".")[:-2]) + "_"
     print("GET " + getEmacsSrcURL() + ".")
-    urllib.urlretrieve(getEmacsSrcURL(),
-                       srcArch)
+    urllib.request.urlretrieve(getEmacsSrcURL(),
+                               srcArch)
     tarfile.open(srcArch).extractall(targetPath)
     shutil.move(targetPath + os.path.sep + "emacs-" + getEmacsVersion(),
                 targetPath[:-1])
