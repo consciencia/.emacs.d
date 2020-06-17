@@ -1282,3 +1282,19 @@ This function is used by the `interactive' code letter `n'."
     `(pcre-to-elisp ,(car args)))
    (t (error "Unknown type '%s'!" type))))
 (defalias 're 'custom/regex-generator)
+
+(defun custom/pretty-xml ()
+  (interactive)
+  (custom/mark-whole-buffer)
+  (call-interactively 'sgml-pretty-print))
+
+(defun custom/create-buffer (&optional file-name)
+  (interactive)
+  (let ((name (or file-name
+                  (read-string "Enter filename: "))))
+    (generate-new-buffer name)
+    (switch-to-buffer-other-window name)))
+
+(defun custom/change-buffer-encoding ()
+  (interactive)
+  (call-interactively 'set-buffer-file-coding-system))
