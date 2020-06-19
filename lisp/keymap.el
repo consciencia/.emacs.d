@@ -34,6 +34,7 @@
                   (if (equal major-mode 'dired-mode)
                       (call-interactively 'dired-other-window)
                     (call-interactively 'dired-jump-other-window))))
+(global-set-key (kbd "<f5>") 'shell)
 (global-set-key (kbd "<f12>") 'customize-group)
 (global-set-key (kbd "<f11>") 'toggle-frame-fullscreen)
 (global-set-key (kbd "<f10>") 'customize-face)
