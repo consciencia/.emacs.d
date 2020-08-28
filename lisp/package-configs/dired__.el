@@ -31,6 +31,7 @@
     (if (file-directory-p (dired-get-file-for-visit))
         (diredp-find-file-reuse-dir-buffer)
       (dired-find-file-other-window))))
+(define-key dired-mode-map (kbd "C-w") 'custom/kill-buffer)
 (define-key dired-mode-map (kbd "<C-kp-add>") 'custom/dired/create-dir-or-file)
 (define-key dired-mode-map (kbd "<kp-add>") 'custom/dired/create-dir)
 (define-key dired-mode-map (kbd "C-<up>") 'dired-prev-dirline)

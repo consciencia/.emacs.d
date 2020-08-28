@@ -22,7 +22,11 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode))
+            ;; Workaround for elpy rpc bug... Im really very tired from
+            ;; this endless stream of shit!!!
+            (when elpy-mode
+              (elpy-rpc-restart))))
 
 (elpy-enable)
 

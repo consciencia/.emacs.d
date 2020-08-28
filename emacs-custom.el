@@ -3,18 +3,16 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-enabled-themes (quote (spacemacs-dark)))
+ '(custom-enabled-themes '(spacemacs-dark))
  '(custom-safe-themes
-   (quote
-    ("bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" default)))
+   '("bffa9739ce0752a37d9b1eee78fc00ba159748f50dc328af4be661484848e476" default))
  '(fci-rule-color "#62686E")
  '(git-gutter:added-sign "++")
  '(git-gutter:deleted-sign "--")
  '(git-gutter:modified-sign "  ")
  '(git-gutter:update-interval 1)
  '(package-selected-packages
-   (quote
-    (elpy cmake-mode elisp-refs multi-term which-key expand-region aggressive-indent helpful gited company-statistics company-statistic nlinum company-tern less-css-mode company-web web-mode gfm-mode markdown-mode js2-mode flycheck ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme)))
+   '(elpy cmake-mode elisp-refs multi-term which-key expand-region aggressive-indent helpful gited company-statistics company-statistic nlinum company-tern less-css-mode company-web web-mode gfm-mode markdown-mode js2-mode flycheck ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme))
  '(vc-annotate-background "#1c1f24")
  '(vc-annotate-color-map
    (list

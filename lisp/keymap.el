@@ -138,7 +138,6 @@
 (global-set-key (kbd "C-s") 'save-buffer)
 (global-set-key (kbd "C-S-s") 'save-some-buffers)
 (global-set-key (kbd "C-w") 'custom/kill-buffer)
-(global-set-key (kbd "C-w") 'custom/kill-buffer)
 (define-key magit-status-mode-map (kbd "C-w") 'magit-mode-bury-buffer)
 
 ;; GENERIC TEXT MANIPULATION BINDS
