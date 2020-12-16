@@ -15,10 +15,18 @@
        'custom/line-has-hidden-link)
   (flyspell-mode)
   (custom/hide-all-links)
-  (local-set-key (kbd "M-l") 'custom/find-all-link-ranges))
+  (local-set-key (kbd "M-l") 'custom/find-all-link-ranges)
+  (local-set-key (kbd "M-t") 'custom/wrap-in-more-info))
 (add-hook 'markdown-mode-hook 'custom/markdown-file-opened)
 
 
+
+(defun custom/wrap-in-more-info ()
+  (interactive)
+  (beginning-of-visual-line)
+  (insert "More info: ")
+  (end-of-visual-line)
+  (insert "."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Link auto hide
@@ -55,22 +63,35 @@
         to-pos (or to-pos (point-max)))
   (save-excursion
     (goto-char from-pos)
-    (let ((regexp (pcre-to-elisp/cached "https?:\\/\\/[^\\s\\]]+"))
+    (let ((regexp (pcre-to-elisp/cached "https?:\\/\\/\\S+"))
           (matches nil)
-          (match nil))
+          (match nil)
+          (match-str nil))
       (while (search-forward-regexp regexp to-pos t)
         (setq match (cons (match-beginning 0)
                           (match-end 0)))
-        (if (save-excursion
-              (goto-char (- (cdr match) 2))
-              (looking-at (pcre-to-elisp/cached "\\)[\\.,]")))
-            (setf (cdr match)
-                  (- (cdr match) 2))
-          (when (save-excursion
-                  (goto-char (1- (cdr match)))
-                  (looking-at (pcre-to-elisp/cached "\\.|\\)")))
-            (setf (cdr match)
-                  (1- (cdr match)))))
+        (setq match-str
+              (buffer-substring-no-properties (car match)
+                                              (cdr match)))
+        (cond
+         ((and
+           (save-excursion
+             (goto-char (- (cdr match) 2))
+             (looking-at (pcre-to-elisp/cached "\\)[\\.,]")))
+           (not (s-match "(" match-str)))
+          (setf (cdr match)
+                (- (cdr match) 2)))
+         ((and (save-excursion
+                 (goto-char (1- (cdr match)))
+                 (looking-at (pcre-to-elisp/cached "\\)")))
+               (not (s-match "(" match-str)))
+          (setf (cdr match)
+                (1- (cdr match))))
+         ((save-excursion
+            (goto-char (1- (cdr match)))
+            (looking-at (pcre-to-elisp/cached "\\.")))
+          (setf (cdr match)
+                (1- (cdr match)))))
         (push match matches))
       (when (interactive-p)
         (let ((links nil)

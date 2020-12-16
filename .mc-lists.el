@@ -8,9 +8,11 @@
         autopair-insert-or-skip-quote
         autopair-skip-close-maybe
         beginning-of-visual-line
+        browse-kill-ring
         company-indent-or-complete-common
         cua--prefix-override-handler
         cua-paste
+        custom/backward-symbol
         custom/forward-symbol
         end-of-visual-line
         indent-for-tab-command
@@ -25,7 +27,11 @@
       '(
         cua-copy-region
         cua-copy-region
+        cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
+        custom/copy-across-cursors
+        custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors
         custom/mc/mark-next-like-this

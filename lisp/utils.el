@@ -31,8 +31,6 @@
         acc)
     nil))
 
-
-
 (defun @init (list &optional unsafe)
   (if unsafe
       (nreverse (nthcdr 1 (nreverse list)))
@@ -284,6 +282,18 @@
                    (>= old-pos b-pos)
                    (<= old-pos e-pos))
               (er/mark-defun))))))
+  (setq transient-mark-mode (cons 'only transient-mark-mode)))
+
+(defun custom/mark-args ()
+  (interactive)
+  (ignore-errors
+    (re-search-backward "("
+                        (save-excursion
+                          (beginning-of-visual-line)
+                          (point)))
+    (set-mark (+ (point) 1))
+    (forward-sexp)
+    (backward-char 1))
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
 (defun custom/cleanse-imenu-node-name (name)

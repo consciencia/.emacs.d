@@ -19,6 +19,7 @@
 
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)
+(setq c-basic-offset tab-width)
 (defvaralias 'c-basic-offset 'tab-width)
 ;; (c-show-syntactic-information)
 (c-set-offset 'substatement-open 0)
@@ -49,7 +50,9 @@
 
 (add-hook 'prog-mode-hook
           'whitespace-mode)
-(set-face-attribute 'default nil :height 100)
+;; FONT SIZE FONTSIZE
+;; (set-face-attribute 'default nil :height 100)
+(set-face-attribute 'default nil :height 105)
 (setq scroll-conservatively 101)
 
 (setq tab-always-indent 'complete)

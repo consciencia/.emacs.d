@@ -5,7 +5,6 @@
 (setq elpy-modules
       (delq 'elpy-module-company
             elpy-modules))
-(setq elpy-rpc-backend "jedi")
 
 (advice-add #'elpy-goto-location
             :after (lambda (&rest args)
@@ -23,8 +22,6 @@
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
               (flyspell-prog-mode))
-            ;; Workaround for elpy rpc bug... Im really very tired from
-            ;; this endless stream of shit!!!
             (when elpy-mode
               (elpy-rpc-restart))))
 
@@ -58,7 +55,6 @@
             (indent-for-tab-command arg))))))))
 
 
-;; elpy-mode-map
 (define-key elpy-mode-map (kbd "<C-down>")
   'elpy-nav-forward-block)
 (define-key elpy-mode-map (kbd "<C-up>")
@@ -73,21 +69,16 @@
 (define-key elpy-mode-map (kbd "<M-up>") nil)
 (define-key elpy-mode-map (kbd "<M-left>") nil)
 (define-key elpy-mode-map (kbd "<M-right>") nil)
-(define-key elpy-mode-map (kbd "M-<next>")
-  'python-nav-forward-defun)
-(define-key elpy-mode-map (kbd "M-<prior>")
-  'python-nav-backward-defun)
+(define-key elpy-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
+(define-key elpy-mode-map (kbd "M-<prior>") 'python-nav-backward-defun)
 (define-key elpy-mode-map (kbd "M-f") nil)
 (define-key elpy-mode-map (kbd "M-*") 'elpy-doc)
 (define-key elpy-mode-map (kbd "M-d") 'custom/mark-defun)
+(define-key elpy-mode-map (kbd "M-a") 'custom/mark-args)
 (define-key elpy-mode-map (kbd "C-<right>") 'custom/forward-symbol)
 (define-key elpy-mode-map (kbd "C-<left>") 'custom/backward-symbol)
 (define-key elpy-mode-map (kbd "C-<down>") 'forward-paragraph)
 (define-key elpy-mode-map (kbd "C-<up>") 'backward-paragraph)
 (define-key elpy-mode-map (kbd "M-.") 'elpy-goto-definition)
-(define-key elpy-mode-map (kbd "M-,") (lambda ()
-                                        (interactive)
-                                        (xref-pop-marker-stack)
-                                        (pulse-momentary-highlight-one-line
-                                         (point))
-                                        (recenter)))
+(define-key elpy-mode-map (kbd "M--") 'xref-find-references)
+(define-key elpy-mode-map (kbd "M-,") 'custom/universal-pop-mark)

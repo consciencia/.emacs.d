@@ -1429,6 +1429,10 @@ BUTTON is the button that was clicked."
     (switch-to-buffer buff)
     (goto-char (point-min))
     (forward-line (1- line))
+    ;; TODO: Find match string on current line.
+    ;;
+    ;; semantic-displayor-traditional vanished so it does not
+    ;; work anyway...
     (recenter)
     (pulse-momentary-highlight-one-line (point))))
 
