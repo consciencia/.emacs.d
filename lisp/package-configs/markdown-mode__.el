@@ -74,6 +74,11 @@
               (buffer-substring-no-properties (car match)
                                               (cdr match)))
         (cond
+         ((save-excursion
+            (goto-char (- (cdr match) 2))
+            (looking-at (pcre-to-elisp/cached "\\)\\)")))
+          (setf (cdr match)
+                (- (cdr match) 1)))
          ((and
            (save-excursion
              (goto-char (- (cdr match) 2))
