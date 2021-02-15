@@ -47,8 +47,7 @@
 ;; Active decoration mode for current buffer only after some seconds
 ;; of idling. This way, no slow down due to decoration happen during
 ;; bulk file parsing in grep and indexer.
-(run-with-idle-timer 2 t
-                     'custom/semantic/enable-decorations-locally)
+(run-with-idle-timer 2 t 'custom/semantic/enable-decorations-locally)
 
 
 
@@ -78,19 +77,26 @@
                         (equal (car e) 'js-mode)))
             collect e))
 
-(add-to-list 'semantic-new-buffer-setup-functions
-             '(emacs-lisp-mode . semantic-default-elisp-setup))
+;; Support for elisp slowes things down and I dont have time to find
+;; out why. Another thing is that output from semantic is used only
+;; for imenu so its not critical.
+;;
+;; (add-to-list 'semantic-new-buffer-setup-functions
+;;              '(emacs-lisp-mode . semantic-default-elisp-setup))
+
 (add-to-list 'semantic-inhibit-functions
              (lambda ()
                (not (or (equal major-mode 'c-mode)
                         (equal major-mode 'c++-mode)
-                        (equal major-mode 'emacs-lisp-mode)))))
+                        ;; (equal major-mode 'emacs-lisp-mode)
+                        ))))
 
 (advice-add 'save-buffer :after
             (lambda (&rest args)
               (if (or (equal major-mode 'c-mode)
                       (equal major-mode 'c++-mode)
-                      (equal major-mode 'emacs-lisp-mode))
+                      ;; (equal major-mode 'emacs-lisp-mode)
+                      )
                   (save-mark-and-excursion
                     (semantic-force-refresh)))))
 

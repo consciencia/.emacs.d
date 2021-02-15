@@ -23,6 +23,7 @@
 (add-hook 'after-make-frame-functions
           #'custom/create-imenu-list)
 
+
 (defun custom|imenu-list-update (oldfun &rest args)
   (let* ((old (current-buffer))
          (oldwin (get-buffer-window old))
@@ -37,3 +38,25 @@
 
 (advice-add #'imenu-list-update
             :around 'custom|imenu-list-update)
+
+
+;; Advices below are fix for crappy imenu list impl.
+;;
+;; I used following advice to trace what is selecting imenu list
+;; after I jumped into different buffer through jedi mode.
+;;
+;; (advice-add #'select-window
+;;             :after (lambda (&rest args)
+;;                      (when (equal (buffer-name (window-buffer (car args)))
+;;                                   "*Ilist*")
+;;                        (backtrace))))
+
+(setq *active-window* nil)
+
+(advice-add #'imenu-list-update-safe
+            :before (lambda (&rest args)
+                      (setq *active-window* (selected-window))))
+
+(advice-add #'imenu-list-update-safe
+            :after (lambda (&rest args)
+                     (select-window *active-window*)))
