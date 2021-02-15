@@ -33,6 +33,8 @@
     (delete-directory (concat root "elpa") t t))
   (funcall write-file version-cache-filename (emacs-version)))
 
+(setq-default buffer-file-coding-system 'utf-8-unix)
+
 ;; set correct path separator
 (if (eq system-type 'windows-nt)
     (setq custom/fs-separator "\\")
