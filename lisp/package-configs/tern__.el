@@ -26,19 +26,19 @@
               (flyspell-prog-mode))))
 
 (advice-add #'tern-go-to-position
+            :before (lambda (&rest args)
+                      (custom/universal-push-mark)))
+
+(advice-add #'tern-go-to-position
             :after (lambda (&rest args)
                      (pulse-momentary-highlight-one-line (point))
                      (recenter)
                      (js2-reparse nil)))
 
 (define-key tern-mode-keymap (kbd "M-.") 'tern-find-definition)
-(define-key tern-mode-keymap (kbd "M-,") 'tern-pop-find-definition)
+(define-key tern-mode-keymap (kbd "M-,") 'custom/universal-pop-mark)
 (define-key tern-mode-keymap (kbd "M-*") 'tern-get-docs)
-(define-key tern-mode-keymap (kbd "M-d")
-  (lambda ()
-    (interactive)
-    (call-interactively 'js2-mark-defun)
-    (setq transient-mark-mode (cons 'only transient-mark-mode))))
+(define-key tern-mode-keymap (kbd "M-d") 'custom/mark-defun)
 ;; js2-narrow-to-defun
 ;; extract info from js2 system and implement following features
 ;; ...

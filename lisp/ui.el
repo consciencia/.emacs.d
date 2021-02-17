@@ -6,6 +6,9 @@
 (menu-bar-mode -1)
 (tool-bar-mode -1)
 
+;; TODO:
+;; Try doom-vibrant.
+;; https://github.com/hlissner/emacs-doom-themes
 (load-theme 'spacemacs-dark t)
 
 (setq-default ring-bell-function 'ignore)

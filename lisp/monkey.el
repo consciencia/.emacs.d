@@ -43,3 +43,8 @@ on local directory elisp code. TODO, solve this somehow!"
               (if (thing-at-point 'symbol)
                   (apply oldfn args)
                 (insert "\n"))))
+
+(advice-add #'occur-mode-goto-occurrence
+            :after
+            (lambda (&rest args)
+              (recenter)))
