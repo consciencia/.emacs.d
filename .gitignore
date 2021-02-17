@@ -23,4 +23,5 @@ undo/
 transient/
 version.cache
 elpy/
+TODO.md
 *.pyc
