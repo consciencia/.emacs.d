@@ -55,8 +55,8 @@
               'semantic-format-tag-summarize)
 (setq-default semantic-idle-work-parse-neighboring-files-flag nil)
 (setq-default semantic-idle-work-update-headers-flag nil)
-(setq-default semantic-complete-inline-analyzer-displayor-class
-              'semantic-displayor-tooltip)
+(setq-default semantic-complete-inline-analyzer-displayer-class
+              'semantic-displayer-tooltip)
 (setq-default semantic-edits-verbose-flag t)
 (setq-default senator-step-at-tag-classes nil)
 (setq-default senator-step-at-start-end-tag-classes
@@ -1436,9 +1436,6 @@ BUTTON is the button that was clicked."
     (goto-char (point-min))
     (forward-line (1- line))
     ;; TODO: Find match string on current line.
-    ;;
-    ;; semantic-displayor-traditional vanished so it does not
-    ;; work anyway...
     (recenter)
     (pulse-momentary-highlight-one-line (point))))
 
@@ -1992,7 +1989,7 @@ Return value can be:
   string - a message to show in the minibuffer."
   ;; Query the environment for an active completion.
   (let ((collector semantic-completion-collector-engine)
-        (displayor semantic-completion-display-engine)
+        (displayer semantic-completion-display-engine)
         (contents (semantic-completion-text))
         matchlist
         answer)
@@ -2007,20 +2004,20 @@ Return value can be:
       (cond
        (custom/semantic/complete-accepts-unknown
         (setq answer (semantic-completion-text)))
-       ;; Input match displayor focus entry
-       ((setq answer (semantic-displayor-current-focus displayor))
+       ;; Input match displayer focus entry
+       ((setq answer (semantic-displayer-current-focus displayer))
         ;; We have answer, continue
         )
        ;; One match from the collector
        ((setq matchlist (semantic-collector-current-exact-match collector))
         (if (= (semanticdb-find-result-length matchlist) 1)
             (setq answer (car (semanticdb-find-result-nth matchlist 0)))
-          (if (semantic-displayor-focus-abstract-child-p displayor)
-              ;; For focusing displayors, we can claim this is
+          (if (semantic-displayer-focus-abstract-child-p displayer)
+              ;; For focusing displayers, we can claim this is
               ;; not unique.  Multiple focuses can choose the correct
               ;; one.
               (setq answer "Not Unique")
-            ;; If we don't have a focusing displayor, we need to do something
+            ;; If we don't have a focusing displayer, we need to do something
             ;; graceful.  First, see if all the matches have the same name.
             (let ((allsame t)
                   (firstname (semantic-tag-name
@@ -2131,20 +2128,20 @@ Return value can be:
 ;; Replaced semantic-complete-key-map for custom/semantic-complete-key-map
 ;; in order to support raw string outputs.
 (defun custom/semantic-complete-read-tag-engine
-    (collector displayor prompt default-tag initial-input history)
+    (collector displayer prompt default-tag initial-input history)
   "Read a semantic tag, and return a tag for the selection.
 Argument COLLECTOR is an object which can be used to calculate
 a list of possible hits.  See `semantic-completion-collector-engine'
 for details on COLLECTOR.
-Argument DISPLAYOR is an object used to display a list of possible
+Argument DISPLAYER is an object used to display a list of possible
 completions for a given prefix.  See`semantic-completion-display-engine'
-for details on DISPLAYOR.
+for details on DISPLAYER.
 PROMPT is a string to prompt with.
 DEFAULT-TAG is a semantic tag or string to use as the default value.
 If INITIAL-INPUT is non-nil, insert it in the minibuffer initially.
 HISTORY is a symbol representing a variable to story the history in."
   (let* ((semantic-completion-collector-engine collector)
-         (semantic-completion-display-engine displayor)
+         (semantic-completion-display-engine displayer)
          (semantic-complete-active-default nil)
          (semantic-complete-current-matched-tag nil)
          (default-as-tag (semantic-complete-default-to-tag default-tag))
@@ -2175,11 +2172,11 @@ HISTORY is a symbol representing a variable to story the history in."
                                   'semantic-completion-default-history)
                               default-tag)
       (semantic-collector-cleanup semantic-completion-collector-engine)
-      (semantic-displayor-cleanup semantic-completion-display-engine))
+      (semantic-displayer-cleanup semantic-completion-display-engine))
     ;; Extract the tag from the completion machinery.
     semantic-complete-current-matched-tag))
 
-;; Redefined because original used more sophisticated displayor which
+;; Redefined because original used more sophisticated displayer which
 ;; refused to select not unique tag name.
 (defun custom/semantic-complete-read-tag-project (prompt &optional
                                                          default-tag
@@ -2206,7 +2203,7 @@ HISTORY is a symbol representing a variable to store the history in."
      (custom/semantic/collector-project-chained prompt
                                                 :buffer (current-buffer)
                                                 :path (current-buffer))
-     (semantic-displayor-traditional)
+     (semantic-displayer-traditional)
      prompt
      default-tag
      initial-input

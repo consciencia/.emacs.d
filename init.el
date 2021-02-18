@@ -103,6 +103,14 @@
 
 (global-auto-revert-mode)
 
+;; Byte compile all functions defined in emacs config.
+(mapatoms (lambda (sym)
+            (when (and (s-starts-with-p "custom/" (format "%s" sym))
+                       (fboundp sym))
+              (let ((byte-compile-log-warning-function
+                     (lambda (&rest args))))
+                (byte-compile sym)))))
+
 ;; fix problem with aggressive indent module when find and replace
 ;; operations is in progress.
 ;; Issue is, aggressive indent is async, that means, it can interfere

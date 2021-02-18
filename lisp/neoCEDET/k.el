@@ -9,13 +9,15 @@
             (eval (progn ,(if (not (stringp docstring))
                               docstring)
                          ,@body)))
-          (byte-compile ',name)))
+          (let ((byte-compile-log-warning-function
+                 (lambda (&rest args))))
+            (byte-compile ',name))))
 
 (defmacro kdeftest (parser input exp-output)
   (declare (indent 1) (debug t))
   `(let (status output)
      (setq output (k-run ,parser
-                    ',input))
+                         ',input))
      (setq status
            (equal output
                   ',exp-output))

@@ -8,11 +8,9 @@
 
 (defun custom/started-scrolling (&rest args)
   (setq custom/scrolling-flag t))
-(byte-compile 'custom/started-scrolling)
 
 (defun custom/stopped-scrolling (&rest args)
   (setq custom/scrolling-flag nil))
-(byte-compile 'custom/stopped-scrolling)
 
 (defun custom/around-jit-lock-function (old-fn &rest args)
   (when (or (not custom/scrolling-flag)
@@ -22,7 +20,6 @@
             (equal major-mode 'magit-revision-mode)
             (not (null hi-lock-interactive-patterns)))
     (apply old-fn args)))
-(byte-compile 'custom/around-jit-lock-function)
 
 
 (advice-add #'previous-line :before #'custom/started-scrolling)
