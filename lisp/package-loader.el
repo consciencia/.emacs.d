@@ -19,7 +19,6 @@
 (load "elisp-slime-nav__.el")
 (load "idle-highlight__.el")
 (load "ido__.el")
-(load "minimap__.el")
 (load "neotree__.el")
 (load "paredit__.el")
 (load "projectile__.el")
