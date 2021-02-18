@@ -1,18 +1,7 @@
-(custom/install-package-when-needed 'elpy)
 (custom/install-package-when-needed 'company-jedi)
 
-(require 'elpy)
+(require 'python)
 (require 'jedi-core)
-
-
-;; (setq elpy-modules
-;;       (delq 'elpy-module-company
-;;             elpy-modules))
-
-;; (advice-add #'elpy-goto-location
-;;             :after (lambda (&rest args)
-;;                      (pulse-momentary-highlight-one-line (point))
-;;                      (recenter)))
 
 (advice-add #'jedi:find-file
             :before (lambda (&rest args)
@@ -25,8 +14,6 @@
 
 (add-hook 'python-mode-hook
           (lambda ()
-            ;; (set (make-local-variable 'company-backends)
-            ;;      '(elpy-company-backend))
             (set (make-local-variable 'company-backends)
                  '(company-jedi company-files))
             (auto-fill-mode 1)
@@ -36,12 +23,7 @@
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
               (flyspell-prog-mode))
-            ;; (when elpy-mode
-            ;;   (elpy-rpc-restart))
             (jedi:setup)))
-
-
-;; (elpy-enable)
 
 
 (defun custom/python/indent-or-complete (arg)
@@ -70,34 +52,59 @@
               (company-complete-common)
             (indent-for-tab-command arg))))))))
 
+(defun custom/py-normalize-region ()
+  "If the first or last line are not fully
+selected, select them completely."
+  (let ((beg (region-beginning))
+        (end (region-end)))
+    (goto-char beg)
+    (beginning-of-line)
+    (push-mark (point) nil t)
+    (goto-char end)
+    (unless (= (point) (line-beginning-position))
+      (end-of-line))))
+
+(defun custom/py-indent-shift-right (&optional count)
+  "Shift current line by COUNT columns to the right.
+
+COUNT defaults to `python-indent-offset'.
+If region is active, normalize the region and shift."
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (custom/py-normalize-region)
+        (python-indent-shift-right (region-beginning)
+                                   (region-end)
+                                   current-prefix-arg))
+    (python-indent-shift-right (line-beginning-position)
+                               (line-end-position)
+                               current-prefix-arg)))
+
+(defun custom/py-indent-shift-left (&optional count)
+  "Shift current line by COUNT columns to the left.
+
+COUNT defaults to `python-indent-offset'.
+If region is active, normalize the region and shift."
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (custom/py-normalize-region)
+        (python-indent-shift-left (region-beginning)
+                                  (region-end)
+                                  current-prefix-arg))
+    (python-indent-shift-left (line-beginning-position)
+                              (line-end-position)
+                              current-prefix-arg)))
+
 
 (define-key jedi-mode-map (kbd "M-.") 'jedi:goto-definition)
 (define-key jedi-mode-map (kbd "M-,") 'custom/universal-pop-mark)
-(define-key jedi-mode-map (kbd "M--") 'xref-find-references)
+(define-key jedi-mode-map (kbd "M--") nil)
 (define-key jedi-mode-map (kbd "M-*") 'jedi:show-doc)
 (define-key jedi-mode-map (kbd "<tab>") 'custom/python/indent-or-complete)
 (define-key jedi-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
 (define-key jedi-mode-map (kbd "M-<prior>") 'python-nav-backward-defun)
-(define-key jedi-mode-map (kbd "<C-kp-add>") 'elpy-nav-indent-shift-right)
-(define-key jedi-mode-map (kbd "<C-kp-subtract>") 'elpy-nav-indent-shift-left)
+(define-key jedi-mode-map (kbd "<C-kp-add>") 'custom/py-indent-shift-right)
+(define-key jedi-mode-map (kbd "<C-kp-subtract>") 'custom/py-indent-shift-left)
 (define-key jedi-mode-map (kbd "M-d") 'custom/mark-defun)
 (define-key jedi-mode-map (kbd "M-a") 'custom/mark-args)
-
-;; (define-key elpy-mode-map (kbd "M-f") nil)
-;; (define-key elpy-mode-map (kbd "<M-down>") nil)
-;; (define-key elpy-mode-map (kbd "<M-up>") nil)
-;; (define-key elpy-mode-map (kbd "<M-left>") nil)
-;; (define-key elpy-mode-map (kbd "<M-right>") nil)
-;; (define-key elpy-mode-map (kbd "C-<right>") 'custom/forward-symbol)
-;; (define-key elpy-mode-map (kbd "C-<left>") 'custom/backward-symbol)
-;; (define-key elpy-mode-map (kbd "C-<down>") 'forward-paragraph)
-;; (define-key elpy-mode-map (kbd "C-<up>") 'backward-paragraph)
-;; (define-key elpy-mode-map (kbd "M-.") 'elpy-goto-definition)
-;; (define-key elpy-mode-map (kbd "M-,") 'custom/universal-pop-mark)
-;; (define-key elpy-mode-map (kbd "M--") 'xref-find-references)
-;; (define-key elpy-mode-map (kbd "M-*") 'elpy-doc)
-;; (define-key elpy-mode-map (kbd "<tab>") 'custom/python/indent-or-complete)
-;; (define-key elpy-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
-;; (define-key elpy-mode-map (kbd "M-<prior>") 'python-nav-backward-defun)
-;; (define-key elpy-mode-map (kbd "M-d") 'custom/mark-defun)
-;; (define-key elpy-mode-map (kbd "M-a") 'custom/mark-args)

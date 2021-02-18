@@ -2,9 +2,9 @@
 (require 'projectile)
 (require 'cl)
 
-(setq projectile-tags-backend 'ggtags
+(setq projectile-tags-backend 'auto
       projectile-track-known-projects-automatically nil
-      projectile-switch-project-action 'custom/projectile-switch-proj-action)
+      projectile-switch-project-action 'projectile-find-file)
 
 (projectile-mode)
 
@@ -26,5 +26,17 @@
         (funcall action res)
       res)))
 
-(defun custom/projectile-switch-proj-action (&rest args)
-  (apply 'projectile-find-file args))
+(setq *custom/proj-root-cache* (custom/map/create))
+(defun custom/projectile-project-root (oldfn &rest args)
+  (let ((path (buffer-file-name (current-buffer)))
+        root)
+    (if (and path
+             (@in *custom/proj-root-cache* path))
+        (custom/map/get path *custom/proj-root-cache*)
+      (progn
+        (setq root (apply oldfn args))
+        (when path
+          (custom/map/set path root *custom/proj-root-cache*))
+        root))))
+
+(advice-add #'projectile-project-root :around 'custom/projectile-project-root)

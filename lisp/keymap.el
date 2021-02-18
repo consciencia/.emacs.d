@@ -158,7 +158,7 @@
 (global-set-key (kbd "C-SPC") 'custom/ace-jump-char-mode)
 (define-key c++-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
 (define-key c-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
-(define-key elpy-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
+(define-key python-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
 
 (global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)

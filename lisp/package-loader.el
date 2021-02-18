@@ -3,7 +3,6 @@
   'sysdef/load-external-system)
 
 
-
 (load "f__.el")
 (load "s__.el")
 (load "browse-kill-ring__.el")
@@ -32,14 +31,13 @@
 (load "magit__.el")
 (load "ivy__.el")
 (load "flycheck__.el")
-(load "elpy__.el")
+(load "python__.el")
 (load "js2-mode__.el")
 (load "markdown-mode__.el")
 (load "tern__.el")
 (load "web-mode__.el")
 (load "less-mode__.el")
 (load "highlight-indentation__.el")
-(load "nlinum__.el")
 (load "aggressive-indent__.el")
 (load "flyspell__.el")
 (load "expand-region__.el")

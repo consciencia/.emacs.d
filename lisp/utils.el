@@ -256,8 +256,8 @@
             'font-lock-string-face)
         (custom/mark-string)
       (if (and semantic-mode
-               (not (equal major-mode 'python-mode))
-               (not (equal major-mode 'lisp-interaction-mode)))
+               (or (equal major-mode 'c-mode)
+                   (equal major-mode 'c++-mode)))
           (if (semantic-current-tag)
               (let* ((tag (semantic-current-tag))
                      (bounds (semantic-tag-bounds tag))

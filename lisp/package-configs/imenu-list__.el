@@ -1,14 +1,15 @@
-(require 'imenu)
 (custom/install-package-when-needed 'imenu-list)
+(require 'imenu)
 (require 'imenu-list)
 
 ;; TODO: Alternative?
 ;; https://github.com/emacsmirror/imenu-tree/blob/master/imenu-tree.el
 
-(setq-default imenu-list-position 'right)
-(setq-default imenu-list-size 0.2)
-(setq-default imenu-list-auto-resize nil)
-(setq-default imenu-list-focus-after-activation nil)
+(setq-default imenu-list-position 'right
+              imenu-list-size 0.2
+              imenu-list-auto-resize nil
+              imenu-list-focus-after-activation nil
+              imenu-list-idle-update-delay 1)
 
 (imenu-list-minor-mode)
 
@@ -17,27 +18,22 @@
     (if (not global-visual-line-mode)
         (global-visual-line-mode 1)))
 
-;; make imenu in every new frame
-;; this is questionable feature, maybe
-;; it will end removed
-(add-hook 'after-make-frame-functions
-          #'custom/create-imenu-list)
 
-
-(defun custom|imenu-list-update (oldfun &rest args)
+(defun custom/imenu-list-update (oldfun &rest args)
   (let* ((old (current-buffer))
          (oldwin (get-buffer-window old))
          (im (get-buffer imenu-list-buffer-name))
          (win (if im (get-buffer-window im))))
     (when (and (not (active-minibuffer-window))
-               im win)
+               im
+               win)
       (switch-to-buffer-other-window im)
       (select-window oldwin)
       (switch-to-buffer old))
     (apply oldfun args)))
 
 (advice-add #'imenu-list-update
-            :around 'custom|imenu-list-update)
+            :around 'custom/imenu-list-update)
 
 
 ;; Advices below are fix for crappy imenu list impl.

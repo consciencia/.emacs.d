@@ -76,18 +76,25 @@
 
 (custom-set-faces
  '(ace-jump-face-foreground ((t (:foreground "white"
-                                             :underline (:color "lightblue"
-                                                                :style wave)))))
+                                 :underline (:color "lightblue"
+                                             :style wave)))))
  '(whitespace-line ((t (:foreground "red"))))
  '(whitespace-space-before-tab ((t (:background "red"))))
  '(avy-lead-face ((t (:background "red"
-                                  :foreground "white"
-                                  :underline (:color "lightblue"
-                                                     :style wave)))))
+                      :foreground "white"
+                      :underline (:color "lightblue"
+                                  :style wave)))))
  '(avy-lead-face-0 ((t (:background "red"
-                                    :foreground "white"
-                                    :underline (:color "lightblue"
-                                                       :style wave))))))
+                        :foreground "white"
+                        :underline (:color "lightblue"
+                                    :style wave)))))
+ `(line-number ((t (:foreground "white"
+                    :background ,(face-attribute 'default
+                                                 :background)))))
+ `(line-number-current-line ((t (:foreground "red"
+                                 :bold t
+                                 :background ,(face-attribute 'default
+                                                              :background))))))
 
 (setq hexl-bits 8)
 
@@ -95,3 +102,5 @@
           'delete-trailing-whitespace)
 
 (scroll-bar-mode -1)
+
+(add-hook 'prog-mode-hook 'display-line-numbers-mode)
