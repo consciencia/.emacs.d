@@ -2,5 +2,3 @@
 (require 'flycheck)
 
 (setq flycheck-display-errors-function nil)
-
-(global-flycheck-mode)

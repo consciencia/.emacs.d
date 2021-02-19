@@ -23,7 +23,8 @@
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
               (flyspell-prog-mode))
-            (jedi:setup)))
+            (jedi:setup)
+            (flycheck-mode)))
 
 
 (defun custom/python/indent-or-complete (arg)

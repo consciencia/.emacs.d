@@ -155,10 +155,10 @@
 (global-set-key (kbd "C-<left>") 'custom/backward-symbol)
 (global-set-key (kbd "C-<down>") 'forward-paragraph)
 (global-set-key (kbd "C-<up>") 'backward-paragraph)
-(global-set-key (kbd "C-SPC") 'custom/ace-jump-char-mode)
-(define-key c++-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
-(define-key c-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
-(define-key python-mode-map (kbd "C-SPC") 'custom/ace-jump-char-mode)
+(global-set-key (kbd "C-SPC") 'custom/avy-jump-char-mode)
+(define-key c++-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
+(define-key c-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
+(define-key python-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
 
 (global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
@@ -244,8 +244,10 @@
             (local-set-key (kbd "M-e M-d") 'eval-defun)
             (define-prefix-command 'custom/edebug/prefix)
             (local-set-key (kbd "M-e M-e") 'custom/edebug/prefix)
-            (define-key custom/edebug/prefix (kbd "M-d") 'edebug-eval-top-level-form)
-            (define-key custom/edebug/prefix (kbd "M-q") 'custom/edebug-remove-instrumentation)
+            (define-key custom/edebug/prefix (kbd "M-d")
+              'edebug-eval-top-level-form)
+            (define-key custom/edebug/prefix (kbd "M-q")
+              'custom/edebug-remove-instrumentation)
             (define-key custom/edebug/prefix (kbd "M-e") 'eval-expression)
             (local-set-key (kbd "M-e M-r") 'eval-region)
             (local-set-key (kbd "M-e M-b") 'eval-buffer)
@@ -272,7 +274,8 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode)
+              (flycheck-mode))))
 ;; define M-. and M-, for jumping around elips sources (funs and vars)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -324,7 +327,8 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode))
+            (flycheck-mode)))
 
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
@@ -373,7 +377,8 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode))
+            (flycheck-mode)))
 
 ;; CMAKE BINDS
 (add-hook 'cmake-mode-hook
@@ -390,7 +395,8 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode))
+            (flycheck-mode)))
 
 ;; HEXL BINDS
 (add-hook 'hexl-mode-hook

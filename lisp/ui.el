@@ -75,9 +75,6 @@
 (global-visual-line-mode t)
 
 (custom-set-faces
- '(ace-jump-face-foreground ((t (:foreground "white"
-                                 :underline (:color "lightblue"
-                                             :style wave)))))
  '(whitespace-line ((t (:foreground "red"))))
  '(whitespace-space-before-tab ((t (:background "red"))))
  '(avy-lead-face ((t (:background "red"

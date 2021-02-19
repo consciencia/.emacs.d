@@ -706,7 +706,7 @@ POS is optional position in file where to search for comment."
               :beg beg
               :end end)))
 
-(defun custom/ace-jump-char-mode ()
+(defun custom/avy-jump-char-mode ()
   (interactive)
   (deactivate-mark t)
   (custom/universal-push-mark)

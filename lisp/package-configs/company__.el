@@ -11,6 +11,18 @@
 (add-hook 'after-init-hook 'global-company-mode)
 (add-hook 'after-init-hook 'company-statistics-mode)
 
+
+(defun custom/get-cpp-include-roots ()
+  (let ((proj (ede-toplevel)))
+    (when proj
+      (append (ede-system-include-path proj)
+              semantic-dependency-system-include-path
+              (loop for inc in (ede-include-path proj)
+                    collect (s-replace "//" "/"
+                                       (s-concat (projectile-project-root)
+                                                 inc)))))))
+
+
 (setq company-minimum-prefix-length 1
       company-idle-delay 2
       company-search-regexp-function 'company-search-flex-regexp
@@ -35,18 +47,9 @@
                          company-xcode
                          company-bbdb
                          company-oddmuse
-                         company-dabbrev))
-(setq company-c-headers-path-system
-      (lambda ()
-        (when ede-object
-          (append (ede-system-include-path ede-object)
-                  semantic-dependency-system-include-path
-                  (loop for inc in (ede-include-path ede-object)
-                        collect (s-replace "//" "/"
-                                           (s-concat (projectile-project-root)
-                                                     inc)))))))
-(setq company-dabbrev-ignore-case nil)
-
+                         company-dabbrev)
+      company-c-headers-path-system 'custom/get-cpp-include-roots
+      company-dabbrev-ignore-case nil)
 
 
 (define-key company-active-map (kbd "M-*") 'company-show-doc-buffer)

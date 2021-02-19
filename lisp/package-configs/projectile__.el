@@ -25,18 +25,3 @@
     (if action
         (funcall action res)
       res)))
-
-(setq *custom/proj-root-cache* (custom/map/create))
-(defun custom/projectile-project-root (oldfn &rest args)
-  (let ((path (buffer-file-name (current-buffer)))
-        root)
-    (if (and path
-             (@in *custom/proj-root-cache* path))
-        (custom/map/get path *custom/proj-root-cache*)
-      (progn
-        (setq root (apply oldfn args))
-        (when path
-          (custom/map/set path root *custom/proj-root-cache*))
-        root))))
-
-(advice-add #'projectile-project-root :around 'custom/projectile-project-root)

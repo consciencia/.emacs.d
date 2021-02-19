@@ -23,7 +23,8 @@
                    (not (eq (get-text-property (point) 'face)
                             'font-lock-comment-face))))
             (when (not (eq system-type 'windows-nt))
-              (flyspell-prog-mode))))
+              (flyspell-prog-mode))
+            (flycheck-mode)))
 
 (advice-add #'tern-go-to-position
             :before (lambda (&rest args)
