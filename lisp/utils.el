@@ -1334,3 +1334,33 @@ This function is used by the `interactive' code letter `n'."
                        "*"))
          (default-directory dir))
     (shell name)))
+
+(defun custom/ido-completing-read-ctx (entries summarise &optional no-error)
+  (when (and (not no-error)
+             (equal (length entries) 0))
+    (error "No entries provided for selection!"))
+  (if (equal (length entries) 1)
+      (car entries)
+    (when (not (equal (length entries) 0))
+      (let* ((get-entry-by-summary (lambda (summary summaries)
+                                     (loop for (summary2 entry) in summaries
+                                           if (equal summary2 summary)
+                                           return entry)))
+             (seen-summaries (custom/map/create))
+             (summaries
+              (loop for entry in entries
+                    for summary = (funcall summarise entry)
+                    unless (prog1
+                               (custom/map/get summary seen-summaries)
+                             (custom/map/set summary t seen-summaries))
+                    collect (list summary entry)))
+             (chosen-summary
+              (if (equal (length summaries) 1)
+                  (caar summaries)
+                (ido-completing-read "Choose tag: "
+                                     (loop for summary in summaries
+                                           collect (car summary)))))
+             (chosen-entry (funcall get-entry-by-summary
+                                    chosen-summary
+                                    summaries)))
+        chosen-entry))))

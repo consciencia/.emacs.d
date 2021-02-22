@@ -12,6 +12,39 @@
                      (pulse-momentary-highlight-one-line (point))
                      (recenter)))
 
+(advice-add #'jedi:goto-definition--nth
+            :around
+            (lambda (oldfn other-window &optional try-next)
+              (let* ((entries (loop for entry in jedi:goto-definition--cache
+                                    for min-entry = (cl-destructuring-bind
+                                                        (&key line_nr
+                                                              column
+                                                              module_path
+                                                              module_name
+                                                              &allow-other-keys)
+                                                        entry
+                                                      (list module_name
+                                                            module_path
+                                                            line_nr
+                                                            column))
+                                    if (not (string= (car min-entry) "__builtin__"))
+                                    if (file-exists-p (cadr min-entry))
+                                    collect min-entry))
+                     (summarizer (lambda (entry)
+                                   (concat (nth 1 entry)
+                                           ":"
+                                           (format "%s" (nth 2 entry)))))
+                     (chosen-entry (custom/ido-completing-read-ctx entries summarizer)))
+                (when (null chosen-entry)
+                  (error "Failed to find definition (%s %s)!"
+                         (length jedi:goto-definition--cache)
+                         (length entries)))
+                (jedi:find-file (nth 1 chosen-entry)
+                                (nth 2 chosen-entry)
+                                (nth 3 chosen-entry)
+                                other-window)
+                (run-hooks 'jedi:goto-definition-hook))))
+
 (add-hook 'python-mode-hook
           (lambda ()
             (set (make-local-variable 'company-backends)
