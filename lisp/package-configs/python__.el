@@ -35,6 +35,7 @@
                                            ":"
                                            (format "%s" (nth 2 entry)))))
                      (chosen-entry (custom/ido-completing-read-ctx entries summarizer)))
+                (setq jedi:goto-definition--cache nil)
                 (when (null chosen-entry)
                   (error "Failed to find definition (%s %s)!"
                          (length jedi:goto-definition--cache)

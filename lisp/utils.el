@@ -1,5 +1,7 @@
 (require 'pp)
+(require 'json)
 (load "monkey.el")
+
 
 (defun custom/map/create ()
   (make-hash-table :test 'equal))
@@ -9,6 +11,9 @@
 
 (defun custom/map/set (key val map)
   (puthash key val map))
+
+(defun custom/map/rem (key map)
+  (remhash key map))
 
 (defun custom/map/len (map)
   (hash-table-count map))
@@ -1364,3 +1369,64 @@ This function is used by the `interactive' code letter `n'."
                                     chosen-summary
                                     summaries)))
         chosen-entry))))
+
+;; '((global-includes . listp)
+;;   (local-includes . listp)
+;;   (macro-files . listp)
+;;   (macro-table . (null hash-table-p))
+;;   (source-roots . listp))
+(defun custom/check-schema (obj schema)
+  (let ((result t))
+    (loop for entry in schema
+          for field = (format "%s" (car entry))
+          for val = (custom/map/get field obj)
+          for predicates = (if (listp (cdr entry))
+                               (cdr entry)
+                             `(,(cdr entry)))
+          for predicates-output = (loop for p in predicates
+                                        collect (funcall p val))
+          do (progn
+               (if (not (eval `(or ,@predicates-output)))
+                   (setq result nil))))
+    (when (not result)
+      (message "Schema check failed!"))
+    result))
+
+(setq *custom/read-json-file-cache* (custom/map/create))
+(setq *custom/read-json-ts-cache* (custom/map/create))
+(defun custom/read-json-cached (path &optional schema)
+  (let ((json-object-type 'hash-table)
+        (json-array-type 'list)
+        (json-key-type 'string)
+        ts
+        result)
+    (if (file-exists-p path)
+        (progn
+          (setq ts (file-attribute-modification-time
+                    (file-attributes path)))
+
+          (if (equal ts
+                     (custom/map/get path
+                                     *custom/read-json-ts-cache*))
+              (setq result
+                    (custom/map/get path
+                                    *custom/read-json-file-cache*))
+            (progn
+              (setq result (json-read-file path))
+              (custom/map/set path
+                              result
+                              *custom/read-json-file-cache*)
+              (custom/map/set path
+                              ts
+                              *custom/read-json-ts-cache*)))
+          (if (and result
+                   schema
+                   (not (custom/check-schema result schema)))
+              (setq result nil)))
+      (progn
+        (custom/map/rem path *custom/read-json-file-cache*)
+        (custom/map/rem path *custom/read-json-ts-cache*)))
+    (when (null result)
+      (message "Failed to read JSON from %s!"
+               path))
+    result))
