@@ -183,8 +183,7 @@
     (interactive)
     (let ((proj-root (call-interactively 'custom/projectile-add-known-project))
           (proj-type (custom/get-simple-input "Project type: "
-                                              '("C/C++ (generic)"
-                                                "Javascript"
+                                              '("Javascript"
                                                 "Other"))))
       (if (and proj-root proj-type)
           (custom/project/generate-loader proj-root
@@ -196,6 +195,14 @@
   (lambda ()
     (interactive)
     (dired-other-window (projectile-project-root))))
+(define-key projectile-key-map (kbd "C-d C-c")
+  (lambda ()
+    (interactive)
+    (cond ((or (equal major-mode 'c-mode)
+               (equal major-mode 'c++-mode))
+           (ede-compile-project))
+          (t (error "Compilation is not supported in %s"
+                    major-mode)))))
 (define-key projectile-key-map (kbd "C-o") 'projectile-find-file)
 (global-set-key (kbd "C-t") 'projectile-find-file)
 (define-key projectile-key-map (kbd "C-f C-f") 'projectile-grep)

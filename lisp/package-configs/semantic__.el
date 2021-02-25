@@ -20,7 +20,8 @@
 (require 'seq)
 (require 'company-semantic)
 
-(load "custom-semantic-db-grep.el")
+(load "cme-semantic-db-grep.el")
+(load "cme-ede-generic-proj.el")
 
 (global-semanticdb-minor-mode t)
 (global-semantic-idle-scheduler-mode t)
@@ -220,7 +221,9 @@ Default action as described in `semanticdb-find-translate-path'."
              (oref basedb reference-directory)
            default-directory))
         (apply #'custom/append-new-backbone
-               (loop for root in (custom/ede/get-project-dependencies)
+               (loop for root in (let ((proj (ede-toplevel)))
+                                   (if (same-class-p proj 'cme-generic-proj)
+                                       (ede-source-roots proj)))
                      collect (semanticdb-current-database-list root)))))))))
 
 ;; Redefined because default implementation refused to list databases
@@ -240,7 +243,9 @@ Always append `semanticdb-project-system-databases' if
         (dbs nil)			; collected databases
         ;; All user roots + project dependencies.
         (roots (nconc semanticdb-project-roots
-                      (custom/ede/get-project-dependencies)))
+                      (let ((proj (ede-toplevel)))
+                        (if (same-class-p proj 'cme-generic-proj)
+                            (ede-source-roots proj)))))
         (dir (file-truename (or dir default-directory))))
     ;; Find the root based on project functions.
     (setq root (run-hook-with-args-until-success
@@ -384,120 +389,6 @@ smallest tag.  Return nil if there is no tag here."
   (interactive)
   (semantic-show-unmatched-syntax-mode -1)
   (message "Parser errors are hidden"))
-
-(defun custom/ede/load-config-file (proj-root &optional dont-ask)
-  (let ((config-path (concat proj-root
-                             "emacs-project-config.json"))
-        (config nil))
-    (if (file-exists-p config-path)
-        (let ((json-object-type 'hash-table)
-              (json-array-type 'list)
-              (json-key-type 'string))
-          (setq config (json-read-from-string
-                        (f-read-text config-path
-                                     'utf-8)))))
-    (if (hash-table-p config)
-        (progn
-          (if (and (not (null (custom/map/get "local-includes" config)))
-                   (not (listp (custom/map/get "local-includes" config))))
-              (error "BAD local-includes in emacs-project-config.json"))
-          (if (and (not (null (custom/map/get "global-includes" config)))
-                   (not (listp (custom/map/get "global-includes" config))))
-              (error "BAD global-includes in emacs-project-config.json"))
-          (if (and (not (null (custom/map/get "macro-table" config)))
-                   (not (hash-table-p (custom/map/get "macro-table" config))))
-              (error "BAD macro-table in emacs-project-config.json"))
-          (if (hash-table-p (custom/map/get "macro-table" config))
-              (custom/map/set "macro-table"
-                              (custom/map/to-alist (custom/map/get "macro-table"
-                                                                   config))
-                              config))
-          (if (and (not (null (custom/map/get "macro-files" config)))
-                   (not (listp (custom/map/get "macro-files" config))))
-              (error "BAD macro-files in emacs-project-config.json"))
-          (if (and (not (null (custom/map/get "source-roots" config)))
-                   (not (listp (custom/map/get "source-roots" config))))
-              (error "BAD source-roots in emacs-project-config.json"))
-          (let* ((macro-files (custom/map/get "macro-files"
-                                              config))
-                 (not-found-files (seq-remove 'file-exists-p
-                                              macro-files)))
-            (if (not (equal (length not-found-files) 0))
-                (progn
-                  (setq macro-files (seq-filter 'file-exists-p macro-files))
-                  (if (and (hash-table-p config)
-                           (not dont-ask)
-                           (yes-or-no-p (concat "Found nonexistent macro files "
-                                                (format "%s" not-found-files)
-                                                ". Do you want to remove them from JSON config?")))
-                      (progn
-                        (custom/map/set "macro-files" macro-files config)
-                        (let ((json-encoding-pretty-print t)
-                              (json-encoding-default-indentation "    ")
-                              (json-encoding-object-sort-predicate 'string<))
-                          (f-write-text (json-encode config)
-                                        'utf-8
-                                        config-path))))))))
-      (if (not (equal config nil))
-          (error "BAD FORMAT OF %s" config-path)
-        (and (not dont-ask)
-             (custom/ede/generate-config-file
-              (file-name-as-directory proj-root)))))
-    config))
-
-(defun custom/ede/get-project-dependencies ()
-  (let* ((root (semantic-symref-calculate-rootdir))
-         (proj-config (if root
-                          (custom/ede/load-config-file root t)))
-         (source-roots (if proj-config
-                           (custom/map/get "source-roots"
-                                           proj-config))))
-    source-roots))
-
-(defun custom/ede/load-project (name proj-root)
-  (let* ((config (custom/ede/load-config-file proj-root)))
-    (ede-cpp-root-project name
-                          :file (concat (file-name-as-directory proj-root)
-                                        ".dir-locals.el")
-                          :include-path (delete-dups
-                                         (append (custom/map/get
-                                                  "local-includes"
-                                                  config)
-                                                 (list "/include" "../include")))
-                          :system-include-path (delete-dups
-                                                (custom/map/get
-                                                 "global-includes"
-                                                 config))
-                          :spp-table (delete-dups (custom/map/get
-                                                   "macro-table"
-                                                   config))
-                          :spp-files (delete-dups (custom/map/get
-                                                   "macro-files"
-                                                   config)))))
-
-(defun custom/ede/generate-config-file (proj-root)
-  (if (yes-or-no-p
-       (format "Do you want to create default C/C++ config file at %s?"
-               proj-root))
-      (f-write-text (concat "{\n"
-                            "\t\"local-includes\": [\"/include\",\"../include\"],\n"
-                            "\t\"global-includes\": [],\n"
-                            "\t\"source-roots\": [],\n"
-                            "\t\"macro-table\": {},\n"
-                            "\t\"macro-files\": []\n"
-                            "}")
-                    'utf-8
-                    (concat proj-root
-                            "emacs-project-config.json"))))
-
-(defun custom/ede/generate-generic-loader (proj-root)
-  (let ((proj-name (read-string "Project name: "
-                                (let ((fragments (s-split custom/fs-separator
-                                                          (file-name-as-directory proj-root))))
-                                  (nth (- (length fragments) 2)
-                                       fragments)))))
-    `((custom/ede/load-project ,proj-name
-                               ,(file-name-as-directory proj-root)))))
 
 ;;;; CODE NAVIGATION ROUTINES
 ;; CODE:
@@ -1290,7 +1181,9 @@ Returns a table of all matching tags."
                                                       "paths (on linux it would"
                                                       " be a loooot paths...)?"))
                                  semantic-dependency-system-include-path)
-                             (custom/ede/get-project-dependencies)))))
+                             (let ((proj (ede-toplevel)))
+                               (if (same-class-p proj 'cme-generic-proj)
+                                   (ede-source-roots proj)))))))
     (if roots
         (progn
           (message "Indexing: %s" roots)
@@ -1326,7 +1219,9 @@ Returns a table of all matching tags."
   (when (not (@at custom/semantic/loaded-projects
                   (semantic-symref-calculate-rootdir)))
     (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
-                             (custom/ede/get-project-dependencies)))
+                             (let ((proj (ede-toplevel)))
+                               (if (same-class-p proj 'cme-generic-proj)
+                                   (ede-source-roots proj)))))
            (store-path (file-name-as-directory
                         semanticdb-default-save-directory))
            (check-regexp (concat "^\\(?:"
@@ -1467,7 +1362,9 @@ BUTTON is the button that was clicked."
                                                         pattern)
   (setq rootdir (s-join " "
                         (cons rootdir
-                              (custom/ede/get-project-dependencies))))
+                              (let ((proj (ede-toplevel)))
+                                (if (same-class-p proj 'cme-generic-proj)
+                                    (ede-source-roots proj))))))
   (let ((res (funcall oldfn rootdir filepattern flags pattern)))
     ;; (message "Generated grep command: %s" res)
     res))
@@ -1494,7 +1391,9 @@ BUTTON is the button that was clicked."
      `(,(cons "$dirlist"
               (s-join ";"
                       (cons (semantic-symref-calculate-rootdir)
-                            (custom/ede/get-project-dependencies))))
+                            (let ((proj (ede-toplevel)))
+                              (if (same-class-p proj 'cme-generic-proj)
+                                  (ede-source-roots proj))))))
        ,(cons "$searchfor" searchfor)
        ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))
      "findstr /s /n /d:$dirlist \"$searchfor\" $filters")))

@@ -449,8 +449,6 @@
 
 (defun custom/project/generate-loader (proj-root proj-type)
   (let ((loader-content (cond
-                         ((equal proj-type "C/C++ (generic)")
-                          (custom/ede/generate-generic-loader proj-root))
                          ((equal proj-type "Javascript")
                           (custom/tern/generare-generic-loader proj-root))
                          (t nil)))
