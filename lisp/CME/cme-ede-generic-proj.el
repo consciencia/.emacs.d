@@ -173,9 +173,10 @@
 (cl-defmethod project-compile-project ((proj cme-generic-proj)
                                        &optional command)
   (let ((cmd-str (or command
-                     (get-attr-from-config proj 'build-cmd))))
+                     (get-attr-from-config proj 'build-cmd)
+                     "make")))
     (when cmd-str
-	  (let ((default-directory
+      (let ((default-directory
               (or (get-attr-from-config proj
                                         'build-dir)
                   (ede-project-root-directory proj))))
