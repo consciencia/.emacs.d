@@ -849,7 +849,7 @@ POS is optional position in file where to search for comment."
       (pop-to-buffer buf))))
 
 (defmacro custom/with-measure-time (&rest body)
-  (declare (indent 1))
+  (declare (indent 99))
   `(let ((time (current-time)))
      (cons (progn
              ,@body)
@@ -1179,7 +1179,7 @@ one is kept."
 (defun custom/isearch-forward-defun-name ()
   (interactive)
   (isearch-forward-symbol nil 1)
-  (let ((symbol (or (custom/semantic/get-current-function-name)
+  (let ((symbol (or (cme-get-current-function-name)
                     (custom/univeral-defun-name))))
     (cond
      (symbol

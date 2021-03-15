@@ -1,4 +1,29 @@
-(require 'cl)
+;;; cme-k.el --- CME k parser combinator
+
+;; Copyright (C) 2021 Consciencia
+
+;; Author: Consciencia <consciencia@protonmail.com>
+;; Version: 1.0.0
+;; Keywords: c c++ cme cedet
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; :(
+
+;;; Code:
 
 (defmacro kdefparser (name arglist &optional docstring &rest body)
   (declare (doc-string 3) (indent 2))
@@ -146,50 +171,54 @@
                     (k-is bar)
                     (k| (k-is baz)
                         (k-is-end)))
-              (k$-n 2))
-    ((foo . "foo")
-     (bar . "bar")
-     (baz . "baz"))
-    "baz")
+                (k$-n 2))
+            ((foo . "foo")
+             (bar . "bar")
+             (baz . "baz"))
+            "baz")
   (kdeftest (k$ (k& (k-is foo)
                     (k-is bar)
                     (k| (k-is baz)
                         (k-is-end)))
-              (k$-n 2))
-    ((foo . "foo")
-     (bar . "bar")
-     (bar . "baz"))
-    nil)
+                (k$-n 2))
+            ((foo . "foo")
+             (bar . "bar")
+             (bar . "baz"))
+            nil)
   (kdeftest (k* (k-is foo))
-    ((foo . "foo")
-     (foo . "bar")
-     (foo . "baz"))
-    ("foo" "bar" "baz"))
+            ((foo . "foo")
+             (foo . "bar")
+             (foo . "baz"))
+            ("foo" "bar" "baz"))
   (kdeftest (k* (k-is foo))
-    ((foo . "foo")
-     (foo . "bar")
-     (bar . "baz"))
-    ("foo" "bar"))
+            ((foo . "foo")
+             (foo . "bar")
+             (bar . "baz"))
+            ("foo" "bar"))
   (kdeftest (k* (k-is foo))
-    ((baz . "foo")
-     (bar . "bar")
-     (foo . "baz"))
-    nil)
+            ((baz . "foo")
+             (bar . "bar")
+             (foo . "baz"))
+            nil)
   (kdeftest (k+ (k-is foo))
-    ((foo . "foo")
-     (foo . "bar")
-     (foo . "baz"))
-    ("foo" "bar" "baz"))
+            ((foo . "foo")
+             (foo . "bar")
+             (foo . "baz"))
+            ("foo" "bar" "baz"))
   (kdeftest (k+ (k-is foo))
-    ((foo . "foo")
-     (foo . "bar")
-     (foo . "baz"))
-    ("foo" "bar" "baz"))
+            ((foo . "foo")
+             (foo . "bar")
+             (foo . "baz"))
+            ("foo" "bar" "baz"))
   (kdeftest (k-sep-by (k-is bar)
-              (k-is foo))
-    ((foo . "foo1")
-     (bar . "bar1")
-     (foo . "foo2")
-     (bar . "bar2")
-     (foo . "foo3"))
-    ("foo1" "foo2" "foo3")))
+                      (k-is foo))
+            ((foo . "foo1")
+             (bar . "bar1")
+             (foo . "foo2")
+             (bar . "bar2")
+             (foo . "foo3"))
+            ("foo1" "foo2" "foo3")))
+
+
+(provide 'cme-k)
+;;; cme-k.el ends here

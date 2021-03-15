@@ -25,3 +25,4 @@ version.cache
 elpy/
 TODO.md
 *.pyc
+cme-last-ver.txt

@@ -1,0 +1,4 @@
+(require 'cme)
+
+
+(cme-init)

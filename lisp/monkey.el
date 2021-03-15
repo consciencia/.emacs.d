@@ -3,16 +3,8 @@
 ;;; it is strongly advised to check following functions when updating        ;;;
 ;;; EMACS.                                                                   ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'xref)
 
-;; Overrided because of some invalid usage of this function in CEDET.
-;;
-;; TODO: Find where it is used in CEDET and do fix there instead of monkey
-;;       patching emacs internals.
-(advice-add #'file-exists-p
-            :around (lambda (oldfn filename)
-                      (if filename
-                          (apply oldfn (list filename))
-                        nil)))
 
 (defun safe-local-variable-p (sym val)
   "Ugly hack to prevent dir-locals floading user with
@@ -48,3 +40,21 @@ on local directory elisp code. TODO, solve this somehow!"
             :after
             (lambda (&rest args)
               (recenter)))
+
+;; Overriden because old implementation had horrible policy when
+;; jumping around. Instead of opening new buffer in window with xref
+;; results, it opened new buffer in window from which xref was
+;; originally invoked.
+(defun xref--show-pos-in-buf (pos buf)
+  "Goto and display position POS of buffer BUF in a window.
+Honor `xref--original-window-intent', run `xref-after-jump-hook'
+and finally return the window."
+  (let ((xref-buf (current-buffer)))
+    (custom/universal-push-mark)
+    (switch-to-buffer buf)
+    (xref--goto-char pos)
+    (run-hooks 'xref-after-jump-hook)
+    (with-current-buffer xref-buf
+      (setq-local other-window-scroll-buffer
+                  (current-buffer)))
+    (selected-window)))

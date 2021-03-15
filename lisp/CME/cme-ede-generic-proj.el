@@ -1,10 +1,33 @@
-(require 'ede)
-(require 'semantic/db)
+;;; cme-ede-generic-proj.el --- CME generic project implementation
 
+;; Copyright (C) 2021 Consciencia
+
+;; Author: Consciencia <consciencia@protonmail.com>
+;; Version: 1.0.0
+;; Keywords: c c++ cme cedet
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; :(
+
+;;; Code:
 
 (defclass cme-generic-target (ede-target)
   ((project :initform nil
-	        :initarg :project)))
+            :initarg :project)))
 
 ;;;###autoload
 (defclass cme-generic-proj (ede-project)
@@ -42,19 +65,19 @@
                    (source-roots . listp)
                    (build-dir . (null stringp))
                    (build-cmd . (null stringp))))
-         (data (custom/read-json-cached conf-path schema))
+         (data (cme-read-json-cached conf-path schema))
          result)
     (if (null data)
         (error "Can't load project attributes!"))
     (cond ((symbolp attr)
-           (setq result (custom/map/get (format "%s" attr)
-                                        data)))
+           (setq result (cme-map-get (format "%s" attr)
+                                     data)))
           ((stringp attr)
-           (setq result (custom/map/get attr data)))
+           (setq result (cme-map-get attr data)))
           (t (error "Bad attribute %s!" attr)))
     (if (or (string= attr "macro-table")
             (equal attr 'macro-table))
-        (setq result (custom/map/to-alist result)))
+        (setq result (cme-map-to-alist result)))
     (if (or (string= attr "global-includes")
             (equal attr 'global-includes)
             (string= attr "macro-files")
@@ -190,4 +213,6 @@
 (cl-defmethod project-rescan ((this cme-generic-proj))
   (message "Nothing to rescan"))
 
+
 (provide 'cme-ede-generic-proj)
+;;; cme-ede-generic-proj.el ends here

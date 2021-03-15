@@ -27,7 +27,7 @@
 (load "undo-tree__.el")
 (load "company__.el")
 (load "imenu-list__.el")
-(load "semantic__.el")
+(load "cme__.el")
 (load "multiple-cursors__.el")
 (load "magit__.el")
 (load "ivy__.el")
