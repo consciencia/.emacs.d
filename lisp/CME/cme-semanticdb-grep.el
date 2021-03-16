@@ -198,7 +198,9 @@ Like `semanticdb-find-tags-for-completion-method' for cscope."
               (s-join ";"
                       (cons (semantic-symref-calculate-rootdir)
                             (let ((proj (ede-toplevel)))
-                              (if (same-class-p proj 'cme-generic-proj)
+                              (if (and proj
+                                       (same-class-p proj
+                                                     'cme-generic-proj))
                                   (ede-source-roots proj))))))
        ,(cons "$searchfor" searchfor)
        ,(cons "$filters" "*.c *.cpp *.cxx *.h *.hpp *.hxx"))

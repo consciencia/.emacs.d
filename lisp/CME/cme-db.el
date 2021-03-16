@@ -43,7 +43,9 @@ Always append `semanticdb-project-system-databases' if
         ;; All user roots + project dependencies.
         (roots (nconc semanticdb-project-roots
                       (let ((proj (ede-toplevel)))
-                        (if (same-class-p proj 'cme-generic-proj)
+                        (if (and proj
+                                 (same-class-p proj
+                                               'cme-generic-proj))
                             (ede-source-roots proj)))))
         (dir (file-truename (or dir default-directory))))
     ;; Find the root based on project functions.

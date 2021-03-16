@@ -160,7 +160,9 @@ PATTERN is the pattern used by Grep."
   (setq rootdir (s-join " "
                         (cons rootdir
                               (let ((proj (ede-toplevel)))
-                                (if (same-class-p proj 'cme-generic-proj)
+                                (if (and proj
+                                         (same-class-p proj
+                                                       'cme-generic-proj))
                                     (ede-source-roots proj))))))
   (grep-compute-defaults)
   (let* ((semantic-symref-grep-flags flags)

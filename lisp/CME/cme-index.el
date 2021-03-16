@@ -55,7 +55,9 @@
   (interactive)
   (let ((roots (cons (semantic-symref-calculate-rootdir)
                      (append (let ((proj (ede-toplevel)))
-                               (if (same-class-p proj 'cme-generic-proj)
+                               (if (and proj
+                                        (same-class-p proj
+                                                      'cme-generic-proj))
                                    (ede-source-roots proj)))
                              (if (yes-or-no-p (concat "Do you want to also "
                                                       "index global system "
@@ -107,7 +109,9 @@
                      (semantic-symref-calculate-rootdir)))
     (let* ((proj-roots (cons (semantic-symref-calculate-rootdir)
                              (let ((proj (ede-toplevel)))
-                               (if (same-class-p proj 'cme-generic-proj)
+                               (if (and proj
+                                        (same-class-p proj
+                                                      'cme-generic-proj))
                                    (ede-source-roots proj)))))
            (store-path (file-name-as-directory
                         semanticdb-default-save-directory))

@@ -36,14 +36,14 @@
 (defun cme-generic-proj-load (dir &optional _rootproj)
   (cme-generic-proj
    :directory (file-name-as-directory dir)
-   :file (expand-file-name "emacs-project-config.json" dir)))
+   :file (expand-file-name "cme-project.json" dir)))
 
 ;;;###autoload
 (ede-add-project-autoload
  (make-instance 'ede-project-autoload
                 :name "CME Generic Project"
                 :file 'cme-ede-generic-proj
-                :proj-file "emacs-project-config.json"
+                :proj-file "cme-project.json"
                 :load-type 'cme-generic-proj-load
                 :class-sym 'cme-generic-proj
                 :new-p nil

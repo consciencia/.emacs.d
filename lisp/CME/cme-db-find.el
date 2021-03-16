@@ -78,7 +78,9 @@ Default action as described in `semanticdb-find-translate-path'."
            default-directory))
         (apply #'cme-append-new-backbone
                (loop for root in (let ((proj (ede-toplevel)))
-                                   (if (same-class-p proj 'cme-generic-proj)
+                                   (if (and proj
+                                            (same-class-p proj
+                                                          'cme-generic-proj))
                                        (ede-source-roots proj)))
                      collect (semanticdb-current-database-list root)))))))))
 

@@ -202,6 +202,20 @@
 (defalias 'cme-fold-tag-toggle 'senator-fold-tag-toggle)
 (defalias 'cme-reparse-buffer 'semantic-force-refresh)
 
+;; In major version 27 and newer, symbols with displayor in name were
+;; renamed so that word displayer is used instead.
+(when (< emacs-major-version 27)
+  (defalias 'semantic-displayer-current-focus
+    'semantic-displayor-current-focus)
+  (defalias 'semantic-displayer-focus-abstract-child-p
+    'semantic-displayor-focus-abstract-child-p)
+  (defalias 'semantic-displayer-cleanup
+    'semantic-displayor-cleanup)
+  (defalias 'semantic-displayer-traditional
+    'semantic-displayor-traditional)
+  (defalias 'semantic-displayer-tooltip
+    'semantic-displayor-tooltip))
+
 ;; Byte compile all CME functions on startup.
 (mapatoms (lambda (sym)
             (when (and (s-starts-with-p "cme-" (format "%s" sym))
