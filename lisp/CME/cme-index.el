@@ -53,19 +53,20 @@
 
 (defun cme-index-current-project ()
   (interactive)
-  (let ((roots (cons (semantic-symref-calculate-rootdir)
-                     (append (let ((proj (ede-toplevel)))
-                               (if (and proj
-                                        (same-class-p proj
-                                                      'cme-generic-proj))
-                                   (ede-source-roots proj)))
-                             (if (yes-or-no-p (concat "Do you want to also "
-                                                      "index global system "
-                                                      "include paths? "
-                                                      "(warning: lot of "
-                                                      "additional files to be "
-                                                      "parsed)"))
-                                 semantic-dependency-system-include-path)))))
+  (let* ((proj (ede-toplevel))
+         (roots (append (list (semantic-symref-calculate-rootdir))
+                        (if (and proj
+                                 (same-class-p proj 'cme-generic-proj))
+                            (ede-source-roots proj))
+                        (if proj
+                            (ede-system-include-path proj))
+                        (if (yes-or-no-p (concat "Do you want to also "
+                                                 "index global system "
+                                                 "include paths? "
+                                                 "(warning: lot of "
+                                                 "additional files to be "
+                                                 "parsed)"))
+                            semantic-dependency-system-include-path))))
     (if roots
         (progn
           (message "Indexing: %s" roots)

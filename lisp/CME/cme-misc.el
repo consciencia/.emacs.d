@@ -80,6 +80,19 @@
                       nil))
                 (apply oldfn args))))
 
+;; Overriden because old implementation is unable to close window by
+;; hitting q.
+(defun data-debug-new-buffer (name)
+  "Create a new data-debug buffer with NAME."
+  (let ((b (get-buffer-create name)))
+    (pop-to-buffer b)
+    (set-buffer b)
+    (setq buffer-read-only nil) ; disable read-only
+    (erase-buffer)
+    (data-debug-mode)
+    (local-set-key "q" 'delete-window)
+    b))
+
 
 (provide 'cme-misc)
 ;;; cme-misc.el ends here

@@ -201,6 +201,8 @@
 (defalias 'cme-previous-tag 'senator-previous-tag)
 (defalias 'cme-fold-tag-toggle 'senator-fold-tag-toggle)
 (defalias 'cme-reparse-buffer 'semantic-force-refresh)
+(defalias 'cme-compile-project 'ede-compile-project)
+(defalias 'cme-list-includes 'semanticdb-find-adebug-scanned-includes)
 
 ;; In major version 27 and newer, symbols with displayor in name were
 ;; renamed so that word displayer is used instead.
