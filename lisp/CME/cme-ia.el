@@ -127,9 +127,11 @@ origin of the code at point."
                     (cme-goto-tag (cme-choose-tag tags))
                   ;; Last regard, use brute force.
                   (cme-find-anything first)))))
-         (t (error (concat "Could not find suitable jump point for '%s'"
-                           " (try cme-complete-jump)!")
-                   first))))))
+         ;; Semantical analysis failed, there's not much to do now.
+         ;; Just use brute force and let user do the filtering.
+         ((stringp first)
+          (cme-find-anything first))
+         (t (error "Don't know what to do here, sorry..."))))))
 
 (defalias 'cme-jump 'semantic-ia-fast-jump)
 

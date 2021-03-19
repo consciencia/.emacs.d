@@ -489,6 +489,8 @@
     (call-interactively 'custom/higlight-this))
    ((equal major-mode 'markdown-mode)
     (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'gfm-mode)
+    (call-interactively 'custom/higlight-this))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
