@@ -153,6 +153,8 @@
 
 (defun custom/hide-all-links (&optional from-pos to-pos)
   (interactive)
+  (when (interactive-p)
+    (setq *custom/links-should-be-seen* nil))
   (loop for (link-start . link-end) in (custom/find-all-link-ranges
                                         from-pos
                                         to-pos)
@@ -181,13 +183,15 @@
                                   ">"))
              (overlay-put ov 'face 'link))))
 
+(setq *custom/links-should-be-seen* nil)
 (defun custom/show-all-links ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (dolist (ov (overlays-in (point-min) (point-max)))
       (when (overlay-get ov 'hidden-link-marker)
-        (delete-overlay ov)))))
+        (delete-overlay ov)))
+    (setq *custom/links-should-be-seen* t)))
 
 (defun custom/link-overlay-at-point (&optional pos)
   (interactive)
@@ -233,7 +237,8 @@
     ;; lines. We cant use it for buffers with hidden links.
     (whitespace-mode -1))
   (when (and (equal major-mode 'markdown-mode)
-             (not (region-active-p)))
+             (not (region-active-p))
+             (not *custom/links-should-be-seen*))
     (let ((win (selected-window)))
       (custom/hide-all-links (window-start win)
                              (window-end win t)))))

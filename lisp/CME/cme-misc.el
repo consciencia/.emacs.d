@@ -93,6 +93,87 @@
     (local-set-key "q" 'delete-window)
     b))
 
+(defun cme-cleanse-imenu-node-name (name)
+  (cme-chain-forms
+      (s-replace-regexp (pcre-to-elisp/cached
+                         "(.*?)\\s+\\(def\\)")
+                        "\\1"
+                        name)
+      (s-replace-regexp (pcre-to-elisp/cached
+                         "(.*?)\\s+\\(class\\)")
+                        "\\1")
+      (s-replace-regexp (pcre-to-elisp/cached
+                         "From: (.*)")
+                        "")
+      (s-replace-regexp (pcre-to-elisp/cached
+                         "[\\(\\{]([^\\{]+)[\\)\\}]")
+                        "\\1")))
+
+(defun cme-flatten-imenu-root (prefix root)
+  (if (and (consp root)
+           (not (consp (cdr root))))
+      `(,(cons (concat prefix
+                       (if (> (length prefix) 0) "." "")
+                       (cme-cleanse-imenu-node-name
+                        (car root)))
+               (cdr root)))
+    (loop for sub-root in (cdr root)
+          for new-prefix = (concat prefix
+                                   (if (> (length prefix) 0) "." "")
+                                   (cme-cleanse-imenu-node-name
+                                    (car root)))
+          append (cme-flatten-imenu-root new-prefix
+                                         sub-root))))
+
+(defun cme-imenu-records ()
+  (interactive)
+  (let* ((tree (save-excursion
+                 (funcall imenu-create-index-function)))
+         (records (loop for root in tree
+                        append (if (and (consp root)
+                                        (not (consp (cdr root))))
+                                   `(,(cons (cme-cleanse-imenu-node-name
+                                             (car root))
+                                            (cdr root)))
+                                 (cme-flatten-imenu-root ""
+                                                         root)))))
+    (if (interactive-p)
+        (cme-with-simple-pop-up "*Flat Imenu Dump*"
+          (setq kill-on-quit t)
+          (loop for (name . _) in records
+                do (insert name "\n")))
+      records)))
+
+(defun cme-goto-imenu-record (record)
+  (let ((target (cdr record)))
+    (cme-push-mark)
+    (cond ((overlayp target)
+           (goto-char (overlay-start target)))
+          ((markerp target)
+           (goto-char (marker-position target)))
+          (t (goto-char target)))
+    (recenter)
+    (pulse-momentary-highlight-one-line (point))))
+
+(defun cme-browse-local-tags (&optional symbol-list)
+  (interactive)
+  (unless (featurep 'imenu)
+    (require 'imenu nil t))
+  (when (or (equal major-mode 'c-mode)
+            (equal major-mode 'c++-mode))
+    (semantic-fetch-tags))
+  (let* ((index (cme-map-create))
+         (records (cme-imenu-records))
+         labels
+         label)
+    (loop for record in records
+          do (progn (cme-map-set (car record)
+                                 record
+                                 index)
+                    (push (car record) labels)))
+    (setq label (ido-completing-read "Symbol? " labels))
+    (cme-goto-imenu-record (cme-map-get label index))))
+
 
 (provide 'cme-misc)
 ;;; cme-misc.el ends here

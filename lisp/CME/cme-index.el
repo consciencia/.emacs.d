@@ -60,12 +60,13 @@
                             (ede-source-roots proj))
                         (if proj
                             (ede-system-include-path proj))
-                        (if (yes-or-no-p (concat "Do you want to also "
-                                                 "index global system "
-                                                 "include paths? "
-                                                 "(warning: lot of "
-                                                 "additional files to be "
-                                                 "parsed)"))
+                        (if (and semantic-dependency-system-include-path
+                                 (yes-or-no-p (concat "Do you want to also "
+                                                      "index global system "
+                                                      "include paths? "
+                                                      "(warning: lot of "
+                                                      "additional files to be "
+                                                      "parsed)")))
                             semantic-dependency-system-include-path))))
     (if roots
         (progn
