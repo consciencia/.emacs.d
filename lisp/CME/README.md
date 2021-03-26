@@ -176,67 +176,67 @@ noted in their documentation.
         <th>Function</th>
       </tr>
       <tr>
-        <td>M-.</td>
+        <td style="white-space: nowrap;">M-.</td>
         <td>cme-jump</td>
       </tr>
       <tr>
-        <td>C-.</td>
+        <td style="white-space: nowrap;">C-.</td>
         <td>cme-find-anything</td>
       </tr>
       <tr>
-        <td>C-r</td>
+        <td style="white-space: nowrap;">C-r</td>
         <td>cme-browse-local-tags</td>
       </tr>
       <tr>
-        <td>M--</td>
+        <td style="white-space: nowrap;">M--</td>
         <td>cme-symref</td>
       </tr>
       <tr>
-        <td>M-,</td>
+        <td style="white-space: nowrap;">M-,</td>
         <td>cme-pop-mark</td>
       </tr>
       <tr>
-        <td>M-*</td>
+        <td style="white-space: nowrap;">M-*</td>
         <td>cme-doc</td>
       </tr>
       <tr>
-        <td>C-,</td>
+        <td style="white-space: nowrap;">C-,</td>
         <td>cme-proto-impl-toggle</td>
       </tr>
       <tr>
-        <td>C--</td>
+        <td style="white-space: nowrap;">C--</td>
         <td>cme-rename-local-var</td>
       </tr>
       <tr>
-        <td>M-&lt;next&gt;</td>
+        <td style="white-space: nowrap;">M-&lt;next&gt;</td>
         <td>cme-next-tag</td>
       </tr>
       <tr>
-        <td>M-&lt;prior&gt;</td>
+        <td style="white-space: nowrap;">M-&lt;prior&gt;</td>
         <td>cme-previous-tag</td>
       </tr>
       <tr>
-        <td>M-p</td>
+        <td style="white-space: nowrap;">M-p</td>
         <td>cme-follow-ref-up</td>
       </tr>
       <tr>
-        <td>M-c</td>
+        <td style="white-space: nowrap;">M-c</td>
         <td>cme-find-subclasses</td>
       </tr>
       <tr>
-        <td>M-f</td>
+        <td style="white-space: nowrap;">M-f</td>
         <td>cme-fold-tag-toggle</td>
       </tr>
       <tr>
-        <td>M-d</td>
+        <td style="white-space: nowrap;">M-d</td>
         <td>cme-mark-tag</td>
       </tr>
       <tr>
-        <td>M-g</td>
+        <td style="white-space: nowrap;">M-g</td>
         <td>cme-reparse-buffer</td>
       </tr>
       <tr>
-        <td>&lt;tab&gt;</td>
+        <td style="white-space: nowrap;">&lt;tab&gt;</td>
         <td>company-indent-or-complete-common</td>
       </tr>
   </table>
@@ -286,17 +286,17 @@ noted in their documentation.
         <th>Description</th>
       </tr>
       <tr>
-        <td>&lt;C-right&gt;</td>
+        <td style="white-space: nowrap;">&lt;C-right&gt;</td>
         <td>forward-button</td>
         <td>Move point to the next button</td>
       </tr>
       <tr>
-        <td>&lt;C-left&gt;</td>
+        <td style="white-space: nowrap;">&lt;C-left&gt;</td>
         <td>backward-button</td>
         <td>Move point to the previous button</td>
       </tr>
       <tr>
-        <td>RET</td>
+        <td style="white-space: nowrap;">RET</td>
         <td>push-button</td>
         <td>It will either toggle the section, jump to file, jump
             to symbol definition or jump to reference. What happens
@@ -305,27 +305,27 @@ noted in their documentation.
             can use `cme-pop-mark` to return back.</td>
       </tr>
       <tr>
-        <td>+ or - or = or SPC</td>
+        <td style="white-space: nowrap;">+ or - or = or SPC</td>
         <td>semantic-symref-list-toggle-showing</td>
         <td>Toggle current section.</td>
       </tr>
       <tr>
-        <td>C-+</td>
+        <td style="white-space: nowrap;">C-+</td>
         <td>semantic-symref-list-expand-all</td>
         <td>Expand all sections.</td>
       </tr>
       <tr>
-        <td>C--</td>
+        <td style="white-space: nowrap;">C--</td>
         <td>semantic-symref-list-contract-all</td>
         <td>Collapse all sections.</td>
       </tr>
       <tr>
-        <td>C-r or R</td>
+        <td style="white-space: nowrap;">C-r or R</td>
         <td>semantic-symref-list-rename-open-hits</td>
         <td>Rename all found references in expanded sections.</td>
       </tr>
       <tr>
-        <td>M-, or C-q or q</td>
+        <td style="white-space: nowrap;">M-, or C-q or q</td>
         <td>cme-pop-mark</td>
         <td>Jump to the location from which `cme-symref` was
             initiated.</td>
