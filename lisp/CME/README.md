@@ -103,24 +103,24 @@ you intend to use CME.
 }
 ```
 
-* **global-includes**
+* **global-includes**<br>
   External include paths. Only absolute paths are allowed. Do not put
   here paths pointing into current project.
   You can omit this parameter.
-* **local-includes**
+* **local-includes**<br>
   Internal include paths. Only relative paths from the project root
   are allowed. Do not put here paths pointing outside current project.
   You can omit this parameter. In that case, CME will use default
   local includes.
-* **source-roots**
+* **source-roots**<br>
   Absolute paths to other projects which are used by this project.
   Every referenced project must have `cme-project.json` in its root.
   You may omit this parameter.
-* **macro-table**
+* **macro-table**<br>
   Dictionary where keys are macro names and values are macro
   values. This is used for resolving preprocessor directives in
   code. You may omit this parameter.
-* **macro-files**
+* **macro-files**<br>
   Enumeration of macro files. Only absolute paths are allowed. CME
   parser (Semantic) is not remembering macro definitions encountered
   in files not listed here in order to speed things up. In case you
@@ -129,10 +129,10 @@ you intend to use CME.
   your magic is defined here. Please note that during parsing macro
   files, no macro definitions from any other (currently processed
   macro file included) macro files are utilized.
-* **build-dir**
+* **build-dir**<br>
   Absolute path to build directory. You may omit this parameter.
   In that case, CME will use project root as build directory.
-* **build-cmd**
+* **build-cmd**<br>
   Build command. You may omit this parameter. In that case, CME
   will use `make`.
 
@@ -167,7 +167,7 @@ noted in their documentation.
 
 ## API
 
-* **cme-init**
+* **cme-init**<br>
   Initializes CME. When `:configure-keys t` is passed, following
   keyboard shortcuts are registered in all C and C++ buffers:
   <table>
@@ -176,71 +176,71 @@ noted in their documentation.
         <th>Function</th>
       </tr>
       <tr>
-        <td>`M-.`</td>
+        <td>M-.</td>
         <td>cme-jump</td>
       </tr>
       <tr>
-        <td>`C-.`</td>
+        <td>C-.</td>
         <td>cme-find-anything</td>
       </tr>
       <tr>
-        <td>`C-r`</td>
+        <td>C-r</td>
         <td>cme-browse-local-tags</td>
       </tr>
       <tr>
-        <td>`M--`</td>
+        <td>M--</td>
         <td>cme-symref</td>
       </tr>
       <tr>
-        <td>`M-,`</td>
+        <td>M-,</td>
         <td>cme-pop-mark</td>
       </tr>
       <tr>
-        <td>`M-*`</td>
+        <td>M-*</td>
         <td>cme-doc</td>
       </tr>
       <tr>
-        <td>`C-,`</td>
+        <td>C-,</td>
         <td>cme-proto-impl-toggle</td>
       </tr>
       <tr>
-        <td>`C--`</td>
+        <td>C--</td>
         <td>cme-rename-local-var</td>
       </tr>
       <tr>
-        <td>`M-<next>`</td>
+        <td>M-\<next\></td>
         <td>cme-next-tag</td>
       </tr>
       <tr>
-        <td>`M-<prior>`</td>
+        <td>M-\<prior\></td>
         <td>cme-previous-tag</td>
       </tr>
       <tr>
-        <td>`M-p`</td>
+        <td>M-p</td>
         <td>cme-follow-ref-up</td>
       </tr>
       <tr>
-        <td>`M-c`</td>
+        <td>M-c</td>
         <td>cme-find-subclasses</td>
       </tr>
       <tr>
-        <td>`M-f`</td>
+        <td>M-f</td>
         <td>cme-fold-tag-toggle</td>
       </tr>
       <tr>
-        <td>`M-d`</td>
+        <td>M-d</td>
         <td>cme-mark-tag</td>
       </tr>
       <tr>
-        <td>`M-g`</td>
+        <td>M-g</td>
         <td>cme-reparse-buffer</td>
       </tr>
       <tr>
-        <td>`<tab>`</td>
+        <td>\<tab\></td>
         <td>company-indent-or-complete-common</td>
       </tr>
   </table>
-* **cme-jump**
+* **cme-jump**<br>
   Performs semantical analysis of the current context and
   jump to definition of symbol under point. When there is
   multiple candidates, user is asked to chose one through
@@ -248,7 +248,7 @@ noted in their documentation.
   acquired by brute force. Not optimal, but better than
   nothing. This command works as intended even with
   incomplete index.
-* **cme-find-anything**
+* **cme-find-anything**<br>
   This function is similar to `find-function`. It enables you to
   interactively search through all symbols in current project and
   its dependencies. Input is taken from minibuffer. You can
@@ -271,10 +271,10 @@ noted in their documentation.
   This command works as intended even with incomplete index except
   for minibuffer auto completion. With incomplete index, you will
   get incomplete auto completion.
-* **cme-browse-local-tags**
+* **cme-browse-local-tags**<br>
   Lists all tags from current buffer through IDO and let user select
   where to jump.
-* **cme-symref**
+* **cme-symref**<br>
   Finds references for symbol under point. Each symbol search
   has dedicated buffer so you can perform recursive searches.
   Following table describes keyboard shortcuts for controlling
@@ -286,17 +286,17 @@ noted in their documentation.
         <th>Description</th>
       </tr>
       <tr>
-        <td>`<C-right>`</td>
+        <td>\<C-right\></td>
         <td>forward-button</td>
         <td>Move point to the next button</td>
       </tr>
       <tr>
-        <td>`<C-left>`</td>
+        <td>\<C-left\></td>
         <td>backward-button</td>
         <td>Move point to the previous button</td>
       </tr>
       <tr>
-        <td>`RET`</td>
+        <td>RET</td>
         <td>push-button</td>
         <td>It will either toggle the section, jump to file, jump
             to symbol definition or jump to reference. What happens
@@ -305,34 +305,34 @@ noted in their documentation.
             can use `cme-pop-mark` to return back.</td>
       </tr>
       <tr>
-        <td>`+` or `-` or `=` or `SPC`</td>
+        <td>+ or - or = or SPC</td>
         <td>semantic-symref-list-toggle-showing</td>
         <td>Toggle current section.</td>
       </tr>
       <tr>
-        <td>`C-+`</td>
+        <td>C-+</td>
         <td>semantic-symref-list-expand-all</td>
         <td>Expand all sections.</td>
       </tr>
       <tr>
-        <td>`C--`</td>
+        <td>C--</td>
         <td>semantic-symref-list-contract-all</td>
         <td>Collapse all sections.</td>
       </tr>
       <tr>
-        <td>`C-r` or `R`</td>
+        <td>C-r or R</td>
         <td>semantic-symref-list-rename-open-hits</td>
         <td>Rename all found references in expanded sections.</td>
       </tr>
       <tr>
-        <td>`M-,` or `C-q` or `q`</td>
+        <td>M-, or C-q or q</td>
         <td>cme-pop-mark</td>
         <td>Jump to the location from which `cme-symref` was
             initiated.</td>
       </tr>
   </table>
   This command works as intended even with incomplete index.
-* **cme-doc**
+* **cme-doc**<br>
   Shows documentation for symbol under cursor. When multiple
   candidates are found, documentation is scrapped from all of
   them and the longest is displayed to user. You can close
@@ -341,41 +341,41 @@ noted in their documentation.
   so you can move cursor into them and then go to their
   definition by hitting `RET`. This command works as intended
   even with incomplete index.
-* **cme-proto-impl-toggle**
+* **cme-proto-impl-toggle**<br>
   Toggles between prototype and implementation. When multiple jump
   candidates exist, it will ask user through IDO where to jump.
   This command works as intended even with incomplete index.
-* **cme-pop-mark**
+* **cme-pop-mark**<br>
   Every jump saves old position through `cme-push-mark`. By
   executing this command, you jump to previously saved position.
-* **cme-next-tag**
+* **cme-next-tag**<br>
   Jumps to next tag in current buffer. What qualify as next tag is
   highly dependent on context. Try it!
-* **cme-previous-tag**
+* **cme-previous-tag**<br>
   Jumps to previous tag in current buffer. What qualify as previous
   tag is highly dependent on context. Try it!
-* **cme-follow-ref-up**
+* **cme-follow-ref-up**<br>
   Jumps to parent tag of current tag. When you are in function
   implementation, you will land in its prototype. When you are
   in prototype which is inside class, you will land in its class.
   When you are in class, you will land at its parent class. When
   multiple classes exist, user is asked through IDO where to jump.
   This command works as intended even with incomplete index.
-* **cme-find-subclasses**
+* **cme-find-subclasses**<br>
   Jumps to subclass of current class. When there are multiple
   classes, asks user through IDO where to jump.
   This command works as intended even with incomplete index.
-* **cme-rename-local-var**
+* **cme-rename-local-var**<br>
   Rename local variable under cursor. It works for function arguments
   too. Upon calling this function, all occurrences of target variable
   become highlighted. You can rename all occurrences by editing any
   single highlighted occurrence. Hit `C-RET` in any highlighted
   occurrence to commit rename.
-* **cme-fold-tag-toggle**
+* **cme-fold-tag-toggle**<br>
   Fold or unfold current tag.
-* **cme-mark-tag**
+* **cme-mark-tag**<br>
   Mark current tag. From function parameters to name spaces.
-* **cme-index-current-project**
+* **cme-index-current-project**<br>
   Create index for current project and its dependencies. You will be
   asked whether you want to index system include paths too. Be warned
   that system include paths include `/usr/include/` so be prepared
@@ -383,12 +383,12 @@ noted in their documentation.
   On 10th gen i5 roughly 60k lines of code can be indexed per minute.
   Not counting comments and blank lines. Be prepared that template
   heavy code tends to consume more time.
-* **cme-reparse-buffer**
+* **cme-reparse-buffer**<br>
   Forces full reparse of current buffer.
-* **cme-compile-project**
+* **cme-compile-project**<br>
   Compiles current project using `build-dir` and `build-cmd`
   in `cme-project.json`.
-* **cme-list-includes**
+* **cme-list-includes**<br>
   Lists all direct and indirect includes in current buffer. Each
   entry is prefixed with resolution status so you can check which
   includes failed to be resolved due to missing include root.
