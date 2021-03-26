@@ -170,76 +170,22 @@ noted in their documentation.
 * **cme-init**<br>
   Initializes CME. When `:configure-keys t` is passed, following
   keyboard shortcuts are registered in all C and C++ buffers:
-  <table>
-      <tr>
-        <th>Shortcut</th>
-        <th>Function</th>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-.</td>
-        <td>cme-jump</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C-.</td>
-        <td>cme-find-anything</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C-r</td>
-        <td>cme-browse-local-tags</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M--</td>
-        <td>cme-symref</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-,</td>
-        <td>cme-pop-mark</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-*</td>
-        <td>cme-doc</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C-,</td>
-        <td>cme-proto-impl-toggle</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C--</td>
-        <td>cme-rename-local-var</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-&lt;next&gt;</td>
-        <td>cme-next-tag</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-&lt;prior&gt;</td>
-        <td>cme-previous-tag</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-p</td>
-        <td>cme-follow-ref-up</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-c</td>
-        <td>cme-find-subclasses</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-f</td>
-        <td>cme-fold-tag-toggle</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-d</td>
-        <td>cme-mark-tag</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-g</td>
-        <td>cme-reparse-buffer</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">&lt;tab&gt;</td>
-        <td>company-indent-or-complete-common</td>
-      </tr>
-  </table>
+  * `M-.` cme-jump
+  * `C-.` cme-find-anything
+  * `C-r` cme-browse-local-tags
+  * `M--` cme-symref
+  * `M-,` cme-pop-mark
+  * `M-*` cme-doc
+  * `C-,` cme-proto-impl-toggle
+  * `C--` cme-rename-local-var
+  * `M-<next>` cme-next-tag
+  * `M-<prior>` cme-previous-tag
+  * `M-p` cme-follow-ref-up
+  * `M-c` cme-find-subclasses
+  * `M-f` cme-fold-tag-toggle
+  * `M-d` cme-mark-tag
+  * `M-g` cme-reparse-buffer
+  * `<tab>` company-indent-or-complete-common
 * **cme-jump**<br>
   Performs semantical analysis of the current context and
   jump to definition of symbol under point. When there is
@@ -279,58 +225,19 @@ noted in their documentation.
   has dedicated buffer so you can perform recursive searches.
   Following table describes keyboard shortcuts for controlling
   buffer with `cme-symref` output:
-  <table>
-      <tr>
-        <th>Shortcut</th>
-        <th>Function</th>
-        <th>Description</th>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">&lt;C-right&gt;</td>
-        <td>forward-button</td>
-        <td>Move point to the next button</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">&lt;C-left&gt;</td>
-        <td>backward-button</td>
-        <td>Move point to the previous button</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">RET</td>
-        <td>push-button</td>
-        <td>It will either toggle the section, jump to file, jump
-            to symbol definition or jump to reference. What happens
-            is dependent on the button which you hit. Before
-            jump, `cme-push-mark` is called which means you
-            can use `cme-pop-mark` to return back.</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">+ or - or = or SPC</td>
-        <td>semantic-symref-list-toggle-showing</td>
-        <td>Toggle current section.</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C-+</td>
-        <td>semantic-symref-list-expand-all</td>
-        <td>Expand all sections.</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C--</td>
-        <td>semantic-symref-list-contract-all</td>
-        <td>Collapse all sections.</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">C-r or R</td>
-        <td>semantic-symref-list-rename-open-hits</td>
-        <td>Rename all found references in expanded sections.</td>
-      </tr>
-      <tr>
-        <td style="white-space: nowrap;">M-, or C-q or q</td>
-        <td>cme-pop-mark</td>
-        <td>Jump to the location from which `cme-symref` was
-            initiated.</td>
-      </tr>
-  </table>
+  * `<C-right>` Move point to the next button.
+  * `<C-left>` Move point to the previous button.
+  * `RET` It will either toggle the section, jump to file, jump
+    to symbol definition or jump to reference. What happens is
+    dependent on the button which you hit.
+    Before jump, `cme-push-mark` is called which means you
+    can use `cme-pop-mark` to return back.
+  * `+ or - or = or SPC` Toggle current section.
+  * `C-+` Expand all sections.
+  * `C--` Collapse all sections.
+  * `C-r or R` Rename all found references in expanded sections.
+  * `M-, or C-q or q` Jump to the location from which `cme-symref`
+    was initiated.
   This command works as intended even with incomplete index.
 * **cme-doc**<br>
   Shows documentation for symbol under cursor. When multiple
