@@ -208,11 +208,11 @@ noted in their documentation.
         <td>cme-rename-local-var</td>
       </tr>
       <tr>
-        <td>M-\<next\></td>
+        <td>M-&lt;next&gt;</td>
         <td>cme-next-tag</td>
       </tr>
       <tr>
-        <td>M-\<prior\></td>
+        <td>M-&lt;prior&gt;</td>
         <td>cme-previous-tag</td>
       </tr>
       <tr>
@@ -236,7 +236,7 @@ noted in their documentation.
         <td>cme-reparse-buffer</td>
       </tr>
       <tr>
-        <td>\<tab\></td>
+        <td>&lt;tab&gt;</td>
         <td>company-indent-or-complete-common</td>
       </tr>
   </table>
@@ -286,12 +286,12 @@ noted in their documentation.
         <th>Description</th>
       </tr>
       <tr>
-        <td>\<C-right\></td>
+        <td>&lt;C-right&gt;</td>
         <td>forward-button</td>
         <td>Move point to the next button</td>
       </tr>
       <tr>
-        <td>\<C-left\></td>
+        <td>&lt;C-left&gt;</td>
         <td>backward-button</td>
         <td>Move point to the previous button</td>
       </tr>
