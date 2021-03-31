@@ -291,6 +291,8 @@
 ;; C BINDS
 (add-hook 'c-mode-hook
           (lambda ()
+            (setq comment-start "//"
+                  comment-end   "")
             (local-set-key (kbd "C-d") 'custom/mark-whole-word)
             (local-set-key (kbd "M-.") 'cme-jump)
             (local-set-key (kbd "M-,") 'custom/universal-pop-mark)
@@ -330,6 +332,8 @@
 ;; C++ BINDS
 (add-hook 'c++-mode-hook
           (lambda ()
+            (setq comment-start "//"
+                  comment-end   "")
             (local-set-key (kbd "C-d") 'custom/mark-whole-word)
             (local-set-key (kbd "M-.") 'cme-jump)
             (local-set-key (kbd "M-,") 'custom/universal-pop-mark)

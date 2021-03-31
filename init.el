@@ -73,13 +73,25 @@
 (setq inhibit-compacting-font-caches t)
 (setq-default bidi-display-reordering nil)
 
-(load (concat
-       (expand-file-name user-emacs-directory)
-       "sysdef.el"))
-(sysdef/init)
+(add-to-list 'load-path
+             (concat (expand-file-name user-emacs-directory)
+                     "lisp"))
+(let ((default-directory
+        (concat (expand-file-name user-emacs-directory)
+                "lisp")))
+  (normal-top-level-add-subdirs-to-load-path))
 
+(package-initialize)
+(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
+                    (not (gnutls-available-p))))
+       (proto (if no-ssl "http" "https")))
+  (when no-ssl
+    (error "SSL not supported!"))
+  (add-to-list 'package-archives
+               `("melpa" . ,(concat proto "://melpa.org/packages/"))))
+
+(load "packages.el")
 (load "utils.el")
-(load "package-loader.el")
 (load "db.el")
 (load "ui.el")
 (load "keymap.el")
@@ -110,23 +122,3 @@
               (let ((byte-compile-log-warning-function
                      (lambda (&rest args))))
                 (byte-compile sym)))))
-
-;; fix problem with aggressive indent module when find and replace
-;; operations is in progress.
-;; Issue is, aggressive indent is async, that means, it can interfere
-;; with other operations.
-;; Make it sync or at least add support for operation in synced manner
-;; is some circumstances.
-
-;; refactor install script
-;; add install targets --target js --target cpp --target py
-;; add some printing options so user can inspect what are emacs
-;; dependencies
-;; when target fails, print info for user how to do stuff
-;; manually
-
-;; remove sysdef and just group things together in order to make
-;; things more modular
-;; another thing is to create custom key bind functions in order
-;; to collect automatically documentation and make key binds
-;; docs generation automatic
