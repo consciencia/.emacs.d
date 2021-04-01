@@ -725,7 +725,8 @@ ESC or `q' to not overwrite any of the remaining files,
                                    (concat (nth 1 entry)
                                            ":"
                                            (format "%s" (nth 2 entry)))))
-                     (chosen-entry (custom/ido-completing-read-ctx entries summarizer)))
+                     (chosen-entry (custom/ido-completing-read-ctx entries
+                                                                   summarizer)))
                 (setq jedi:goto-definition--cache nil)
                 (when (null chosen-entry)
                   (error "Failed to find definition (%s %s)!"

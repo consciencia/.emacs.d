@@ -12,99 +12,6 @@
 (defun custom/map/set (key val map)
   (puthash key val map))
 
-(defun custom/map/rem (key map)
-  (remhash key map))
-
-(defun custom/map/len (map)
-  (hash-table-count map))
-
-(defun custom/map/clear (map)
-  (clrhash map))
-
-(defun custom/map/vectorize (key map)
-  (custom/map/set key
-                  (apply 'vector
-                         (custom/map/get key map))
-                  map))
-
-(defun custom/map/to-alist (map)
-  (if (hash-table-p map)
-      (let ((acc nil))
-        (maphash (lambda (k v)
-                   (setq acc (cons (cons k v) acc)))
-                 map)
-        acc)
-    nil))
-
-(defun @init (list &optional unsafe)
-  (if unsafe
-      (nreverse (nthcdr 1 (nreverse list)))
-    (nreverse (nthcdr 1 (reverse list)))))
-
-(defalias '@tail 'rest)
-
-(defalias '@head 'car)
-
-(defun @end (list)
-  (if list
-      (nth (1- (length list)) list)))
-
-(defun @push-back (list val)
-  (append list (list val)))
-
-(defalias '@pop-back '@init)
-
-(defalias '@push-front 'cons)
-
-(defalias '@pop-front 'cdr)
-
-(defun @len (list)
-  (cond
-   ((listp list) (length list))
-   ((hash-table-p list) (hash-table-count list))
-   (t (error "Bad input to @len"))))
-
-(defun @at (list idx)
-  (cond
-   ((listp list) (nth idx list))
-   ((hash-table-p list) (gethash idx list))
-   (t (error "Bad input to @at"))))
-
-(defun @in (list val)
-  (cond
-   ((listp list) (member val list))
-   ((hash-table-p list) (gethash val list))
-   (t (error "Bad input to @in"))))
-
-(defun @map (fun list)
-  (cond
-   ((listp list)
-    (loop for x in list collect (funcall fun x)))
-   ((hash-table-p list)
-    (loop for key being the hash-keys of list using (hash-values val)
-          collect (funcall fun key val)))
-   (t (error "Bad input to @map"))))
-
-(defalias '@dict-new 'custom/map/create)
-
-(defalias '@dict-set 'custom/map/set)
-
-(defalias '@dict-clear 'custom/map/clear)
-
-(defalias '@dict-val-to-vector 'custom/map/vectorize)
-
-(defalias '@dict-val-to-alist 'custom/map/to-alist)
-
-(defun @dict-& (dict1 dict2))
-
-(defun @dict-| (dict1 dict2))
-
-(defun @dict-^ (dict1 dict2))
-
-(defun @dict-/ (dict1 dict2))
-
-
-
 ;; Function s-replace-all not works correctly for all inputs in all
 ;; versions of emacs. This is workaround for that.
 ;; This function also handle correctly empty replacement list.
@@ -388,17 +295,6 @@
   (interactive)
   (scroll-down 4))
 
-(setq ECB-ACTIVE nil)
-(defun custom/ecb-run ()
-  (interactive)
-  (ecb-activate)
-  (setq ECB-ACTIVE t))
-
-(defun custom/ecb-kill ()
-  (interactive)
-  (ecb-deactivate)
-  (setq ECB-ACTIVE nil))
-
 (defun custom/get-simple-input (question opts)
   (interactive)
   (ido-completing-read question opts))
@@ -422,16 +318,6 @@
                       (if (eq buffer (window-buffer window))
                           (set-window-hscroll window 0)))
                     nil t))))
-
-(defun custom/create-imenu-list (new-f)
-  (select-frame-set-input-focus new-f)
-  (run-at-time "1" nil
-               (lambda ()
-                 (if (not ECB-ACTIVE) ; (not ecb-minor-mode)
-                     (progn
-                       (imenu-list-show)
-                       (other-window 1))
-                   (ecb-redraw-layout-full)))))
 
 (defun custom/eval (string)
   (eval (car (read-from-string (format "(progn %s)" string)))))
@@ -568,27 +454,6 @@
   (if (not (active-minibuffer-window))
       (custom/truncate-lines)))
 
-(defun custom/elisp-slime/get-documentation (sym-name)
-  (interactive (list (elisp-slime-nav--read-symbol-at-point)))
-  (when sym-name
-    (let ((sym (intern sym-name)))
-      (message "Searching documentation for %s..." sym-name)
-      (cond
-       ((fboundp sym)
-        (describe-function sym)
-        (switch-to-buffer-other-window "*Help*"))
-       ((boundp sym)
-        (describe-variable sym)
-        (switch-to-buffer-other-window "*Help*"))
-       ((or (featurep sym) (locate-library sym-name))
-        (describe-package sym-name)
-        (switch-to-buffer-other-window "*Help*"))
-       ((facep sym)
-        (describe-face sym)
-        (switch-to-buffer-other-window "*Help*"))
-       (t
-        (error "Don't know how to find documentation for '%s'" sym))))))
-
 (defun custom/full-macroexpand (expression)
   (interactive (list (thing-at-point 'list t)))
   ;; TODO: Modify pp-display-expression to use (custom/with-simple-pop-up)
@@ -603,92 +468,11 @@
     (custom/db/set "GLOBAL-SYMBOL-COUNTER" (+ num 1))
     (make-symbol (format "%s%d" pfix num))))
 
-(defun custom/make-link-farm (basePath targetPaths)
-  (let* ((base (file-name-as-directory basePath))
-         (targets (mapcar #'file-name-as-directory
-                          (delete-dups targetPaths)))
-         (targetNames (mapcar (lambda (path)
-                                (let ((p (s-split custom/fs-separator path)))
-                                  (nth (- (length p) 2) p)))
-                              targets)))
-    (if (or (file-directory-p base)
-            (file-exists-p base))
-        (delete-directory base t t))
-    (make-directory base t)
-    (dotimes (i (length targets))
-      (let ((target (nth i targets))
-            (name (nth i targetNames)))
-        (make-symbolic-link target (concat base name) t)))))
-
 (defun custom/nop (&rest args)
   (interactive))
 
 (defun custom/get-project-root ()
   (ignore-errors (projectile-project-root)))
-
-(defun custom/pos-is-in-comment (&optional pos)
-  "Returns t when position is in comment. This function
-can detect comment via `syntax-ppss' or using test for font
-face placed there by font-lock. This function is reasonable
-fast so dont be shy.
-POS is optional position in file where to search for comment."
-  (interactive)
-  (if (not pos)
-      (setq pos (point)))
-  (let ((fontfaces (get-text-property pos 'face))
-        (comment-faces '(font-lock-comment-face
-                         font-lock-comment-delimiter-face))
-        (result nil))
-    (when (not (listp fontfaces))
-      (setf fontfaces (list fontfaces)))
-    (setq result
-          (if font-lock-mode
-              (loop for font-face in fontfaces
-                    if (memq font-face comment-faces)
-                    return t)
-            (let ((ppss (syntax-ppss)))
-              (or (car (setq ppss (nthcdr 3 ppss)))
-                  (car (setq ppss (cdr ppss)))
-                  (nth 3 ppss)))))
-    (if (called-interactively-p 'any)
-        (message "Comment state: %s" result)
-      result)))
-
-(defun custom/pos-is-in-string (&optional pos)
-  (if (not pos)
-      (setq pos (point)))
-  (eq (get-text-property pos 'face)
-      'font-lock-string-face))
-
-(defun custom/extract-comments-from-region (start stop)
-  (when font-lock-mode
-    ;; There is possibility that target region is in buffer with font lock
-    ;; enabled but with no font locking done yet. In such case, we must
-    ;; explicitly fontify that region where we search for comments.
-    ;; Of course there is backup for buffers without font locking, but
-    ;; this backup is enabled only when font lock mode is disabled so
-    ;; its not usable in this situation.
-    (font-lock-fontify-region start stop))
-  (let ((result "")
-        (len (- stop start))
-        (finger start)
-        (was-in nil)
-        (is-in nil))
-    (dotimes (finger len result)
-      (setq is-in (custom/pos-is-in-comment (+ start finger)))
-      (if is-in
-          (setq result (concat result
-                               (string
-                                (char-after (+ start
-                                               finger))))))
-      (if (and was-in (not is-in))
-          (setq result (concat result
-                               (if (equal (string
-                                           (aref result
-                                                 (1- (length result)))) "\n")
-                                   "\n"
-                                 "\n\n"))))
-      (setq was-in is-in))))
 
 (defun custom/goto-line ()
   (interactive)
@@ -734,42 +518,6 @@ POS is optional position in file where to search for comment."
         (recenter))
     (pulse-momentary-highlight-one-line (point))))
 
-(defun custom/is-c-file (path)
-  (string-match-p ".*\\.\\(c\\|cpp\\|h\\|hpp\\)$"
-                  path))
-
-(defun custom/is-js-file (path)
-  (string-match-p ".*\\.js$"
-                  path))
-
-(defun custom/is-el-file (path)
-  (string-match-p ".*\\.el$"
-                  path))
-
-(defun custom/is-py-file (path)
-  (string-match-p ".*\\.py$"
-                  path))
-
-(defun custom/get-files-recur (root predicate)
-  (let ((root (file-name-as-directory (file-truename root)))
-        (file nil)
-        (files (directory-files root t))
-        (acc nil))
-    (setq files (delete (format "%s." root) files))
-    (setq files (delete (format "%s.." root) files))
-    (setq files (delete (format "%s.git" root) files))
-    (setq files (delete (format "%s.hg" root) files))
-    (while files
-      (setq file (pop files))
-      (if (not (file-accessible-directory-p file))
-          (if (apply predicate (list file))
-            (setq acc (cons file acc)))
-        (setq acc (append acc
-                          (custom/get-files-recur file
-                                                  predicate)))
-        ))
-    acc))
-
 (defun custom/define-buffer-key (key func)
   (let ((name (format "%s-magic" (buffer-name))))
     (eval
@@ -782,11 +530,6 @@ POS is optional position in file where to search for comment."
       (eval
        `(define-key ,map ,key func)))
     (funcall (intern name) t)))
-
-(defun custom/inspect-eieio (obj)
-  (require 'eieio-datadebug)
-  (data-debug-new-buffer "*Inspector*")
-  (data-debug-insert-object-slots obj ">>"))
 
 (defun custom/simple-pop-up (name content)
   (let ((buff (custom/get-buffer name)))
@@ -865,20 +608,6 @@ POS is optional position in file where to search for comment."
       (if (not smerge-mode)
           (smerge-start-session)))))
 
-(defun custom/get-comment-content (&optional pos)
-  (interactive (list (point)))
-  (let ((result nil))
-    (save-mark-and-excursion
-     (goto-char pos)
-     (ignore-errors
-       (er/mark-comment))
-     (if (use-region-p)
-         (setq result
-               (buffer-substring-no-properties
-                (region-beginning)
-                (region-end)))))
-    result))
-
 (defun custom/flyspell-at-point ()
   (interactive)
   (loop for o in (overlays-at (point))
@@ -913,10 +642,6 @@ POS is optional position in file where to search for comment."
                    collect y)
           do (hi-lock-unface-buffer r))))
 
-(defun custom/open-kekel ()
-  (interactive)
-  (find-file "~/Documents/Private/jinyKekel"))
-
 (defun custom/open-environment-settings ()
   (interactive)
   (find-file "~/.bash_profile"))
@@ -927,26 +652,6 @@ POS is optional position in file where to search for comment."
     (imenu-list-smart-toggle)
     (neotree-toggle)
     (switch-to-buffer buff)))
-
-(defmacro custom/silence-eldoc-for (func)
-  `(advice-add #',func
-               :around
-               (lambda (oldfun &rest args)
-                 (let ((eldoc-message-function
-                        #'(lambda (&rest args) nil)))
-                   (apply oldfun args)))))
-
-(defmacro custom/silence-eldoc-for-funcs (&rest funcs)
-  (cons 'progn
-        (loop for func in funcs
-              collect `(custom/silence-eldoc-for ,func))))
-
-(custom/silence-eldoc-for-funcs yes-or-no-p
-                                y-or-n-p
-                                read-from-minibuffer
-                                read-string
-                                read-regexp
-                                save-some-buffers)
 
 (defun custom/locate-key-binding (key)
   "Determine in which keymap KEY is defined."
@@ -1038,15 +743,6 @@ POS is optional position in file where to search for comment."
 (defmacro custom/chain-forms (&rest forms)
   (apply #'custom/chain-forms-helper (nreverse forms)))
 
-(defun custom/find-string-occurences (string)
-  (save-excursion
-    (let ((len (length string))
-          (result nil))
-      (goto-char (point-min))
-      (while (search-forward string nil 0)
-        (push (cons (- (point) len) (point)) result))
-      result)))
-
 (defmacro custom/catch-error (do-form err-form)
   (let ((err-sym (gensym)))
     `(condition-case ,err-sym
@@ -1057,39 +753,6 @@ POS is optional position in file where to search for comment."
           (if (not supress-error)
               (signal (car ,err-sym)
                       (cdr ,err-sym))))))))
-
-(defun custom/delete-dups-eq (list)
-  "Destructively remove `eq' duplicates from LIST.
-Store the result in LIST and return it.  LIST must be a proper list.
-Of several `eq' occurrences of an element in LIST, the first
-one is kept."
-  (let ((hash (make-hash-table :test #'eq :size (length list)))
-        (tail list) retail)
-    (puthash (car list) t hash)
-    (while (setq retail (cdr tail))
-      (let ((elt (car retail)))
-        (if (gethash elt hash)
-            (setcdr tail (cdr retail))
-          (puthash elt t hash)
-          (setq tail retail)))))
-  list)
-
-(defun custom/append-new-backbone (&rest lists)
-  (let ((result nil))
-    (dolist (list lists)
-      (dolist (element list)
-        (push element result)))
-    result))
-
-(defun custom/longest-string (strings)
-  (let ((longest (car strings))
-        (head (cdr strings)))
-    (while head
-      (when (> (length (car head))
-               (length longest))
-        (setq longest (car head)))
-      (setq head (cdr head)))
-    longest))
 
 (defun custom/edebug-remove-instrumentation ()
   "Remove Edebug instrumentation from all functions."
@@ -1203,72 +866,6 @@ one is kept."
     (font-lock-fontify-region (point-min)
                               (point-max))))
 
-;; Override because I want to be able to parse number from input with noise.
-(defun read-number (prompt &optional default)
-  "Read a numeric value in the minibuffer, prompting with PROMPT.
-DEFAULT specifies a default value to return if the user just types RET.
-The value of DEFAULT is inserted into PROMPT.
-This function is used by the `interactive' code letter `n'."
-  (let ((n nil)
-        (default1 (if (consp default) (car default) default)))
-    (when default1
-      (setq prompt
-            (if (string-match "\\(\\):[ \t]*\\'" prompt)
-                (replace-match (format " (default %s)" default1) t t prompt 1)
-              (replace-regexp-in-string "[ \t]*\\'"
-                                        (format " (default %s) " default1)
-                                        prompt t t))))
-    (while
-        (progn
-          (let ((str (read-from-minibuffer
-                      prompt nil nil nil nil
-                      (when default
-                        (if (consp default)
-                            (mapcar 'number-to-string (delq nil default))
-                          (number-to-string default))))))
-            (condition-case nil
-                (setq n (cond
-                         ((zerop (length str)) default1)
-                         ((stringp str)
-                          (or (let* ((parser (pcre-to-elisp/cached
-                                              "[^\\d]*(\\d+(?:\\.\\d+)?)[^\\d]*"))
-                                     (capture (s-match parser str)))
-                                (when capture
-                                  (read (cadr capture))))
-                              (read str)))))
-              (error nil)))
-          (unless (numberp n)
-            (message "Please enter a number.")
-            (sit-for 1)
-            t)))
-    n))
-
-;; Override because I want to be able to execute elisp in regexp input
-;; and use its result value as an final input.
-(defun occur-read-primary-args ()
-  (let* ((perform-collect (consp current-prefix-arg))
-         (regexp (read-regexp (if perform-collect
-                                  "Collect strings matching regexp"
-                                "List lines matching regexp")
-                              'regexp-history-last))
-         (code (ignore-errors (read regexp))))
-    (when (consp code)
-      (setq regexp (format "%s" (eval code))))
-    (list regexp
-          (if perform-collect
-              ;; Perform collect operation
-              (if (zerop (regexp-opt-depth regexp))
-                  ;; No subexpression so collect the entire match.
-                  "\\&"
-                ;; Get the regexp for collection pattern.
-                (let ((default (car occur-collect-regexp-history)))
-                  (read-regexp
-                   (format "Regexp to collect (default %s): " default)
-                   default 'occur-collect-regexp-history)))
-            ;; Otherwise normal occur takes numerical prefix argument.
-            (when current-prefix-arg
-              (prefix-numeric-value current-prefix-arg))))))
-
 (defun cwt (&rest vals)
   (let ((days (loop for val in vals sum val)))
     (insert " "
@@ -1368,64 +965,3 @@ This function is used by the `interactive' code letter `n'."
                                     chosen-summary
                                     summaries)))
         chosen-entry))))
-
-;; '((global-includes . listp)
-;;   (local-includes . listp)
-;;   (macro-files . listp)
-;;   (macro-table . (null hash-table-p))
-;;   (source-roots . listp))
-(defun custom/check-schema (obj schema)
-  (let ((result t))
-    (loop for entry in schema
-          for field = (format "%s" (car entry))
-          for val = (custom/map/get field obj)
-          for predicates = (if (listp (cdr entry))
-                               (cdr entry)
-                             `(,(cdr entry)))
-          for predicates-output = (loop for p in predicates
-                                        collect (funcall p val))
-          do (progn
-               (if (not (eval `(or ,@predicates-output)))
-                   (setq result nil))))
-    (when (not result)
-      (message "Schema check failed!"))
-    result))
-
-(setq *custom/read-json-file-cache* (custom/map/create))
-(setq *custom/read-json-ts-cache* (custom/map/create))
-(defun custom/read-json-cached (path &optional schema)
-  (let ((json-object-type 'hash-table)
-        (json-array-type 'list)
-        (json-key-type 'string)
-        ts
-        result)
-    (if (file-exists-p path)
-        (progn
-          (setq ts (file-attribute-modification-time
-                    (file-attributes path)))
-
-          (if (equal ts
-                     (custom/map/get path
-                                     *custom/read-json-ts-cache*))
-              (setq result
-                    (custom/map/get path
-                                    *custom/read-json-file-cache*))
-            (progn
-              (setq result (json-read-file path))
-              (custom/map/set path
-                              result
-                              *custom/read-json-file-cache*)
-              (custom/map/set path
-                              ts
-                              *custom/read-json-ts-cache*)))
-          (if (and result
-                   schema
-                   (not (custom/check-schema result schema)))
-              (setq result nil)))
-      (progn
-        (custom/map/rem path *custom/read-json-file-cache*)
-        (custom/map/rem path *custom/read-json-ts-cache*)))
-    (when (null result)
-      (message "Failed to read JSON from %s!"
-               path))
-    result))
