@@ -19,6 +19,7 @@
 
 (show-paren-mode 1)
 (setq-default show-paren-delay 0)
+(setq-default show-paren-style 'expression)
 
 (setq-default tab-width 4)
 (setq-default indent-tabs-mode nil)

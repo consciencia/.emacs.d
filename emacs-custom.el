@@ -12,7 +12,7 @@
  '(git-gutter:modified-sign "  ")
  '(git-gutter:update-interval 1)
  '(package-selected-packages
-   '(elpy cmake-mode elisp-refs multi-term which-key expand-region aggressive-indent helpful gited company-statistics company-statistic nlinum company-tern less-css-mode company-web web-mode gfm-mode markdown-mode js2-mode flycheck ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme))
+   '(avy elpy cmake-mode elisp-refs multi-term which-key expand-region aggressive-indent helpful gited company-statistics company-statistic nlinum company-tern less-css-mode company-web web-mode gfm-mode markdown-mode js2-mode flycheck ws-butler company-c-headers call-graph paredit browse-kill-ring doom-themes pcre2el git-gutter adaptive-wrap magit multiple-cursors shackle stickyfunc-enhance eldoc-overlay visual-regexp-steroids visual-regexp imenu-list company ggtags undo-tree smart-mode-line-powerline-theme smart-mode-line projectile neotree minimap ido-completing-read+ flx-ido ido-vertical-mode idle-highlight-mode f elisp-slime-nav dired+ autopair ace-window ace-jump-mode spacemacs-theme))
  '(vc-annotate-background "#1c1f24")
  '(vc-annotate-color-map
    (list

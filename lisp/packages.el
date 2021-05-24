@@ -7,7 +7,7 @@
                            'adaptive-wrap 'spacemacs-theme
                            'doom-themes 'smart-mode-line
                            'smart-mode-line-powerline-theme
-                           'avy 'ace-window 'autopair 'dired-imenu
+                           'avy 'ace-window 'dired-imenu
                            'dired-subtree 'dash 'elisp-slime-nav
                            'idle-highlight-mode 'ido-vertical-mode
                            'flx-ido 'ido-completing-read+
@@ -42,7 +42,6 @@
 (require 'smart-mode-line)
 (require 'avy)
 (require 'ace-window)
-(require 'autopair)
 (require 'dired-aux)
 (require 'dired-x)
 (require 'wdired)
@@ -161,20 +160,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;; autopair
 
-(autopair-global-mode)
-
-(add-hook 'emacs-lisp-mode-hook
-          #'(lambda ()
-              (push '(?` . ?')
-                    (getf autopair-extra-pairs :comment))
-              (push '(?` . ?')
-                    (getf autopair-extra-pairs :string))))
-
-(add-hook 'python-mode-hook
-          #'(lambda ()
-              (setq autopair-handle-action-fns
-                    (list #'autopair-default-handle-action
-                          #'autopair-python-triple-quote-action))))
+(electric-pair-mode 1)
 
 ;;;;;;;;;;;;;;;;;;;;;;; dired
 
@@ -475,6 +461,13 @@ ESC or `q' to not overwrite any of the remaining files,
     (if action
         (funcall action res)
       res)))
+
+;; Overriden because actual (24.5.2021) version of projectile contains
+;; bug which causes failure during file open.
+(defun projectile-verify-file (file)
+  "Check whether FILE exists in the current project."
+  (when (not (equal file 100))
+    (file-exists-p (projectile-expand-root file))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; undo-tree
 
