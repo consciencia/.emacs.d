@@ -43,6 +43,8 @@
  '(ace-jump-face-foreground ((t (:foreground "white" :underline (:color "lightblue" :style wave)))))
  '(avy-lead-face ((t (:background "red" :foreground "white" :underline (:color "lightblue" :style wave)))))
  '(avy-lead-face-0 ((t (:background "red" :foreground "white" :underline (:color "lightblue" :style wave)))))
+ '(line-number ((t (:foreground "white" :background "#292b2e"))))
+ '(line-number-current-line ((t (:foreground "red" :bold t :background "#292b2e"))))
  '(sml/folder ((t :foreground "lightgray")))
  '(sml/modes ((t :foreground "lightgray")))
  '(sml/position-percentage ((t :foreground "lightgray")))

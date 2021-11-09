@@ -18,6 +18,7 @@
         indent-for-tab-command
         keyboard-escape-quit
         markdown-cycle
+        markdown-outdent-or-delete
         paredit-backward
         paredit-forward
         paredit-forward-down
@@ -29,7 +30,9 @@
         cua-copy-region
         cua-copy-region
         cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
+        custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors

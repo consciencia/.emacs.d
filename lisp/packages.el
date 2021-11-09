@@ -534,21 +534,25 @@ ESC or `q' to not overwrite any of the remaining files,
     (if (not global-visual-line-mode)
         (global-visual-line-mode 1)))
 
-(defun custom/imenu-list-update (oldfun &rest args)
-  (let* ((old (current-buffer))
-         (oldwin (get-buffer-window old))
-         (im (get-buffer imenu-list-buffer-name))
-         (win (if im (get-buffer-window im))))
-    (when (and (not (active-minibuffer-window))
-               im
-               win)
-      (switch-to-buffer-other-window im)
-      (select-window oldwin)
-      (switch-to-buffer old))
-    (apply oldfun args)))
+;; Following piece of code was good for something but it started to
+;; cause problems with newer imenu-list package so I commented it
+;; out.
+;;
+;; (defun custom/imenu-list-update (oldfun &rest args)
+;;   (let* ((old (current-buffer))
+;;          (oldwin (get-buffer-window old))
+;;          (im (get-buffer imenu-list-buffer-name))
+;;          (win (if im (get-buffer-window im))))
+;;     (when (and (not (active-minibuffer-window))
+;;                im
+;;                win)
+;;       (switch-to-buffer-other-window im)
+;;       (select-window oldwin)
+;;       (switch-to-buffer old))
+;;     (apply oldfun args)))
 
-(advice-add #'imenu-list-update
-            :around 'custom/imenu-list-update)
+;; (advice-add #'imenu-list-update
+;;             :around 'custom/imenu-list-update)
 
 ;; Advices below are fix for crappy imenu list impl.
 ;;
