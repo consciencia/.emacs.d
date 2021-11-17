@@ -196,10 +196,7 @@
 (defun custom/mark-args ()
   (interactive)
   (ignore-errors
-    (re-search-backward "("
-                        (save-excursion
-                          (beginning-of-visual-line)
-                          (point)))
+    (re-search-backward "(")
     (set-mark (+ (point) 1))
     (forward-sexp)
     (backward-char 1))
