@@ -1247,7 +1247,7 @@ If region is active, normalize the region and shift."
 (add-hook 'c-mode-hook #'aggressive-indent-mode)
 (add-hook 'c++-mode-hook #'aggressive-indent-mode)
 
-(setq *custom/agressive-indent-disabled* nil)
+(setq-local *custom/agressive-indent-disabled* nil)
 
 (push '*custom/agressive-indent-disabled*
       aggressive-indent-dont-indent-if)
