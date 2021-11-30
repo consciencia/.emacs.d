@@ -82,9 +82,7 @@
 (define-key regs-key-map (kbd "C-a") 'append-to-register)
 (define-key regs-key-map (kbd "C-p") 'prepend-to-register)
 (define-key regs-key-map (kbd "C-l") 'list-registers)
-(define-key completion-list-mode-map
-  (kbd "C-f")
-  'isearch-forward)
+(define-key completion-list-mode-map (kbd "C-f") 'isearch-forward)
 
 ;; WINDOWS AND FRAMES MANIPULATION BINDS
 (define-key general-key-map (kbd "C-w C-<right>")
@@ -231,7 +229,7 @@
 
 ;; BUFFER LOCAL SEARCHING BINDS
 (define-key search-key-map (kbd "C-r") 'vr/query-replace)
-(define-key search-key-map (kbd "C-f") 'isearch-forward)
+(define-key search-key-map (kbd "C-f") 'custom/isearch-forward)
 (define-key search-key-map (kbd "C-s") 'isearch-forward-symbol-at-point)
 (define-key search-key-map (kbd "C-d") 'custom/isearch-forward-defun-name)
 (define-key search-key-map (kbd "C-o") 'custom/isearch-to-occur)

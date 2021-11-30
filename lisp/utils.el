@@ -962,3 +962,21 @@
                                     chosen-summary
                                     summaries)))
         chosen-entry))))
+
+(defvar *custom/isearch-forward-region* nil)
+
+(defun custom/isearch-forward-region-cleanup ()
+  (when *custom/isearch-forward-region*
+    (widen))
+  (setq *custom/isearch-forward-region* nil))
+
+(defun custom/isearch-forward ()
+  (interactive)
+  (when (region-active-p)
+    (call-interactively 'narrow-to-region)
+    (deactivate-mark)
+    (setq *custom/isearch-forward-region* t))
+  (call-interactively 'isearch-forward))
+
+(add-hook 'isearch-mode-end-hook
+          'custom/isearch-forward-region-cleanup)
