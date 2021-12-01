@@ -39,16 +39,19 @@
             (if (only-minimal-default-ui-component-shown)
                 (if (> frame-count 1)
                     (delete-frame)
-                  (save-buffers-kill-emacs))
+                  (when (y-or-n-p "Exit Emacs?")
+                    (save-buffers-kill-emacs)))
               (progn
                 (delete-window this-window)
                 (if (only-default-ui-component-shown)
                     (if (> frame-count 1)
                         (delete-frame)
-                      (save-buffers-kill-emacs))))))
+                      (when (y-or-n-p "Exit Emacs?")
+                        (save-buffers-kill-emacs)))))))
         (if (> frame-count 1)
             (delete-frame)
-          (save-buffers-kill-emacs))))))
+          (when (y-or-n-p "Exit Emacs?")
+            (save-buffers-kill-emacs)))))))
 
 (defun custom/kill-buffer ()
   (interactive)
@@ -422,8 +425,10 @@
     (lambda ()
       (interactive)
       (call-interactively 'isearch-occur)
-      (switch-to-buffer-other-window "*Occur*")
-      (shrink-window-if-larger-than-buffer)))
+      (unwind-protect
+          (call-interactively 'isearch-cancel)
+        (switch-to-buffer-other-window "*Occur*")
+        (shrink-window-if-larger-than-buffer))))
   (define-key isearch-mode-map (kbd "<backspace>") 'isearch-del-char))
 
 (defun custom/generate-dir-locals (path &optional forms guarded-forms)
@@ -619,7 +624,11 @@
       (progn (flyspell-auto-correct-word)
              (setq *custom/flyspell-last-pos* (point)))
     (progn
-      (highlight-regexp (or (find-tag-default-as-symbol-regexp)
+      (highlight-regexp (or (when (region-active-p)
+                              (buffer-substring-no-properties
+                               (region-beginning)
+                               (region-end)))
+                            (find-tag-default-as-symbol-regexp)
                             (regexp-quote (read-string "Highlight: ")))
                         (hi-lock-read-face-name))
       (setq *custom/flyspell-last-pos* nil))))
