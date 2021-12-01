@@ -1,4 +1,3 @@
-(load "symbol-navigation.el")
 (require 'elisp-slime-nav)
 
 (setq local-function-key-map
