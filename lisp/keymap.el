@@ -404,14 +404,7 @@
 (define-key neotree-mode-map (kbd "C-<left>") 'neotree-select-previous-sibling-node)
 
 ;; IDO BINDS
-(global-set-key (kbd "M-x")
-                (lambda ()
-                  (interactive)
-                  (call-interactively
-                   (intern
-                    (ido-completing-read
-                     "M-x "
-                     (all-completions "" obarray 'commandp))))))
+(global-set-key (kbd "M-x") 'custom/m-x)
 (defvar custom-ido-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<C-return>") 'custom/special-c-return-handler)
@@ -432,3 +425,15 @@
 
 ;; Flycheck BINDS
 (global-set-key (kbd "M-l") 'custom/lint-this-buffer)
+
+;; Term BINDS
+(define-key term-mode-map (kbd "M-c") 'term-char-mode)
+(define-key term-raw-map (kbd "C-w") 'custom/kill-buffer)
+(define-key term-raw-map (kbd "M-l") 'term-line-mode)
+(define-key term-raw-map (kbd "M-x") 'custom/m-x)
+
+(defadvice term-line-mode (after term-line-mode-fixes ())
+  (setq-local cua-mode t)
+  (setq-local transient-mark-mode t))
+
+(ad-activate 'term-line-mode)

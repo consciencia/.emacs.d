@@ -21,6 +21,7 @@
         markdown-cycle
         markdown-outdent-or-delete
         paredit-backward
+        paredit-doublequote
         paredit-forward
         paredit-forward-down
         ))
@@ -28,7 +29,9 @@
 (setq mc/cmds-to-run-once
       '(
         cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
+        custom/copy-across-cursors
         custom/copy-across-cursors
         custom/mc/mark-next-like-this
         custom/mc/mark-prev-like-this

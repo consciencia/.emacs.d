@@ -1071,3 +1071,11 @@
           (backward-char)
         (re-search-backward *custom/blank-space-regexp* nil t)))
     (point)))
+
+(defun custom/m-x ()
+  (interactive)
+  (call-interactively
+   (intern
+    (ido-completing-read
+     "M-x "
+     (all-completions "" obarray 'commandp)))))

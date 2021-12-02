@@ -1340,6 +1340,8 @@ then keep indenting until nothing more happens."
       term-bind-key-alist)
 (push (cons "C-w" 'kill-buffer)
       term-bind-key-alist)
+(push (cons "M-l" 'term-line-mode)
+      term-bind-key-alist)
 
 ;;;;;;;;;;;;;;;;;;;;;;; elisp-refs
 
