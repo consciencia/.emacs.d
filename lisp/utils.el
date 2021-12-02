@@ -406,19 +406,34 @@
     (call-interactively 'custom/occur-mode-display-occurrence))
    (t (message "No bind in current context"))))
 
+(defmacro custom/recenter-after (&rest body)
+  (declare (indent 99))
+  (let ((buff (gensym))
+        (win (gensym))
+        (start (gensym))
+        (end (gensym)))
+    `(let* ((,buff (current-buffer))
+            (,win (selected-window))
+            (,start (window-start ,win))
+            (,end (window-end ,win)))
+       ,@body
+       (if (not (and (>= (point) ,start)
+                     (<= (point) ,end)))
+           (recenter)))))
+
 (defun custom/enhance-isearch ()
   (define-key isearch-mode-map
     (kbd "C-<right>")
     (lambda ()
       (interactive)
-      (call-interactively 'isearch-repeat-forward)
-      (recenter)))
+      (custom/recenter-after
+          (call-interactively 'isearch-repeat-forward))))
   (define-key isearch-mode-map
     (kbd "C-<left>")
     (lambda ()
       (interactive)
-      (call-interactively 'isearch-repeat-backward)
-      (recenter)))
+      (custom/recenter-after
+          (call-interactively 'isearch-repeat-backward))))
   (define-key isearch-mode-map (kbd "<next>") 'custom/scroll-up)
   (define-key isearch-mode-map (kbd "<prior>") 'custom/scroll-down)
   (define-key isearch-mode-map (kbd "C-v") 'isearch-yank-kill)
@@ -499,9 +514,12 @@
 
 (defun custom/avy-jump-char-mode ()
   (interactive)
-  (deactivate-mark t)
-  (custom/universal-push-mark)
-  (call-interactively 'custom/avy-goto-char-n))
+  (if (region-active-p)
+      (call-interactively 'exchange-point-and-mark)
+    (progn
+      (deactivate-mark t)
+      (custom/universal-push-mark)
+      (call-interactively 'custom/avy-goto-char-n))))
 
 (defun custom/universal-push-mark ()
   (interactive)
@@ -510,16 +528,9 @@
 (defun custom/universal-pop-mark ()
   (interactive)
   (deactivate-mark t)
-  (let* ((buff (current-buffer))
-         (win (selected-window))
-         (start (window-start win))
-         (end (window-end win)))
-    (xref-pop-marker-stack)
-    (if (not (and (eq buff (current-buffer))
-                  (>= (point) start)
-                  (<= (point) end)))
-        (recenter))
-    (pulse-momentary-highlight-one-line (point))))
+  (custom/recenter-after
+      (xref-pop-marker-stack))
+  (pulse-momentary-highlight-one-line (point)))
 
 (defun custom/define-buffer-key (key func)
   (let ((name (format "%s-magic" (buffer-name))))
@@ -976,11 +987,6 @@
 
 (defvar *custom/isearch-forward-region* nil)
 
-(defun custom/isearch-forward-region-cleanup ()
-  (when *custom/isearch-forward-region*
-    (widen))
-  (setq *custom/isearch-forward-region* nil))
-
 (defun custom/isearch-forward ()
   (interactive)
   (when (region-active-p)
@@ -988,6 +994,11 @@
     (deactivate-mark)
     (setq *custom/isearch-forward-region* t))
   (call-interactively 'isearch-forward))
+
+(defun custom/isearch-forward-region-cleanup ()
+  (when *custom/isearch-forward-region*
+    (widen))
+  (setq *custom/isearch-forward-region* nil))
 
 (add-hook 'isearch-mode-end-hook
           'custom/isearch-forward-region-cleanup)
