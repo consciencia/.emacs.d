@@ -26,7 +26,7 @@
 ;; GENERAL BINDS
 (global-set-key (kbd "<insert>") nil)
 (global-set-key (kbd "<f2>") 'neotree-toggle)
-(global-set-key (kbd "<f3>") 'neotree-find)
+(global-set-key (kbd "<f3>") 'imenu-list-smart-toggle)
 (global-set-key (kbd "<f4>")
                 (lambda ()
                   (interactive)
@@ -448,6 +448,12 @@
   (setq-local transient-mark-mode t))
 
 (ad-activate 'term-line-mode)
+
+(defadvice term-char-mode (after term-char-mode-fixes ())
+  (setq-local cua-mode nil)
+  (setq-local transient-mark-mode nil))
+
+(ad-activate 'term-char-mode)
 
 ;; Flyspell BINDS
 (define-key flyspell-mode-map "\M-\t" nil)

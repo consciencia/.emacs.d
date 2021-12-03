@@ -950,11 +950,13 @@
                   proj-dir
                 (read-directory-name "Directory: ")))
          (dirbase (file-name-base (s-left -1 dir)))
-         (name (concat "*shell-"
-                       (s-chop-prefix "." dirbase)
-                       "*"))
+         (multi-term-buffer-name
+          (concat "terminal-"
+                  (s-chop-prefix "." dirbase)))
          (default-directory dir))
-    (shell name)))
+    (split-window-vertically)
+    (windmove-down)
+    (multi-term)))
 
 (defun custom/ido-completing-read-ctx (entries summarise &optional no-error)
   (when (and (not no-error)
