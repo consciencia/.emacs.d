@@ -417,7 +417,8 @@
             (,start (window-start ,win))
             (,end (window-end ,win)))
        ,@body
-       (if (not (and (>= (point) ,start)
+       (if (not (and (eq ,buff (current-buffer))
+                     (>= (point) ,start)
                      (<= (point) ,end)))
            (recenter)))))
 

@@ -94,12 +94,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;; Flyspell
 (ispell-change-dictionary "english" "globally")
 
-(define-key flyspell-mode-map "\M-\t" nil)
-(define-key flyspell-mode-map flyspell-auto-correct-binding nil)
-(define-key flyspell-mode-map [(control ?\,)] nil)
-(define-key flyspell-mode-map [(control ?\.)] nil)
-(define-key flyspell-mode-map [?\C-c ?$] nil)
-
 ;;;;;;;;;;;;;;;;;;;;;;; pcre2el
 
 ;; enhance occur and projectile-occur by normal regexes
@@ -173,48 +167,9 @@
       dired-recursive-copies 'top
       dired-recursive-deletes 'top
       dired-dwim-target t)
+
 (diredp-toggle-find-file-reuse-dir 1)
-
-(define-key dired-mode-map (kbd "<C-kp-subtract>")
-  'diredp-up-directory-reuse-dir-buffer)
-(define-key dired-mode-map (kbd "RET")
-  (lambda ()
-    (interactive)
-    (if (file-directory-p (dired-get-file-for-visit))
-        (diredp-find-file-reuse-dir-buffer)
-      (dired-find-file-other-window))))
-(define-key dired-mode-map (kbd "C-w") 'custom/kill-buffer)
-(define-key dired-mode-map (kbd "<C-kp-add>") 'custom/dired/create-dir-or-file)
-(define-key dired-mode-map (kbd "<kp-add>") 'custom/dired/create-dir)
-(define-key dired-mode-map (kbd "C-<up>") 'dired-prev-dirline)
-(define-key dired-mode-map (kbd "C-<down>") 'dired-next-dirline)
-(define-key dired-mode-map (kbd "i") 'dired-subtree-insert)
-(define-key dired-mode-map (kbd "I") 'dired-subtree-remove)
-(define-key dired-mode-map (kbd "<tab>") 'dired-subtree-toggle)
-(define-key dired-mode-map (kbd "C")
-  (lambda ()
-    (interactive)
-    (call-interactively 'dired-do-copy)
-    (dired-revert)))
-(define-key dired-mode-map (kbd "D")
-  (lambda ()
-    (interactive)
-    (call-interactively 'dired-do-delete)
-    (dired-revert)))
-(define-key dired-mode-map (kbd "R")
-  (lambda ()
-    (interactive)
-    (call-interactively 'dired-do-rename)
-    (dired-revert)))
-;; call to (wdired-change-to-wdired-mode)
-(define-key dired-mode-map (kbd "C-SPC") 'dired-toggle-read-only)
-(define-key wdired-mode-map (kbd "C-SPC") 'wdired-finish-edit)
-(define-key wdired-mode-map (kbd "C-q") 'wdired-exit)
-(define-key xref--button-map (kbd "C-<return>")
-  'xref-show-location-at-point)
-
 (add-hook 'dired-mode-hook 'auto-revert-mode)
-
 
 (defun custom/dired/create-dir ()
   (interactive)
@@ -358,8 +313,9 @@ ESC or `q' to not overwrite any of the remaining files,
 
 ;;;;;;;;;;;;;;;;;;;;;;; idle-highlight-mode
 
-(add-hook 'prog-mode-hook (lambda ()
-                            (idle-highlight-mode t)))
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (idle-highlight-mode t)))
 
 (setq idle-highlight-idle-time 1)
 
@@ -424,17 +380,6 @@ ESC or `q' to not overwrite any of the remaining files,
 (add-hook 'scheme-mode-hook #'enable-paredit-mode)
 
 (setf (cdr paredit-mode-map) nil)
-
-(define-key paredit-mode-map (kbd "(" ) 'paredit-open-round)
-(define-key paredit-mode-map (kbd ")" ) 'paredit-close-round)
-(define-key paredit-mode-map (kbd "[" ) 'paredit-open-square)
-(define-key paredit-mode-map (kbd "]" ) 'paredit-close-square)
-(define-key paredit-mode-map (kbd "\"" ) 'paredit-doublequote)
-(define-key paredit-mode-map (kbd ";" ) 'paredit-semicolon)
-(define-key paredit-mode-map (kbd "C-<right>") 'paredit-forward)
-(define-key paredit-mode-map (kbd "C-<left>") 'paredit-backward)
-(define-key paredit-mode-map (kbd "C-<down>") 'paredit-forward-down)
-(define-key paredit-mode-map (kbd "C-<up>") 'paredit-backward-up)
 
 ;;;;;;;;;;;;;;;;;;;;;;; projectile
 
@@ -509,12 +454,6 @@ ESC or `q' to not overwrite any of the remaining files,
                          company-oddmuse
                          company-dabbrev)
       company-dabbrev-ignore-case nil)
-
-(define-key company-active-map (kbd "M-*") 'company-show-doc-buffer)
-(define-key company-active-map (kbd "<tab>") 'company-search-candidates)
-(define-key company-search-map (kbd "<prior>") 'company-search-repeat-backward)
-(define-key company-search-map (kbd "<next>") 'company-search-repeat-forward)
-(define-key company-search-map (kbd "<tab>") 'company-search-abort)
 
 ;;;;;;;;;;;;;;;;;;;;;;; imenu-list
 
@@ -666,28 +605,11 @@ ESC or `q' to not overwrite any of the remaining files,
                           (custom/copy-across-cursors)
                         (apply oldfn args))))
 
-(define-key mc/keymap (kbd "<ESC>") 'mc/keyboard-quit)
-
 ;;;;;;;;;;;;;;;;;;;;;;; magit
 
 (setq magit-completing-read-function 'magit-ido-completing-read)
 
-(define-key smerge-mode-map (kbd "C-<next>") 'smerge-next)
-(define-key smerge-mode-map (kbd "C-<prior>") 'smerge-prev)
-
 (run-with-idle-timer 5 t #'custom/try-to-use-smerge)
-
-(when (boundp 'transient-base-map)
-  (define-key transient-base-map (kbd "q") 'transient-quit-one))
-
-;; Needed because CUA override in emulation-mode-map-alists failed.
-;; What the fuck omg.
-(loop for m in (list magit-diff-mode-map
-                     magit-file-section-map
-                     magit-hunk-section-map
-                     magit-unstaged-section-map
-                     magit-staged-section-map)
-      do (define-key m (kbd "C-c") 'cua-copy-region))
 
 ;;;;;;;;;;;;;;;;;;;;;;; python
 
@@ -818,18 +740,6 @@ If region is active, normalize the region and shift."
     (python-indent-shift-left (line-beginning-position)
                               (line-end-position)
                               current-prefix-arg)))
-
-(define-key jedi-mode-map (kbd "M-.") 'jedi:goto-definition)
-(define-key jedi-mode-map (kbd "M-,") 'custom/universal-pop-mark)
-(define-key jedi-mode-map (kbd "M--") nil)
-(define-key jedi-mode-map (kbd "M-*") 'jedi:show-doc)
-(define-key jedi-mode-map (kbd "<tab>") 'custom/python/indent-or-complete)
-(define-key jedi-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
-(define-key jedi-mode-map (kbd "M-<prior>") 'python-nav-backward-defun)
-(define-key jedi-mode-map (kbd "<C-kp-add>") 'custom/py-indent-shift-right)
-(define-key jedi-mode-map (kbd "<C-kp-subtract>") 'custom/py-indent-shift-left)
-(define-key jedi-mode-map (kbd "M-d") 'custom/mark-defun)
-(define-key jedi-mode-map (kbd "M-a") 'custom/mark-args)
 
 ;;;;;;;;;;;;;;;;;;;;;;; js2-mode
 
@@ -1112,21 +1022,6 @@ If region is active, normalize the region and shift."
                      (recenter)
                      (js2-reparse nil)))
 
-(define-key tern-mode-keymap (kbd "M-.") 'tern-find-definition)
-(define-key tern-mode-keymap (kbd "M-,") 'custom/universal-pop-mark)
-(define-key tern-mode-keymap (kbd "M-*") 'tern-get-docs)
-(define-key tern-mode-keymap (kbd "M-d") 'custom/mark-defun)
-;; js2-narrow-to-defun
-;; extract info from js2 system and implement following features
-;; ...
-;; (define-key tern-mode-keymap (kbd "M-<next>") 'senator-next-tag)
-;; (define-key tern-mode-keymap (kbd "M-<prior>") 'senator-previous-tag)
-;; (define-key tern-mode-keymap (kbd "M-f") 'senator-fold-tag-toggle)
-(define-key tern-mode-keymap (kbd "M-<next>") nil)
-(define-key tern-mode-keymap (kbd "M-<prior>") nil)
-(define-key tern-mode-keymap (kbd "M-f") nil)
-(define-key tern-mode-keymap (kbd "<tab>") 'company-indent-or-complete-common)
-
 (defun custom/tern/generare-generic-loader (proj-root)
   (let ((proj-name
          (read-string "Project name: "
@@ -1191,16 +1086,6 @@ If region is active, normalize the region and shift."
       web-mode-enable-block-face t
       web-mode-enable-current-element-highlight t
       web-mode-enable-current-column-highlight t)
-
-(define-key web-mode-map (kbd "<tab>") 'company-indent-or-complete-common)
-(define-key web-mode-map (kbd "C-<down>") 'web-mode-element-next)
-(define-key web-mode-map (kbd "C-<up>") 'web-mode-element-previous)
-(define-key web-mode-map (kbd "M-r") 'web-mode-element-rename)
-(define-key web-mode-map (kbd "M-d")
-  (lambda ()
-    (interactive)
-    (web-mode-element-select)
-    (setq transient-mark-mode (cons 'only transient-mark-mode))))
 
 (add-hook 'web-mode-hook (lambda ()
                            (set (make-local-variable 'company-backends)
@@ -1381,9 +1266,6 @@ t."
   (interactive)
   (kill-this-buffer)
   (custom/universal-pop-mark))
-
-(define-key elisp-refs-mode-map (kbd "q") 'custom/elip-refs-quit)
-(define-key elisp-refs-mode-map (kbd "M-,") 'custom/elip-refs-quit)
 
 ;;;;;;;;;;;;;;;;;;;;;;; helpful
 
