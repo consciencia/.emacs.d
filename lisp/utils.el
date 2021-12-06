@@ -505,22 +505,31 @@
   (flycheck-list-errors)
   (switch-to-buffer-other-window "*Flycheck errors*"))
 
-(defun custom/avy-goto-char-n (&optional arg beg end)
-  (interactive (list current-prefix-arg nil nil))
+(defun custom/avy-goto-char-n (&optional arg beg end chars)
+  (interactive (list current-prefix-arg nil nil nil))
   (avy-with custom/avy-goto-char-n
-    (avy-jump (regexp-quote (read-string "Chars: "))
+    (avy-jump (regexp-quote (or chars
+                                (read-string "Chars: ")))
               :window-flip arg
               :beg beg
               :end end)))
 
-(defun custom/avy-jump-char-mode ()
+(defun custom/avy-jump-char-mode (&optional _chars)
   (interactive)
   (if (region-active-p)
       (call-interactively 'exchange-point-and-mark)
-    (progn
-      (deactivate-mark t)
-      (custom/universal-push-mark)
-      (call-interactively 'custom/avy-goto-char-n))))
+    (let ((chars (or _chars
+                     (read-string "Chars: ")))
+          (prefix "-"))
+      (when (s-starts-with-p prefix chars)
+        (custom/avy-copy-word (s-chop-prefix prefix chars)))
+      (when (not (s-starts-with-p prefix chars))
+        (deactivate-mark t)
+        (custom/universal-push-mark)
+        (custom/avy-goto-char-n current-prefix-arg
+                                nil
+                                nil
+                                chars)))))
 
 (defun custom/universal-push-mark ()
   (interactive)
@@ -1082,3 +1091,15 @@
     (ido-completing-read
      "M-x "
      (all-completions "" obarray 'commandp)))))
+
+(defun custom/python-find-references ()
+  (interactive)
+  (let ((symbol (or (thing-at-point 'symbol)
+                    (read-string "Symbol: "))))
+    (when (or (null symbol)
+              (string= symbol ""))
+      (error "Empty input!"))
+    (rgrep (regexp-quote symbol)
+           "*.py"
+           (projectile-project-root))
+    (switch-to-buffer-other-window "*grep*")))

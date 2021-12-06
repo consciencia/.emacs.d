@@ -152,6 +152,18 @@
 (setq avy-all-windows nil
       avy-background nil)
 
+(defun custom/avy-copy-word (chars)
+  (interactive)
+  (let ((avy-all-windows t)
+        (curr-win (selected-window)))
+    (custom/avy-jump-char-mode chars)
+    (call-interactively 'custom/mark-whole-word)
+    (call-interactively 'cua-copy-region)
+    (deactivate-mark t)
+    (select-window curr-win)
+    (call-interactively 'custom/universal-pop-mark)
+    (call-interactively 'cua-paste)))
+
 ;;;;;;;;;;;;;;;;;;;;;;; autopair
 
 (electric-pair-mode 1)
@@ -414,6 +426,10 @@ ESC or `q' to not overwrite any of the remaining files,
   (when (not (equal file 100))
     (file-exists-p (projectile-expand-root file))))
 
+(advice-add #'projectile-find-other-file
+            :before
+            'custom/universal-push-mark)
+
 ;;;;;;;;;;;;;;;;;;;;;;; undo-tree
 
 ;; TODO: Buggy, sometimes it kill buffer mode initialization.
@@ -467,6 +483,7 @@ ESC or `q' to not overwrite any of the remaining files,
               imenu-list-idle-update-delay 1)
 
 (imenu-list-minor-mode)
+(imenu-list-smart-toggle)
 
 ;; make sure visual line mode is active
 (if (functionp 'global-visual-line-mode)

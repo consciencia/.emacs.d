@@ -6,11 +6,11 @@
 (require 'xref)
 
 
-(defun safe-local-variable-p (sym val)
-  "Ugly hack to prevent dir-locals floading user with
-qustions. On the other side, it opens a way to exploits based
-on local directory elisp code. TODO, solve this somehow!"
-  t)
+;; (defun safe-local-variable-p (sym val)
+;;   "Ugly hack to prevent dir-locals floading user with
+;; qustions. On the other side, it opens a way to exploits based
+;; on local directory elisp code. TODO, solve this somehow!"
+;;   t)
 
 (defun keyboard-escape-quit ()
   "Modifies EMACs keyboard-escape-quit but withut window removal."

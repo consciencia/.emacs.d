@@ -539,7 +539,13 @@
 ;; Jedi BINDS
 (define-key jedi-mode-map (kbd "M-.") 'jedi:goto-definition)
 (define-key jedi-mode-map (kbd "M-,") 'custom/universal-pop-mark)
-(define-key jedi-mode-map (kbd "M--") nil)
+;; TODO: Find referenced is impossible with jedi package. Elpy can do
+;; that but is bugged as hell. Anaconda can do that too but its hard
+;; to say how time consuming will the migration be.
+;;
+;; https://github.com/pythonic-emacs/anaconda-mode
+;; https://github.com/pythonic-emacs/company-anaconda
+(define-key jedi-mode-map (kbd "M--") 'custom/python-find-references)
 (define-key jedi-mode-map (kbd "M-*") 'jedi:show-doc)
 (define-key jedi-mode-map (kbd "<tab>") 'custom/python/indent-or-complete)
 (define-key jedi-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
