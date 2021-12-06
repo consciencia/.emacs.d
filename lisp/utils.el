@@ -520,7 +520,7 @@
       (call-interactively 'exchange-point-and-mark)
     (let ((chars (or _chars
                      (read-string "Chars: ")))
-          (prefix "-"))
+          (prefix " "))
       (when (s-starts-with-p prefix chars)
         (custom/avy-copy-word (s-chop-prefix prefix chars)))
       (when (not (s-starts-with-p prefix chars))

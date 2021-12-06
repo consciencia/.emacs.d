@@ -82,6 +82,7 @@
 (define-key regs-key-map (kbd "C-p") 'prepend-to-register)
 (define-key regs-key-map (kbd "C-l") 'list-registers)
 (define-key completion-list-mode-map (kbd "C-f") 'isearch-forward)
+(global-set-key (kbd "C-u") 'universal-argument)
 
 ;; WINDOWS AND FRAMES MANIPULATION BINDS
 (define-key general-key-map (kbd "C-w C-<right>")
@@ -142,8 +143,8 @@
 (global-set-key (kbd "C-d") 'custom/mark-whole-word)
 (global-set-key (kbd "C-l") 'custom/mark-whole-line)
 (global-set-key (kbd "C-z") 'undo)
-(global-set-key (kbd "C-S-z") 'redo)
-(global-set-key (kbd "C-u")
+(global-set-key (kbd "C-y") 'redo)
+(global-set-key (kbd "C-S-z")
                 (lambda ()
                   (interactive)
                   (call-interactively 'undo-tree-visualize)
