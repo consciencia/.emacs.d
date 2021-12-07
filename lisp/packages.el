@@ -551,20 +551,20 @@ ESC or `q' to not overwrite any of the remaining files,
 (defun custom/mc/mark-next-like-this (arg)
   (interactive "p")
   (if (< arg 0)
-      (let ((cursor (mc/furthest-cursor-after-point)))
-        (if cursor
-            (mc/remove-fake-cursor cursor)
-          (error "No cursors to be unmarked")))
+      (dotimes (_ (abs arg))
+        (let ((cursor (mc/furthest-cursor-after-point)))
+          (when (not (null cursor))
+            (mc/remove-fake-cursor cursor))))
     (mc/mark-lines arg 'forwards))
   (mc/maybe-multiple-cursors-mode))
 
 (defun custom/mc/mark-prev-like-this (arg)
   (interactive "p")
   (if (< arg 0)
-      (let ((cursor (mc/furthest-cursor-before-point)))
-        (if cursor
-            (mc/remove-fake-cursor cursor)
-          (error "No cursors to be unmarked")))
+      (dotimes (_ (abs arg))
+        (let ((cursor (mc/furthest-cursor-before-point)))
+          (when (not (null cursor))
+            (mc/remove-fake-cursor cursor))))
     (mc/mark-lines arg 'backwards))
   (mc/maybe-multiple-cursors-mode))
 
@@ -576,10 +576,9 @@ ESC or `q' to not overwrite any of the remaining files,
 (setq *cutom/bulk-clipboard* nil)
 
 (mc/load-lists)
-(push 'custom/copy-across-cursors
-      mc/cmds-to-run-once)
-(push 'cua-copy-region
-      mc/cmds-to-run-once)
+(push 'custom/copy-across-cursors mc/cmds-to-run-once)
+(push 'cua-copy-region mc/cmds-to-run-once)
+(push 'custom/digit-argument-0 mc/cmds-to-run-once)
 
 (defun custom/copy-across-cursors ()
   (interactive)
@@ -726,37 +725,42 @@ selected, select them completely."
     (unless (= (point) (line-beginning-position))
       (end-of-line))))
 
-(defun custom/py-indent-shift-right (&optional count)
-  "Shift current line by COUNT columns to the right.
-
-COUNT defaults to `python-indent-offset'.
-If region is active, normalize the region and shift."
-  (interactive)
-  (if (use-region-p)
+(defun custom/py-indent-shift (&optional count)
+  (interactive "P")
+  (when (not (or (null count)
+                 (consp count)
+                 (numberp count)
+                 (equal count '-)))
+    (error "Bad prefix argument %s!" count))
+  (when (consp count)
+    (setq count (floor (log (car count) 4))))
+  (when (numberp count)
+    (setq count (* count python-indent-offset)))
+  (when (null count)
+    (setq count python-indent-offset))
+  (when (eql count '-)
+    (setq count (* python-indent-offset -1)))
+  (if (< count 0)
       (progn
-        (custom/py-normalize-region)
-        (python-indent-shift-right (region-beginning)
-                                   (region-end)
-                                   current-prefix-arg))
-    (python-indent-shift-right (line-beginning-position)
-                               (line-end-position)
-                               current-prefix-arg)))
-
-(defun custom/py-indent-shift-left (&optional count)
-  "Shift current line by COUNT columns to the left.
-
-COUNT defaults to `python-indent-offset'.
-If region is active, normalize the region and shift."
-  (interactive)
-  (if (use-region-p)
-      (progn
-        (custom/py-normalize-region)
-        (python-indent-shift-left (region-beginning)
-                                  (region-end)
-                                  current-prefix-arg))
-    (python-indent-shift-left (line-beginning-position)
-                              (line-end-position)
-                              current-prefix-arg)))
+        (setq count (abs count))
+        (if (use-region-p)
+            (progn
+              (custom/py-normalize-region)
+              (python-indent-shift-left (region-beginning)
+                                        (region-end)
+                                        count))
+          (python-indent-shift-left (line-beginning-position)
+                                    (line-end-position)
+                                    count)))
+    (if (use-region-p)
+        (progn
+          (custom/py-normalize-region)
+          (python-indent-shift-right (region-beginning)
+                                     (region-end)
+                                     count))
+      (python-indent-shift-right (line-beginning-position)
+                                 (line-end-position)
+                                 count))))
 
 ;;;;;;;;;;;;;;;;;;;;;;; js2-mode
 

@@ -118,16 +118,26 @@
   ;; Secret sauce for standard selection behavior
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
-(defun custom/mark-whole-line ()
+(defun custom/mark-whole-line (&optional arg)
   "Select the current line"
-  (interactive)
-  (if (or (and (eq last-command this-command) (mark t))
-          (region-active-p))
-      (forward-char))
-  (end-of-line) ; move to end of line
-  (if (not (or (and (eq last-command this-command) (mark t))
-               (region-active-p)))
-      (set-mark (line-beginning-position)))
+  (interactive "P")
+  (when (not (or (null arg)
+                 (consp arg)
+                 (and (numberp arg)
+                      (> arg 0))))
+    (error "Invalid prefix argument %s" arg))
+  (when (null arg)
+    (setq arg 1))
+  (when (consp arg)
+    (setq arg (floor (log (car arg) 4))))
+  (dotimes (_ arg)
+    (if (or (and (eq last-command this-command) (mark t))
+            (region-active-p))
+        (forward-char))
+    (end-of-line)
+    (if (not (or (and (eq last-command this-command) (mark t))
+                 (region-active-p)))
+        (set-mark (line-beginning-position))))
   ;; Secret sauce for standard selection behavior
   (setq transient-mark-mode (cons 'only transient-mark-mode)))
 
@@ -493,12 +503,20 @@
 (defun custom/get-project-root ()
   (ignore-errors (projectile-project-root)))
 
-(defun custom/goto-line ()
-  (interactive)
-  (custom/universal-push-mark)
-  (call-interactively 'goto-line)
-  (recenter)
-  (pulse-momentary-highlight-one-line (point)))
+(defun custom/goto-line (&optional arg)
+  (interactive "P")
+  (cond
+   ((null arg)
+    (custom/universal-push-mark)
+    (custom/recenter-after
+        (call-interactively 'goto-line))
+    (pulse-momentary-highlight-one-line (point)))
+   ((numberp arg)
+    (custom/universal-push-mark)
+    (custom/recenter-after
+        (forward-line arg))
+    (pulse-momentary-highlight-one-line (point)))
+   (t (error "Invalid prefix argument %s" arg))))
 
 (defun custom/lint-this-buffer ()
   (interactive)
@@ -1103,3 +1121,22 @@
            "*.py"
            (projectile-project-root))
     (switch-to-buffer-other-window "*grep*")))
+
+(defun custom/shrink-or-fit-or-balance-windows (&optional arg)
+  (interactive "P")
+  (cond ((null arg)
+         (shrink-window-if-larger-than-buffer))
+        ((equal arg '(4))
+         (fit-window-to-buffer))
+        ((equal arg '(16))
+         (balance-windows))
+        (t (error "Invalid prefix argument!"))))
+
+(defun custom/digit-argument-0 (arg)
+  (interactive "P")
+  ;; Command digit-argument is extracting digit from keyboard
+  ;; shortcut it is bound to but it does not work when I bind
+  ;; it manually to custom keymap. Solution is to fake last
+  ;; command event value.
+  (let ((last-command-event 134217776))
+    (digit-argument arg)))

@@ -116,8 +116,7 @@
 (global-set-key (kbd "M-<right>") (ignore-error-wrapper 'windmove-right))
 (global-set-key (kbd "M-<up>") (ignore-error-wrapper 'windmove-up))
 (global-set-key (kbd "M-<down>") (ignore-error-wrapper 'windmove-down))
-(global-set-key (kbd "M-5") 'shrink-window-if-larger-than-buffer)
-(global-set-key (kbd "C-5") 'fit-window-to-buffer)
+(global-set-key (kbd "M-5") 'custom/shrink-or-fit-or-balance-windows)
 (global-set-key (kbd "M-8") 'enlarge-window)
 (global-set-key (kbd "M-2") 'shrink-window)
 (global-set-key (kbd "M-6") 'enlarge-window-horizontally)
@@ -170,7 +169,7 @@
 (define-key bookmarks-key-map (kbd "C-l") 'list-bookmarks)
 (global-set-key (kbd "C-r") 'ido-goto-symbol)
 (global-set-key (kbd "C-<tab>") 'custom/mc/mark-next-like-this)
-(global-set-key (kbd "C-S-<iso-lefttab>") 'custom/mc/mark-prev-like-this)
+(global-set-key (kbd "C-S-<iso-lefttab>") 'mc/mark-next-like-this-symbol)
 (define-key mc/keymap (kbd "<escape>") 'mc/keyboard-quit)
 (global-set-key (kbd "M-r") 'cua-rectangle-mark-mode)
 
@@ -298,7 +297,7 @@
             (local-set-key (kbd "M-*") 'cme-doc)
             (local-set-key (kbd "C-,") 'cme-proto-impl-toggle)
             (local-set-key (kbd "C-.") 'cme-find-anything)
-            (local-set-key (kbd "C--") 'cme-rename-local-var)
+            (local-set-key (kbd "M-r M-v") 'cme-rename-local-var)
             (local-set-key (kbd "M-<next>") 'cme-next-tag)
             (local-set-key (kbd "M-<prior>") 'cme-previous-tag)
             (local-set-key (kbd "M-p") 'cme-follow-ref-up)
@@ -339,7 +338,7 @@
             (local-set-key (kbd "M-*") 'cme-doc)
             (local-set-key (kbd "C-,") 'cme-proto-impl-toggle)
             (local-set-key (kbd "C-.") 'cme-find-anything)
-            (local-set-key (kbd "C--") 'cme-rename-local-var)
+            (local-set-key (kbd "M-r M-v") 'cme-rename-local-var)
             (local-set-key (kbd "M-<next>") 'cme-next-tag)
             (local-set-key (kbd "M-<prior>") 'cme-previous-tag)
             (local-set-key (kbd "M-p") 'cme-follow-ref-up)
@@ -440,6 +439,7 @@
 
 ;; Term BINDS
 (define-key term-mode-map (kbd "M-c") 'term-char-mode)
+(define-key term-mode-map (kbd "C-d") 'custom/mark-whole-word)
 (define-key term-raw-map (kbd "C-w") 'custom/kill-buffer)
 (define-key term-raw-map (kbd "M-l") 'term-line-mode)
 (define-key term-raw-map (kbd "M-x") 'custom/m-x)
@@ -523,6 +523,7 @@
 
 ;; Multiple cursors BINDS
 (define-key mc/keymap (kbd "<ESC>") 'mc/keyboard-quit)
+(define-key mc/keymap (kbd "<M-kp-0>") 'custom/digit-argument-0)
 
 ;; Magit BINDS
 (define-key smerge-mode-map (kbd "C-<next>") 'smerge-next)
@@ -551,8 +552,7 @@
 (define-key jedi-mode-map (kbd "<tab>") 'custom/python/indent-or-complete)
 (define-key jedi-mode-map (kbd "M-<next>") 'python-nav-forward-defun)
 (define-key jedi-mode-map (kbd "M-<prior>") 'python-nav-backward-defun)
-(define-key jedi-mode-map (kbd "<C-kp-add>") 'custom/py-indent-shift-right)
-(define-key jedi-mode-map (kbd "<C-kp-subtract>") 'custom/py-indent-shift-left)
+(define-key jedi-mode-map (kbd "<C-kp-add>") 'custom/py-indent-shift)
 (define-key jedi-mode-map (kbd "M-d") 'custom/mark-defun)
 (define-key jedi-mode-map (kbd "M-a") 'custom/mark-args)
 

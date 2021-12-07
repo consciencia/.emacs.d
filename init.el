@@ -81,6 +81,7 @@
                 "lisp")))
   (normal-top-level-add-subdirs-to-load-path))
 
+(setq package-check-signature 'allow-unsigned)
 (package-initialize)
 (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                     (not (gnutls-available-p))))
