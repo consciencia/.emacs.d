@@ -27,3 +27,4 @@ TODO.md
 *.pyc
 cme-last-ver.txt
 CME
+local-init.el
