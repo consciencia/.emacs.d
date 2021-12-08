@@ -426,9 +426,10 @@ ESC or `q' to not overwrite any of the remaining files,
   (when (not (equal file 100))
     (file-exists-p (projectile-expand-root file))))
 
-(advice-add #'projectile-find-other-file
-            :before
-            'custom/universal-push-mark)
+(defun custom/projectile-find-other-file (&optional arg)
+  (interactive "P")
+  (custom/universal-push-mark)
+  (projectile-find-other-file arg))
 
 ;;;;;;;;;;;;;;;;;;;;;;; undo-tree
 

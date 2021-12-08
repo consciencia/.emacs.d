@@ -387,6 +387,14 @@
     (call-interactively 'custom/higlight-this))
    ((equal major-mode 'gfm-mode)
     (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'cmake-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'gdb-script-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'term-mode)
+    (call-interactively 'custom/higlight-this))
+   ((equal major-mode 'text-mode)
+    (call-interactively 'custom/higlight-this))
    (t (message "No bind in current context"))))
 
 (defun custom/special-m-return-handler ()
@@ -1113,12 +1121,34 @@
 (defun custom/python-find-references ()
   (interactive)
   (let ((symbol (or (thing-at-point 'symbol)
-                    (read-string "Symbol: "))))
+                    (read-string "Symbol: ")))
+        ;; Sometimes, this variable is not correctly configured
+        ;; which causes rgrep to fail.
+        (grep-find-template
+         (concat "find <D> <X> -type f <F> -exec grep <C> "
+                 "-nH --null -e <R> \\{\\} +")))
     (when (or (null symbol)
               (string= symbol ""))
       (error "Empty input!"))
     (rgrep (regexp-quote symbol)
            "*.py"
+           (projectile-project-root))
+    (switch-to-buffer-other-window "*grep*")))
+
+(defun custom/cmake-find-references ()
+  (interactive)
+  (let ((symbol (or (thing-at-point 'symbol)
+                    (read-string "Symbol: ")))
+        ;; Sometimes, this variable is not correctly configured
+        ;; which causes rgrep to fail.
+        (grep-find-template
+         (concat "find <D> <X> -type f <F> -exec grep <C> "
+                 "-nH --null -e <R> \\{\\} +")))
+    (when (or (null symbol)
+              (string= symbol ""))
+      (error "Empty input!"))
+    (rgrep (regexp-quote symbol)
+           "@(CMakeLists.txt|*.cmake)"
            (projectile-project-root))
     (switch-to-buffer-other-window "*grep*")))
 

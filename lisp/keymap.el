@@ -67,6 +67,10 @@
 (define-key general-key-map (kbd "C-f C-l") 'find-library)
 (define-key general-key-map (kbd "C-i") 'ielm)
 (define-key general-key-map (kbd "C-u") 'custom/toggle-uis)
+(define-key general-key-map (kbd "C-k C-s") 'kmacro-start-macro-or-insert-counter)
+(define-key general-key-map (kbd "C-k C-k") 'kmacro-end-or-call-macro)
+(define-key general-key-map (kbd "C-k C-r") 'apply-macro-to-region-lines)
+(define-key general-key-map (kbd "C-k TAB") 'insert-kbd-macro)
 (define-key browse-kill-ring-mode-map (kbd "C-<down>") 'browse-kill-ring-forward)
 (define-key browse-kill-ring-mode-map (kbd "C-<up>") 'browse-kill-ring-previous)
 (define-key browse-kill-ring-mode-map (kbd "<down>") 'browse-kill-ring-forward)
@@ -83,6 +87,10 @@
 (define-key regs-key-map (kbd "C-l") 'list-registers)
 (define-key completion-list-mode-map (kbd "C-f") 'isearch-forward)
 (global-set-key (kbd "C-u") 'universal-argument)
+(global-set-key (kbd "C-x C-x") 'eval-expression)
+;; I tend to accidentally hit this which results in emacs termination
+;; so I disabled this shortcut.
+(global-set-key (kbd "C-x C-c") nil)
 
 ;; WINDOWS AND FRAMES MANIPULATION BINDS
 (define-key general-key-map (kbd "C-w C-<right>")
@@ -129,7 +137,7 @@
 (global-set-key (kbd "C-o") 'find-file)
 (global-set-key (kbd "C-S-<prior>") 'next-buffer)
 (global-set-key (kbd "C-S-<next>") 'previous-buffer)
-(global-set-key (kbd "C-0") 'ido-switch-buffer)
+(global-set-key (kbd "M-0") 'ido-switch-buffer)
 (global-set-key (kbd "C-b") 'ido-switch-buffer)
 (global-set-key (kbd "C-y") nil)
 (global-set-key (kbd "C-s") 'save-buffer)
@@ -187,7 +195,7 @@
                                           proj-type)))))
 (define-key projectile-key-map (kbd "C-d C-k") 'projectile-kill-buffers)
 (define-key projectile-key-map (kbd "C-d C-r") 'projectile-remove-known-project)
-(define-key projectile-key-map (kbd "C-d C-o") 'projectile-find-other-file)
+(define-key projectile-key-map (kbd "C-d C-o") 'custom/projectile-find-other-file)
 (define-key projectile-key-map (kbd "C-d C-d")
   (lambda ()
     (interactive)
@@ -373,6 +381,7 @@
           (lambda ()
             (local-set-key (kbd "C-d") 'custom/mark-whole-word)
             (local-set-key (kbd "M-*") 'cmake-help)
+            (local-set-key (kbd "M--") 'custom/cmake-find-references)
             (local-set-key (kbd "<tab>") 'company-indent-or-complete-common)
             (set (make-local-variable 'company-backends)
                  '((company-cmake
@@ -440,6 +449,7 @@
 ;; Term BINDS
 (define-key term-mode-map (kbd "M-c") 'term-char-mode)
 (define-key term-mode-map (kbd "C-d") 'custom/mark-whole-word)
+(define-key term-mode-map (kbd "M-,") 'custom/universal-pop-mark)
 (define-key term-raw-map (kbd "C-w") 'custom/kill-buffer)
 (define-key term-raw-map (kbd "M-l") 'term-line-mode)
 (define-key term-raw-map (kbd "M-x") 'custom/m-x)
@@ -524,6 +534,7 @@
 ;; Multiple cursors BINDS
 (define-key mc/keymap (kbd "<ESC>") 'mc/keyboard-quit)
 (define-key mc/keymap (kbd "<M-kp-0>") 'custom/digit-argument-0)
+(define-key mc/keymap (kbd "<return>") 'newline)
 
 ;; Magit BINDS
 (define-key smerge-mode-map (kbd "C-<next>") 'smerge-next)
