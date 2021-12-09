@@ -99,7 +99,10 @@
 (load "edebug-tweaks.el")
 (load "shell-tweaks.el")
 (load (concat (expand-file-name user-emacs-directory)
-              "local-init.el"))
+              "local-init.el")
+      ;; Causes load to not fail when target file does
+      ;; not exists.
+      t)
 
 ;; When enabled, its faster but it eats a lot more memory.
 ;; Its up to you.
