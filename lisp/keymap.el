@@ -71,6 +71,7 @@
 (define-key general-key-map (kbd "C-k C-k") 'kmacro-end-or-call-macro)
 (define-key general-key-map (kbd "C-k C-r") 'apply-macro-to-region-lines)
 (define-key general-key-map (kbd "C-k TAB") 'insert-kbd-macro)
+(define-key general-key-map (kbd "C-k C-c") 'kmacro-set-counter)
 (define-key browse-kill-ring-mode-map (kbd "C-<down>") 'browse-kill-ring-forward)
 (define-key browse-kill-ring-mode-map (kbd "C-<up>") 'browse-kill-ring-previous)
 (define-key browse-kill-ring-mode-map (kbd "<down>") 'browse-kill-ring-forward)
