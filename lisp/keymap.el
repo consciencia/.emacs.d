@@ -96,6 +96,8 @@
 ;; I tend to accidentally hit this which results in emacs termination
 ;; so I disabled this shortcut.
 (global-set-key (kbd "C-x C-c") nil)
+(global-set-key (kbd "<home>") 'custom/beginning-of-line)
+(global-set-key (kbd "<end>") 'end-of-line)
 
 ;; WINDOWS AND FRAMES MANIPULATION BINDS
 (define-key general-key-map (kbd "C-w C-<right>")
@@ -169,7 +171,6 @@
 (define-key c++-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
 (define-key c-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
 (define-key python-mode-map (kbd "C-SPC") 'custom/avy-jump-char-mode)
-
 (global-set-key (kbd "C-g") 'custom/goto-line)
 (global-set-key (kbd "C-<kp-divide>") 'comment-or-uncomment-region)
 (global-set-key (kbd "M-c") nil)

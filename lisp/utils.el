@@ -1178,3 +1178,15 @@
   ;; command event value.
   (let ((last-command-event 134217776))
     (digit-argument arg)))
+
+(defun custom/beginning-of-line ()
+  (interactive)
+  (let ((pos (point)))
+    (beginning-of-line)
+    (when (re-search-forward (pcre-to-elisp/cached "[^\\s]")
+                             (point-at-eol)
+                             t)
+      (backward-char)
+      (when (or (eql pos (point))
+                (eql pos (point-at-bol)))
+        (beginning-of-line)))))

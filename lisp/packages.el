@@ -790,7 +790,7 @@ selected, select them completely."
   (interactive)
   (beginning-of-visual-line)
   (insert "More info: ")
-  (end-of-visual-line)
+  (end-of-line)
   (insert "."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1216,7 +1216,7 @@ then keep indenting until nothing more happens."
             (while run
               (forward-line 1)
               (setq left (point))
-              (end-of-visual-line)
+              (end-of-line)
               (setq right (point))
               (goto-char left)
               (skip-chars-forward "[:blank:]\n\r\xc")
