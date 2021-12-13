@@ -97,7 +97,7 @@
 ;; so I disabled this shortcut.
 (global-set-key (kbd "C-x C-c") nil)
 (global-set-key (kbd "<home>") 'custom/beginning-of-line)
-(global-set-key (kbd "<end>") 'end-of-line)
+(global-set-key (kbd "<end>") 'custom/end-of-line)
 
 ;; WINDOWS AND FRAMES MANIPULATION BINDS
 (define-key general-key-map (kbd "C-w C-<right>")
