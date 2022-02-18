@@ -1154,7 +1154,8 @@ selected, select them completely."
 (add-hook 'c-mode-hook #'aggressive-indent-mode)
 (add-hook 'c++-mode-hook #'aggressive-indent-mode)
 
-(setq-local *custom/agressive-indent-disabled* nil)
+(setq *custom/agressive-indent-disabled* nil)
+(make-variable-buffer-local '*custom/agressive-indent-disabled*)
 
 (push '*custom/agressive-indent-disabled*
       aggressive-indent-dont-indent-if)
