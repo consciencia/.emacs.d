@@ -1204,3 +1204,15 @@
                 (eql pos (point-at-eol))
                 (< (point) pos))
         (call-interactively 'end-of-line nil)))))
+
+(defun count-words (start end)
+  "Print number of words in the region."
+  (interactive "r")
+  (save-excursion
+    (save-restriction
+      (narrow-to-region start end)
+      (goto-char (point-min))
+      (message "Word count: %s"
+               (count-matches "\\sw+")))))
+
+(defalias 'word-count 'count-words)
