@@ -121,10 +121,18 @@
 
 (global-auto-revert-mode)
 
-;; Byte compile all functions defined in emacs config.
-(mapatoms (lambda (sym)
-            (when (and (s-starts-with-p "custom/" (format "%s" sym))
-                       (fboundp sym))
-              (let ((byte-compile-log-warning-function
-                     (lambda (&rest args))))
-                (byte-compile sym)))))
+(if (version< emacs-version "28")
+    ;; Byte compile all functions defined in emacs config.
+    (mapatoms (lambda (sym)
+                (when (and (s-starts-with-p "custom/" (format "%s" sym))
+                           (fboundp sym))
+                  (let ((byte-compile-log-warning-function
+                         (lambda (&rest args))))
+                    (byte-compile sym)))))
+  ;; Native compile all functions defined in emacs config.
+  (mapatoms (lambda (sym)
+              (when (and (s-starts-with-p "custom/" (format "%s" sym))
+                         (fboundp sym))
+                (let ((byte-compile-log-warning-function
+                       (lambda (&rest args))))
+                  (ignore-error (native-compile sym)))))))

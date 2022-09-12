@@ -433,11 +433,9 @@ ESC or `q' to not overwrite any of the remaining files,
 
 ;;;;;;;;;;;;;;;;;;;;;;; undo-tree
 
-;; TODO: Buggy, sometimes it kill buffer mode initialization.
-;;
-;; (setq undo-tree-auto-save-history t)
-;; (setq undo-tree-history-directory-alist
-;;       '(("." . "~/.emacs.d/undo")))
+(setq undo-tree-auto-save-history nil)
+(setq undo-tree-history-directory-alist
+      '(("." . "~/.emacs.d/undo")))
 
 (global-undo-tree-mode 1)
 

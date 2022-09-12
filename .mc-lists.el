@@ -17,6 +17,9 @@
         custom/beginning-of-line
         custom/end-of-line
         custom/forward-symbol
+        custom/isearch-forward
+        custom/mark-whole-word
+        electric-pair-delete-pair
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit
@@ -34,11 +37,20 @@
         cua-copy-region
         cua-copy-region
         cua-copy-region
+        cua-copy-region
+        cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
         custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors
+        custom/copy-across-cursors
+        custom/copy-across-cursors
+        custom/copy-across-cursors
+        custom/digit-argument-0
+        custom/digit-argument-0
+        custom/digit-argument-0
         custom/digit-argument-0
         custom/digit-argument-0
         custom/mc/mark-next-like-this
