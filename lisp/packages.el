@@ -1152,32 +1152,32 @@ selected, select them completely."
 (add-hook 'c-mode-hook #'aggressive-indent-mode)
 (add-hook 'c++-mode-hook #'aggressive-indent-mode)
 
-(setq *custom/agressive-indent-disabled* nil)
-(make-variable-buffer-local '*custom/agressive-indent-disabled*)
+(setq *custom/aggressive-indent-disabled* nil)
+(make-variable-buffer-local '*custom/aggressive-indent-disabled*)
 
-(push '*custom/agressive-indent-disabled*
+(push '*custom/aggressive-indent-disabled*
       aggressive-indent-dont-indent-if)
 
-(defun custom/toggle-agressive-indent ()
+(defun custom/toggle-aggressive-indent ()
   (interactive)
-  (setq *custom/agressive-indent-disabled*
-        (not *custom/agressive-indent-disabled*))
-  (if *custom/agressive-indent-disabled*
-      (message "Agressive indent is disabled")
-    (message "Agressive indent is enabled")))
+  (setq *custom/aggressive-indent-disabled*
+        (not *custom/aggressive-indent-disabled*))
+  (if *custom/aggressive-indent-disabled*
+      (message "Aggressive indent is disabled")
+    (message "Aggressive indent is enabled")))
 
-(defun custom/disable-agressive-indent ()
+(defun custom/disable-aggressive-indent ()
   (interactive)
-  (setq *custom/agressive-indent-disabled* t)
-  (message "Agressive indent is disabled"))
+  (setq *custom/aggressive-indent-disabled* t)
+  (message "Aggressive indent is disabled"))
 
-(defun custom/enable-agressive-indent ()
+(defun custom/enable-aggressive-indent ()
   (interactive)
-  (setq *custom/agressive-indent-disabled* nil)
-  (message "Agressive indent is enabled"))
+  (setq *custom/aggressive-indent-disabled* nil)
+  (message "Aggressive indent is enabled"))
 
-(defun custom/agressive-indent-state ()
-  (not *custom/agressive-indent-disabled*))
+(defun custom/aggressive-indent-state ()
+  (not *custom/aggressive-indent-disabled*))
 
 (defun aggressive-indent-indent-region-and-on (l r)
   "Indent region between L and R, and then some.
