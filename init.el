@@ -60,9 +60,9 @@
       `(("." . ,(concat (expand-file-name user-emacs-directory)
                         "file-backups"))))
 
-(setq delete-old-versions nil
-      kept-new-versions 10
-      kept-old-versions 10
+(setq delete-old-versions t
+      kept-new-versions 100
+      kept-old-versions 0
       version-control t)
 
 ;; Dont create lockfiles. They are pain in the ass in the
