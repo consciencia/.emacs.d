@@ -87,7 +87,7 @@ and finally return the window."
 
 ;; Overriden because I want to be able to parse number from input
 ;; with noise.
-(defun read-number (prompt &optional default)
+(defun read-number (prompt &optional default hist)
   "Read a numeric value in the minibuffer, prompting with PROMPT.
 DEFAULT specifies a default value to return if the user just types RET.
 The value of DEFAULT is inserted into PROMPT.
@@ -104,7 +104,7 @@ This function is used by the `interactive' code letter `n'."
     (while
         (progn
           (let ((str (read-from-minibuffer
-                      prompt nil nil nil nil
+                      prompt nil nil nil (or hist 'read-number-history)
                       (when default
                         (if (consp default)
                             (mapcar 'number-to-string (delq nil default))
