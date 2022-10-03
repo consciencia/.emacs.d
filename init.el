@@ -91,6 +91,11 @@
   (add-to-list 'package-archives
                `("melpa" . ,(concat proto "://melpa.org/packages/"))))
 
+(unless (version< emacs-version "28")
+  ;; Native compilation broken markdown mode.
+  (setq native-comp-deferred-compilation-deny-list
+        '("markdown-mode\\.el$")))
+
 (load "packages.el")
 (load "utils.el")
 (load "db.el")
