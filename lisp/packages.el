@@ -421,10 +421,10 @@ ESC or `q' to not overwrite any of the remaining files,
 
 ;; Overriden because actual (24.5.2021) version of projectile contains
 ;; bug which causes failure during file open.
-(defun projectile-verify-file (file)
+(defun projectile-verify-file (file &optional dir)
   "Check whether FILE exists in the current project."
   (when (not (equal file 100))
-    (file-exists-p (projectile-expand-root file))))
+    (file-exists-p (projectile-expand-root file dir))))
 
 (defun custom/projectile-find-other-file (&optional arg)
   (interactive "P")

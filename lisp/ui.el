@@ -56,7 +56,7 @@
           'whitespace-mode)
 ;; FONT SIZE FONTSIZE
 ;; (set-face-attribute 'default nil :height 100)
-(set-face-attribute 'default nil :height 105)
+(set-face-attribute 'default nil :height 110)
 (setq scroll-conservatively 101)
 
 (setq tab-always-indent 'complete)

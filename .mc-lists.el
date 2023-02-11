@@ -23,6 +23,7 @@
         end-of-visual-line
         indent-for-tab-command
         keyboard-escape-quit
+        kmacro-end-or-call-macro
         markdown-cycle
         markdown-outdent-or-delete
         paredit-backward
@@ -40,6 +41,7 @@
         cua-copy-region
         cua-copy-region
         cua-copy-region
+        cua-copy-region
         cua-exchange-point-and-mark
         custom/copy-across-cursors
         custom/copy-across-cursors
@@ -48,6 +50,8 @@
         custom/copy-across-cursors
         custom/copy-across-cursors
         custom/copy-across-cursors
+        custom/copy-across-cursors
+        custom/digit-argument-0
         custom/digit-argument-0
         custom/digit-argument-0
         custom/digit-argument-0
